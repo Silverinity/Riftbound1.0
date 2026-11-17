@@ -95,21 +95,28 @@ function getTowerStats(t){
   damage+=currentRun.towerDamageBonus;
   return {...base,damage,range,fireRate,cooldown:1/fireRate};
 }
+function environmentPalette(){
+  if(currentRun.area===2)return {ground:"#302B2A",textureA:"#403634",textureB:"#211F20",pathDark:"#29201F",path:"#665047",pathEdge:"#9A7965",treeDark:"#211C1B",tree:"#49403A",treeLight:"#6A5B50",trunk:"#554137"};
+  if(currentRun.area===3)return {ground:"#26313C",textureA:"#344352",textureB:"#1D2935",pathDark:"#222832",path:"#586675",pathEdge:"#9AAEC0",treeDark:"#1A2730",tree:"#344B5A",treeLight:"#607D91",trunk:"#52616D"};
+  return {ground:"#263B2B",textureA:"#304632",textureB:"#203326",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#17251B",tree:"#315438",treeLight:"#426443",trunk:"#64472F"};
+}
 function drawBattlefield(){
-  ctx.fillStyle="#263B2B";ctx.fillRect(0,0,960,540);drawGroundTexture();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawPlacementPreview();
+  const palette=environmentPalette();ctx.fillStyle=palette.ground;ctx.fillRect(0,0,960,540);drawGroundTexture();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawPlacementPreview();
 }
 function drawGroundTexture(){
-  for(let x=0;x<960;x+=32)for(let y=0;y<540;y+=32){const v=(x*7+y*13)%5;if(v===0){ctx.fillStyle="#304632";ctx.fillRect(x,y,16,16);}else if(v===1){ctx.fillStyle="#203326";ctx.fillRect(x+12,y+8,12,12);}}
+  const p=environmentPalette();
+  for(let x=0;x<960;x+=32)for(let y=0;y<540;y+=32){const v=(x*7+y*13)%5;if(v===0){ctx.fillStyle=p.textureA;ctx.fillRect(x,y,16,16);}else if(v===1){ctx.fillStyle=p.textureB;ctx.fillRect(x+12,y+8,12,12);}}
 }
 function drawPath(){
-  ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.strokeStyle="#382C29";ctx.lineWidth=68;ctx.stroke();ctx.strokeStyle="#776047";ctx.lineWidth=54;ctx.stroke();
-  ctx.strokeStyle="#9B8060";ctx.lineWidth=2;ctx.setLineDash([12,15]);ctx.stroke();ctx.setLineDash([]);
+  const palette=environmentPalette();ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=68;ctx.stroke();ctx.strokeStyle=palette.path;ctx.lineWidth=54;ctx.stroke();
+  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=2;ctx.setLineDash([12,15]);ctx.stroke();ctx.setLineDash([]);
 }
 function drawTrees(){
+  const p=environmentPalette();
   [[70,70],[145,90],[90,170],[330,55],[390,65],[520,70],[610,90],[780,75],[900,80],[100,390],[150,465],[320,470],[540,490],[800,450],[900,400],[560,230],[820,170],[350,330],[110,330],[760,340],[920,180]].forEach(([x,y])=>{
-    ctx.fillStyle="#17251B";ctx.fillRect(x-15,y-12,38,34);ctx.fillStyle="#152C20";ctx.fillRect(x-18,y-25,36,35);
-    ctx.fillStyle="#315438";ctx.fillRect(x-12,y-30,25,25);ctx.fillStyle="#426443";ctx.fillRect(x-5,y-25,12,12);ctx.fillStyle="#64472F";ctx.fillRect(x-5,y+5,10,15);
+    ctx.fillStyle=p.treeDark;ctx.fillRect(x-15,y-12,38,34);ctx.fillStyle=p.trunk;ctx.fillRect(x-5,y+5,10,15);
+    ctx.fillStyle=p.tree;ctx.fillRect(x-18,y-25,36,35);ctx.fillStyle=p.treeLight;ctx.fillRect(x-12,y-30,25,25);ctx.fillStyle=p.tree;ctx.fillRect(x-5,y-25,12,12);
   });
 }
 function drawPortal(){
@@ -150,7 +157,8 @@ function drawProjectiles(){
 function drawPlacementPreview(){
   if(!pointerWorld||!currentRun||!selectedTower)return;
   const s=towerTypes[selectedTower];const valid=canBuild(pointerWorld.x,pointerWorld.y,false);
-  ctx.beginPath();ctx.arc(pointerWorld.x,pointerWorld.y,s.range,0,Math.PI*2);ctx.fillStyle=valid?"rgba(185,154,232,.09)":"rgba(214,107,117,.09)";ctx.fill();
+  const range=s.range*(selectedTower==="cannon"?Math.pow(1.25,currentRun.cards.filter(c=>c==="siege").length):1);
+  ctx.beginPath();ctx.arc(pointerWorld.x,pointerWorld.y,range,0,Math.PI*2);ctx.fillStyle=valid?"rgba(185,154,232,.09)":"rgba(214,107,117,.09)";ctx.fill();
   ctx.strokeStyle=valid?"rgba(185,154,232,.65)":"rgba(214,107,117,.8)";ctx.lineWidth=2;ctx.stroke();
   ctx.globalAlpha=.65;ctx.fillStyle=valid?s.color:"#D66B75";ctx.fillRect(pointerWorld.x-14,pointerWorld.y-14,28,28);ctx.globalAlpha=1;
 }
@@ -201,7 +209,7 @@ function damageEnemy(e,dmg){
 function updateProjectiles(dt){
   currentRun.projectiles=currentRun.projectiles.filter(p=>{
     const e=p.target;if(!currentRun.enemies.includes(e)||e.health<=0)return false;
-    const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d<9){damageEnemy(e,p.damage);
+    const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d<=p.speed*dt+8){damageEnemy(e,p.damage);
       if(p.towerType==="cannon")currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48)damageEnemy(other,p.damage*.5);});
       return false;
     }p.x+=dx/d*p.speed*dt;p.y+=dy/d*p.speed*dt;return true;
