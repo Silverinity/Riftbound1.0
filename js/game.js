@@ -267,6 +267,7 @@ function isOnPath(x,y){
   for(let i=0;i<pathPoints.length-1;i++){const a=pathPoints[i],b=pathPoints[i+1],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;let t=((x-a.x)*dx+(y-a.y)*dy)/l;t=Math.max(0,Math.min(1,t));if(Math.hypot(x-(a.x+t*dx),y-(a.y+t*dy))<38)return true;}return false;
 }
 function canBuild(x,y,checkGold=true){
+  if(!Number.isFinite(x)||!Number.isFinite(y))return false;
   if(x<22||x>938||y<22||y>518||isOnPath(x,y)||Math.hypot(x-75,y-270)<62||(x>830&&y>200&&y<340))return false;
   if(currentRun.towers.some(t=>Math.hypot(x-t.x,y-t.y)<37))return false;
   return !checkGold||currentRun.gold>=towerTypes[selectedTower].cost;
