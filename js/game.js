@@ -9,7 +9,7 @@ let spawnTimer = 0;
 let pointerWorld = null;
 let placementValid = false;
 let pendingCards = [];
-let settings = window.settings || {};
+function getSettings(){ return window.riftboundSettings || { towerRanges:false, difficulty:"normal" }; }
 
 const canvas = document.getElementById("battlefield");
 const ctx = canvas.getContext("2d");
@@ -126,7 +126,7 @@ function drawTowers(){
   if(!currentRun)return;
   currentRun.towers.forEach(t=>{
     const s=getTowerStats(t),selected=t===selectedTowerEntity;
-    if(settings.towerRanges||selected){ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,Math.PI*2);ctx.fillStyle=selected?"rgba(185,154,232,.12)":"rgba(185,154,232,.06)";ctx.fill();ctx.strokeStyle=selected?"rgba(220,195,255,.75)":"rgba(185,154,232,.2)";ctx.lineWidth=selected?2:1;ctx.stroke();}
+    if(getSettings().towerRanges||selected){ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,Math.PI*2);ctx.fillStyle=selected?"rgba(185,154,232,.12)":"rgba(185,154,232,.06)";ctx.fill();ctx.strokeStyle=selected?"rgba(220,195,255,.75)":"rgba(185,154,232,.2)";ctx.lineWidth=selected?2:1;ctx.stroke();}
     ctx.fillStyle="#241932";ctx.fillRect(t.x-16,t.y-16,32,32);ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.strokeRect(t.x-16,t.y-16,32,32);
     ctx.fillStyle=s.color;ctx.fillRect(t.x-8,t.y-8,16,16);ctx.fillStyle="#E5DDF0";ctx.fillRect(t.x-3,t.y-3,6,6);
     if(t.level>1){ctx.fillStyle="#F0D58A";ctx.font="11px Georgia";ctx.fillText("+"+(t.level-1),t.x+12,t.y-12);}
@@ -177,7 +177,7 @@ function startWave(){
   updateGameDisplay();
 }
 function spawnEnemy(type){
-  const d=enemyTypes[type],difficulty=settings.difficulty||"normal";let mult=areaData().enemyScale*(1+currentRun.currentWave*.06);
+  const d=enemyTypes[type],difficulty=getSettings().difficulty||"normal";let mult=areaData().enemyScale*(1+currentRun.currentWave*.06);
   if(difficulty==="easy")mult*=.8;if(difficulty==="hard")mult*=1.25;
   const health=d.health*mult;currentRun.enemies.push({type,x:pathPoints[0].x,y:pathPoints[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage});
 }
