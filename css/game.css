@@ -237,14 +237,21 @@
     color: #E5DDF0;
 }
 
-.battlefield-area {
-    flex: 1;
-    min-height: 300px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 15px;
-}
+.battlefield-area{flex:1;min-height:300px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:14px;align-items:center;padding:15px;max-width:1500px;width:100%;margin:0 auto;}
+.tower-info-panel{align-self:stretch;min-height:240px;padding:18px;background:#171022;border:1px solid #49335F;color:#E5DDF0;}
+.tower-panel-empty{height:100%;display:flex;flex-direction:column;justify-content:center;gap:12px;text-align:center;color:#93879F;font-size:12px;line-height:1.6;}
+.panel-symbol{font-size:32px;color:#B99AE8;}
+.tower-panel-empty strong{color:#B99AE8;letter-spacing:2px;font-size:11px;}
+.tower-panel-heading{display:flex;gap:12px;align-items:center;margin-bottom:18px;color:#B99AE8;}
+.tower-panel-heading .panel-symbol{font-size:30px;}
+.tower-panel-heading small{display:block;color:#93879F;font-size:9px;letter-spacing:2px;margin-bottom:4px;}
+.tower-panel-heading strong{font-size:13px;letter-spacing:1px;}
+.tower-stat{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #302044;font-size:12px;}
+.tower-stat span{color:#93879F;}.tower-stat strong{color:#E5DDF0;}
+.panel-upgrade-title{margin:16px 0 8px;color:#B99AE8;font-size:10px;letter-spacing:2px;}
+.tower-upgrade-button{width:100%;display:flex;justify-content:space-between;margin:5px 0;padding:9px;background:#241932;border:1px solid #62447F;color:#E5DDF0;font-size:10px;cursor:pointer;}
+.tower-upgrade-button span{color:#B99AE8;}.tower-upgrade-button:disabled{opacity:.4;cursor:not-allowed;}
+.panel-hint{font-size:9px;color:#93879F;margin-top:9px;line-height:1.5;}
 
 #battlefield {
     display: block;
@@ -260,14 +267,7 @@
     user-select: none;
 }
 
-.wave-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    padding: 12px;
-    background: #100C19;
-}
+.wave-controls{display:flex;justify-content:center;align-items:center;padding:9px;background:#100C19;}
 
 #start-wave {
     padding: 12px 28px;
@@ -459,3 +459,22 @@
         max-height: none;
     }
 }
+
+/* Card rewards */
+.game-overlay{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(5,3,10,.92);backdrop-filter:blur(8px);}
+.game-overlay[hidden]{display:none;}
+.card-screen{width:min(1050px,100%);text-align:center;padding:35px;background:radial-gradient(ellipse at top,rgba(94,51,137,.25),transparent 65%),#171022;border:1px solid #62447F;}
+.card-screen h2{color:#E5DDF0;font-size:30px;letter-spacing:4px;margin:12px 0;}
+.card-intro{color:#93879F;margin-bottom:28px;font-size:13px;}
+.card-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+.reward-card{min-height:270px;padding:22px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;background:linear-gradient(160deg,#302044,#171022 70%);border:1px solid #62447F;color:#E5DDF0;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;}
+.reward-card:hover{transform:translateY(-6px);border-color:#B99AE8;box-shadow:0 0 24px rgba(185,154,232,.18);}
+.card-rarity,.card-type{color:#B99AE8;font-size:9px;letter-spacing:3px;}
+.card-icon{font-size:48px;color:#D8C0FF;text-shadow:0 0 18px rgba(185,154,232,.4);}
+.reward-card strong{font-size:17px;letter-spacing:1px;}
+.reward-card p{color:#B8ADBF;font-size:12px;line-height:1.6;}
+.card-pick{margin-top:auto;padding-top:12px;color:#B99AE8;font-size:10px;letter-spacing:2px;}
+.rest-status{color:#B99AE8;letter-spacing:3px;font-size:11px;}
+.large-action-button{margin-top:8px;padding:12px 16px;background:#241932;border:1px solid #62447F;color:#E5DDF0;cursor:pointer;}
+.large-action-button:disabled{opacity:.4;cursor:not-allowed;}
+@media(max-width:900px){.battlefield-area{grid-template-columns:1fr;}.tower-info-panel{order:2;min-height:150px;}#battlefield{max-width:100%;}.card-options{grid-template-columns:1fr;}.reward-card{min-height:190px;}}
