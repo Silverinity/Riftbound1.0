@@ -1,1052 +1,331 @@
-
-/* =========================================
-   RIFTBOUND - COMPLETE GAME ENGINE
-========================================= */
-
+/* RIFTBOUND - AREA, CARD AND TOWER GAMEPLAY UPDATE */
 let currentRun = null;
 let selectedTower = "archer";
+let selectedTowerEntity = null;
 let gameRunning = false;
 let animationFrame = null;
 let lastFrameTime = 0;
 let spawnTimer = 0;
+let pointerWorld = null;
+let placementValid = false;
+let pendingCards = [];
+let settings = window.settings || {};
 
 const canvas = document.getElementById("battlefield");
 const ctx = canvas.getContext("2d");
 
 const pathPoints = [
-    { x: 75, y: 270 },
-    { x: 230, y: 270 },
-    { x: 230, y: 130 },
-    { x: 440, y: 130 },
-    { x: 440, y: 405 },
-    { x: 690, y: 405 },
-    { x: 690, y: 270 },
-    { x: 850, y: 270 }
+  {x:75,y:270},{x:230,y:270},{x:230,y:130},{x:440,y:130},
+  {x:440,y:405},{x:690,y:405},{x:690,y:270},{x:850,y:270}
+];
+const areas = [
+  {name:"Verdant Woods",subtitle:"The Last Fortress",boss:"",enemyScale:1},
+  {name:"Ashen Wastes",subtitle:"The Scorched Crossing",boss:"",enemyScale:1.3},
+  {name:"Frostbound Kingdom",subtitle:"The Frozen Citadel",boss:"Ancient Treant",enemyScale:1.65}
+];
+const towerTypes = {
+  archer:{name:"Archer Tower",cost:50,damage:10,range:120,fireRate:1,color:"#B99AE8",projectileSpeed:330,upgradeCost:65},
+  arcane:{name:"Wizard Tower",cost:100,damage:34,range:112,fireRate:.8,color:"#75B8E8",projectileSpeed:280,upgradeCost:90},
+  cannon:{name:"Cannon Tower",cost:125,damage:48,range:145,fireRate:.4,color:"#D9A56C",projectileSpeed:230,upgradeCost:110}
+};
+const enemyTypes = {
+  riftling:{name:"Riftling",health:40,speed:45,reward:8,damage:8,color:"#B68AE8",size:12},
+  brute:{name:"Iron Brute",health:150,speed:22,reward:18,damage:18,color:"#A17B78",size:17},
+  riftwing:{name:"Riftwing",health:65,speed:75,reward:12,damage:10,color:"#78B9D1",size:11},
+  treant:{name:"Ancient Treant",health:2000,speed:15,reward:150,damage:35,color:"#83A66C",size:27}
+};
+const cardPool = [
+  {id:"arrows",name:"Sharpened Arrows",rarity:"COMMON",type:"TOWER",description:"Archer Tower damage increased by 20%.",icon:"➶"},
+  {id:"arcane",name:"Arcane Knowledge",rarity:"RARE",type:"TOWER",description:"Wizard Tower damage increased by 25%.",icon:"✧"},
+  {id:"siege",name:"Siege Engineering",rarity:"RARE",type:"TOWER",description:"Cannon Tower range increased by 25%.",icon:"◆"},
+  {id:"greed",name:"Greedy Kingdom",rarity:"COMMON",type:"ECONOMY",description:"Earn 15% more gold from defeated enemies.",icon:"♜"},
+  {id:"walls",name:"Reinforced Walls",rarity:"RARE",type:"DEFENSE",description:"Increase maximum castle HP by 20 and restore 20 HP.",icon:"⬟"}
 ];
 
-const towerTypes = {
-    archer: {
-        name: "Archer",
-        cost: 50,
-        damage: 10,
-        range: 120,
-        fireRate: 1,
-        color: "#B99AE8",
-        projectileSpeed: 330
-    },
-    arcane: {
-        name: "Arcane",
-        cost: 100,
-        damage: 25,
-        range: 105,
-        fireRate: 0.7,
-        color: "#75B8E8",
-        projectileSpeed: 280
-    },
-    cannon: {
-        name: "Cannon",
-        cost: 125,
-        damage: 35,
-        range: 95,
-        fireRate: 0.4,
-        color: "#D9A56C",
-        projectileSpeed: 230
-    }
-};
-
-const enemyTypes = {
-    riftling: {
-        name: "Riftling",
-        health: 40,
-        speed: 45,
-        reward: 8,
-        damage: 8,
-        color: "#B68AE8",
-        size: 12
-    },
-    brute: {
-        name: "Iron Brute",
-        health: 150,
-        speed: 22,
-        reward: 18,
-        damage: 18,
-        color: "#A17B78",
-        size: 17
-    },
-    riftwing: {
-        name: "Riftwing",
-        health: 65,
-        speed: 75,
-        reward: 12,
-        damage: 10,
-        color: "#78B9D1",
-        size: 11
-    },
-    treant: {
-        name: "Ancient Treant",
-        health: 2000,
-        speed: 15,
-        reward: 150,
-        damage: 35,
-        color: "#83A66C",
-        size: 27
-    }
-};
-
-
-/* =========================================
-   RUN CREATION
-========================================= */
-
-function createNewRun() {
-    return {
-        gold: 100,
-        castleHealth: 100,
-        maxCastleHealth: 100,
-        currentWave: 0,
-        totalWaves: 15,
-        towers: [
-            {
-                type: "archer",
-                x: 330,
-                y: 75,
-                cooldown: 0,
-                level: 1
-            }
-        ],
-        enemies: [],
-        projectiles: [],
-        spawnQueue: [],
-        waveActive: false,
-        gameOver: false,
-        towerDamageBonus: 0
-    };
+function createNewRun(){
+  return {
+    gold:100,castleHealth:100,maxCastleHealth:100,area:1,currentWave:0,totalWaves:5,
+    towers:[{type:"archer",x:330,y:75,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
+    enemies:[],projectiles:[],spawnQueue:[],waveActive:false,gameOver:false,
+    towerDamageBonus:0,cards:[],nextWaveTimer:15,waitingForWave:true,runFinished:false
+  };
 }
-
-function startNewRun() {
-    stopGameLoop();
-
-    currentRun = createNewRun();
-    selectedTower = "archer";
-
-    document.querySelectorAll(".tower-button").forEach(button => {
-        button.classList.toggle(
-            "selected",
-            button.dataset.tower === "archer"
-        );
-    });
-
-    updateGameDisplay();
+function startNewRun(){
+  stopGameLoop();currentRun=createNewRun();selectedTower="archer";selectedTowerEntity=null;
+  document.querySelectorAll(".tower-button").forEach(b=>b.classList.toggle("selected",b.dataset.tower==="archer"));
+  updateGameDisplay();
 }
-
-
-/* =========================================
-   BATTLEFIELD INITIALIZATION
-========================================= */
-
-function initBattlefield() {
-    if (!currentRun) {
-        startNewRun();
-    }
-
-    // Reset the frame clock and render immediately so the battlefield
-    // is visible before the first animation frame.
-    stopGameLoop();
-    updateGameDisplay();
-    drawBattlefield();
-    setWaveStatus("PREPARE YOUR DEFENSE");
-    showBattleMessage("SELECT A TOWER AND CLICK AN OPEN AREA TO BUILD");
+function areaData(){return areas[currentRun.area-1]||areas[0];}
+function updateAreaLabels(){
+  const a=areaData();
+  document.querySelector(".battle-region span").textContent="AREA 0"+currentRun.area+" · "+a.name.toUpperCase();
+  document.querySelector(".battle-region h1").textContent=a.subtitle.toUpperCase();
+  document.querySelector(".region-heading .prep-eyebrow").textContent="AREA 0"+currentRun.area;
+  document.querySelector(".region-heading h2").textContent=a.name.toUpperCase();
+  document.querySelector(".region-details span").textContent="5 WAVES";
+}
+function initBattlefield(){
+  if(!currentRun)startNewRun();
+  stopGameLoop();selectedTowerEntity=null;updateAreaLabels();updateGameDisplay();drawBattlefield();
+  setWaveStatus("NEXT WAVE IN 15");showBattleMessage("BUILD YOUR DEFENSE — THE FIRST WAVE ARRIVES IN 15 SECONDS");
+  currentRun.waitingForWave=true;currentRun.nextWaveTimer=15;startGameLoop();
+}
+function updateGameDisplay(){
+  if(!currentRun)return;
+  document.getElementById("gold-display").textContent=Math.floor(currentRun.gold);
+  document.getElementById("health-display").textContent=currentRun.castleHealth+" / "+currentRun.maxCastleHealth;
+  document.getElementById("wave-display").textContent=currentRun.currentWave+" / 5";
+  updateTowerButtons();updateTowerPanel();
+}
+function updateTowerButtons(){
+  document.querySelectorAll(".tower-button").forEach(b=>{
+    const type=towerTypes[b.dataset.tower];b.disabled=!currentRun||currentRun.gold<type.cost||currentRun.gameOver;
+  });
+}
+function showBattleMessage(s){document.getElementById("battle-message").textContent=s;}
+function setWaveStatus(s){document.getElementById("wave-status").textContent=s;}
+function getTowerStats(t){
+  const base=towerTypes[t.type],u=t.upgrades||{damage:0,range:0,speed:0};
+  let damage=base.damage*Math.pow(1.22,u.damage||0);
+  let range=base.range*Math.pow(1.15,u.range||0);
+  let fireRate=base.fireRate*Math.pow(1.18,u.speed||0);
+  if(t.type==="archer")damage*=1+(currentRun.cards.filter(c=>c==="arrows").length*.2);
+  if(t.type==="arcane")damage*=1+(currentRun.cards.filter(c=>c==="arcane").length*.25);
+  if(t.type==="cannon")range*=Math.pow(1.25,currentRun.cards.filter(c=>c==="siege").length);
+  damage+=currentRun.towerDamageBonus;
+  return {...base,damage,range,fireRate,cooldown:1/fireRate};
+}
+function drawBattlefield(){
+  ctx.fillStyle="#263B2B";ctx.fillRect(0,0,960,540);drawGroundTexture();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawPlacementPreview();
+}
+function drawGroundTexture(){
+  for(let x=0;x<960;x+=32)for(let y=0;y<540;y+=32){const v=(x*7+y*13)%5;if(v===0){ctx.fillStyle="#304632";ctx.fillRect(x,y,16,16);}else if(v===1){ctx.fillStyle="#203326";ctx.fillRect(x+12,y+8,12,12);}}
+}
+function drawPath(){
+  ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.strokeStyle="#382C29";ctx.lineWidth=68;ctx.stroke();ctx.strokeStyle="#776047";ctx.lineWidth=54;ctx.stroke();
+  ctx.strokeStyle="#9B8060";ctx.lineWidth=2;ctx.setLineDash([12,15]);ctx.stroke();ctx.setLineDash([]);
+}
+function drawTrees(){
+  [[70,70],[145,90],[90,170],[330,55],[390,65],[520,70],[610,90],[780,75],[900,80],[100,390],[150,465],[320,470],[540,490],[800,450],[900,400],[560,230],[820,170],[350,330],[110,330],[760,340],[920,180]].forEach(([x,y])=>{
+    ctx.fillStyle="#17251B";ctx.fillRect(x-15,y-12,38,34);ctx.fillStyle="#152C20";ctx.fillRect(x-18,y-25,36,35);
+    ctx.fillStyle="#315438";ctx.fillRect(x-12,y-30,25,25);ctx.fillStyle="#426443";ctx.fillRect(x-5,y-25,12,12);ctx.fillStyle="#64472F";ctx.fillRect(x-5,y+5,10,15);
+  });
+}
+function drawPortal(){
+  const p=1+Math.sin(performance.now()/300)*.12;ctx.fillStyle="rgba(129,85,184,.15)";ctx.beginPath();ctx.arc(75,270,48*p,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#62447F";ctx.lineWidth=8;ctx.beginPath();ctx.ellipse(75,270,24,38,0,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle="#21102F";ctx.beginPath();ctx.ellipse(75,270,18,31,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#B99AE8";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(75,270,15,27,0,0,Math.PI*2);ctx.stroke();
+}
+function drawCastle(){
+  ctx.fillStyle="#17251B";ctx.fillRect(855,225,85,100);ctx.fillStyle="#655A70";ctx.fillRect(860,235,70,70);ctx.fillStyle="#98899E";ctx.fillRect(870,245,50,50);
+  ctx.fillStyle="#4A3B55";ctx.fillRect(852,220,22,35);ctx.fillRect(916,220,22,35);ctx.fillRect(852,285,22,35);ctx.fillRect(916,285,22,35);
+  ctx.fillStyle="#B99AE8";ctx.fillRect(852,216,22,6);ctx.fillRect(916,216,22,6);ctx.fillStyle="#241932";ctx.fillRect(885,275,22,30);
+}
+function drawTowers(){
+  if(!currentRun)return;
+  currentRun.towers.forEach(t=>{
+    const s=getTowerStats(t),selected=t===selectedTowerEntity;
+    if(settings.towerRanges||selected){ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,Math.PI*2);ctx.fillStyle=selected?"rgba(185,154,232,.12)":"rgba(185,154,232,.06)";ctx.fill();ctx.strokeStyle=selected?"rgba(220,195,255,.75)":"rgba(185,154,232,.2)";ctx.lineWidth=selected?2:1;ctx.stroke();}
+    ctx.fillStyle="#241932";ctx.fillRect(t.x-16,t.y-16,32,32);ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.strokeRect(t.x-16,t.y-16,32,32);
+    ctx.fillStyle=s.color;ctx.fillRect(t.x-8,t.y-8,16,16);ctx.fillStyle="#E5DDF0";ctx.fillRect(t.x-3,t.y-3,6,6);
+    if(t.level>1){ctx.fillStyle="#F0D58A";ctx.font="11px Georgia";ctx.fillText("+"+(t.level-1),t.x+12,t.y-12);}
+  });
+}
+function drawEnemies(){
+  if(!currentRun)return;
+  currentRun.enemies.forEach(e=>{
+    const t=enemyTypes[e.type],size=t.size;ctx.fillStyle="rgba(0,0,0,.3)";ctx.fillRect(e.x-size,e.y+size/2,size*2,5);
+    ctx.fillStyle=t.color;ctx.fillRect(e.x-size/2,e.y-size/2,size,size);ctx.fillStyle="#241932";ctx.fillRect(e.x-4,e.y-3,3,3);ctx.fillRect(e.x+2,e.y-3,3,3);
+    const w=e.type==="treant"?64:42,p=Math.max(0,e.health/e.maxHealth),barY=e.y-size-15;
+    ctx.fillStyle="#241932";ctx.fillRect(e.x-w/2,barY,w,7);ctx.fillStyle=p>.5?"#75C77A":"#D66B75";ctx.fillRect(e.x-w/2,barY,w*p,7);
+    ctx.font="10px Arial";ctx.textAlign="center";ctx.fillStyle="#FFFFFF";ctx.strokeStyle="#241932";ctx.lineWidth=2;
+    const hp=Math.max(0,Math.ceil(e.health))+"/"+Math.ceil(e.maxHealth);ctx.strokeText(hp,e.x,barY-3);ctx.fillText(hp,e.x,barY-3);
+    if(e.type==="treant"){ctx.font="12px Georgia";ctx.fillStyle="#F0D58A";ctx.fillText("ANCIENT TREANT",e.x,e.y-size-25);}
+  });ctx.textAlign="left";
+}
+function drawProjectiles(){
+  if(!currentRun)return;currentRun.projectiles.forEach(p=>{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();});
+}
+function drawPlacementPreview(){
+  if(!pointerWorld||!currentRun||!selectedTower)return;
+  const s=towerTypes[selectedTower];const valid=canBuild(pointerWorld.x,pointerWorld.y,false);
+  ctx.beginPath();ctx.arc(pointerWorld.x,pointerWorld.y,s.range,0,Math.PI*2);ctx.fillStyle=valid?"rgba(185,154,232,.09)":"rgba(214,107,117,.09)";ctx.fill();
+  ctx.strokeStyle=valid?"rgba(185,154,232,.65)":"rgba(214,107,117,.8)";ctx.lineWidth=2;ctx.stroke();
+  ctx.globalAlpha=.65;ctx.fillStyle=valid?s.color:"#D66B75";ctx.fillRect(pointerWorld.x-14,pointerWorld.y-14,28,28);ctx.globalAlpha=1;
+}
+function getTotalPathLength(){let n=0;for(let i=0;i<pathPoints.length-1;i++)n+=Math.hypot(pathPoints[i+1].x-pathPoints[i].x,pathPoints[i+1].y-pathPoints[i].y);return n;}
+const totalPathLength=getTotalPathLength();
+function getPathPosition(progress){
+  let d=progress*totalPathLength;for(let i=0;i<pathPoints.length-1;i++){const a=pathPoints[i],b=pathPoints[i+1],len=Math.hypot(b.x-a.x,b.y-a.y);if(d<=len){const t=d/len;return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}d-=len;}return pathPoints[pathPoints.length-1];
+}
+function createWaveQueue(wave){
+  if(currentRun.area===3&&wave===5)return ["treant"];
+  const count=5+wave*2+(currentRun.area-1)*3,queue=[];
+  for(let i=0;i<count;i++){
+    if(currentRun.area>=2&&wave>=3&&i%4===0)queue.push("brute");
+    else if(wave>=2&&i%5===2)queue.push("riftwing");
+    else if(wave>=3&&i%4===0)queue.push("brute");
+    else queue.push("riftling");
+  }return queue;
+}
+function startWave(){
+  if(!currentRun||currentRun.waveActive||currentRun.gameOver||currentRun.currentWave>=5)return;
+  currentRun.currentWave++;currentRun.waveActive=true;currentRun.waitingForWave=false;currentRun.spawnQueue=createWaveQueue(currentRun.currentWave);currentRun.enemies=[];currentRun.projectiles=[];spawnTimer=0;
+  if(currentRun.area===3&&currentRun.currentWave===5){setWaveStatus("AREA BOSS");showBattleMessage("THE ANCIENT TREANT HAS AWAKENED!");}
+  else{setWaveStatus("WAVE "+currentRun.currentWave+" IN PROGRESS");showBattleMessage("WAVE "+currentRun.currentWave+" HAS BEGUN");}
+  updateGameDisplay();
+}
+function spawnEnemy(type){
+  const d=enemyTypes[type],difficulty=settings.difficulty||"normal";let mult=areaData().enemyScale*(1+currentRun.currentWave*.06);
+  if(difficulty==="easy")mult*=.8;if(difficulty==="hard")mult*=1.25;
+  const health=d.health*mult;currentRun.enemies.push({type,x:pathPoints[0].x,y:pathPoints[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage});
+}
+function updateEnemies(dt){
+  if(currentRun.waveActive&&currentRun.spawnQueue.length){spawnTimer-=dt;if(spawnTimer<=0){spawnEnemy(currentRun.spawnQueue.shift());spawnTimer=currentRun.currentWave===5&&currentRun.area===3?1.2:.85;}}
+  currentRun.enemies.forEach(e=>{e.progress+=enemyTypes[e.type].speed*dt/totalPathLength;const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;});
+  currentRun.enemies=currentRun.enemies.filter(e=>{
+    if(e.progress>=1){currentRun.castleHealth=Math.max(0,currentRun.castleHealth-e.damage);updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
+  });
+}
+function updateTowers(dt){
+  currentRun.towers.forEach(t=>{
+    const s=getTowerStats(t);t.cooldown-=dt;if(t.cooldown>0)return;
+    let target=null,best=-1;currentRun.enemies.forEach(e=>{if(Math.hypot(e.x-t.x,e.y-t.y)<=s.range&&e.progress>best){best=e.progress;target=e;}});
+    if(!target)return;currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage,color:s.color,speed:s.projectileSpeed,towerType:t.type});t.cooldown=s.cooldown;
+  });
+}
+function damageEnemy(e,dmg){
+  e.health-=dmg;if(e.health<=0&&!e.rewarded){e.rewarded=true;let bonus=1+currentRun.cards.filter(c=>c==="greed").length*.15;currentRun.gold+=Math.round(e.reward*bonus);updateGameDisplay();}
+}
+function updateProjectiles(dt){
+  currentRun.projectiles=currentRun.projectiles.filter(p=>{
+    const e=p.target;if(!currentRun.enemies.includes(e)||e.health<=0)return false;
+    const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d<9){damageEnemy(e,p.damage);
+      if(p.towerType==="cannon")currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48)damageEnemy(other,p.damage*.5);});
+      return false;
+    }p.x+=dx/d*p.speed*dt;p.y+=dy/d*p.speed*dt;return true;
+  });currentRun.enemies=currentRun.enemies.filter(e=>e.health>0);
+}
+function checkWaveCompletion(){
+  if(!currentRun.waveActive||currentRun.spawnQueue.length||currentRun.enemies.length)return;
+  currentRun.waveActive=false;currentRun.projectiles=[];updateGameDisplay();
+  if(currentRun.currentWave===5){showCardSelection();return;}
+  currentRun.waitingForWave=true;currentRun.nextWaveTimer=15;setWaveStatus("NEXT WAVE IN 15");showBattleMessage("WAVE CLEARED — NEXT WAVE STARTS AUTOMATICALLY IN 15 SECONDS");
+}
+function endGame(){
+  if(currentRun.gameOver)return;currentRun.gameOver=true;currentRun.waveActive=false;stopGameLoop();setWaveStatus("DEFEAT");showBattleMessage("THE CASTLE HAS FALLEN");
+  document.getElementById("result-eyebrow").textContent="THE FORTRESS HAS FALLEN";document.getElementById("result-title").textContent="DEFEAT";
+  document.getElementById("result-description").textContent="You reached area "+currentRun.area+", wave "+currentRun.currentWave+". Your defense has ended.";
+  document.getElementById("result-continue").textContent="RETURN TO MENU";document.getElementById("result-continue").dataset.action="menu";document.getElementById("result-overlay").hidden=false;
+}
+function showCardSelection(){
+  pendingCards=[...cardPool].sort(()=>Math.random()-.5).slice(0,3);
+  const container=document.getElementById("card-options");container.innerHTML="";
+  pendingCards.forEach(card=>{
+    const button=document.createElement("button");button.className="reward-card";button.innerHTML=
+      '<span class="card-rarity">'+card.rarity+'</span><span class="card-icon">'+card.icon+'</span><strong>'+card.name+'</strong><span class="card-type">'+card.type+'</span><p>'+card.description+'</p><span class="card-pick">CHOOSE CARD</span>';
+    button.addEventListener("click",()=>chooseCard(card.id));container.appendChild(button);
+  });
+  document.getElementById("card-area-label").textContent="AREA 0"+currentRun.area+" CLEARED";
+  document.getElementById("card-overlay").hidden=false;stopGameLoop();
+}
+function chooseCard(id){
+  if(!currentRun||!pendingCards.some(c=>c.id===id))return;
+  currentRun.cards.push(id);
+  if(id==="walls"){currentRun.maxCastleHealth+=20;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+20);}
+  document.getElementById("card-overlay").hidden=true;
+  if(currentRun.area<3){
+    currentRun.area++;currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnQueue=[];
+    currentRun.waitingForWave=true;currentRun.nextWaveTimer=15;selectedTowerEntity=null;updateAreaLabels();updateGameDisplay();
+    setWaveStatus("NEXT WAVE IN 15");showBattleMessage("WELCOME TO "+areaData().name.toUpperCase()+" — BUILD YOUR DEFENSE");
     startGameLoop();
+  }else{
+    currentRun.runFinished=true;showRestScreen();
+  }
 }
-
-/* =========================================
-   HUD
-========================================= */
-
-function updateGameDisplay() {
-    if (!currentRun) return;
-
-    document.getElementById("gold-display").textContent =
-        currentRun.gold;
-
-    document.getElementById("health-display").textContent =
-        currentRun.castleHealth + " / " + currentRun.maxCastleHealth;
-
-    document.getElementById("wave-display").textContent =
-        currentRun.currentWave + " / " + currentRun.totalWaves;
-
-    document.getElementById("start-wave").disabled =
-        currentRun.waveActive || currentRun.gameOver;
-
-    updateTowerButtons();
+function gameLoop(timestamp){
+  if(!gameRunning||!currentRun)return;const dt=Math.min(Math.max((timestamp-lastFrameTime)/1000,0),.033);lastFrameTime=timestamp;
+  if(currentRun.waitingForWave&&!currentRun.waveActive&&!currentRun.gameOver){
+    currentRun.nextWaveTimer-=dt;const left=Math.max(0,Math.ceil(currentRun.nextWaveTimer));setWaveStatus("NEXT WAVE IN "+left);
+    if(currentRun.nextWaveTimer<=0)startWave();
+  }
+  if(currentRun.waveActive){updateEnemies(dt);updateTowers(dt);updateProjectiles(dt);checkWaveCompletion();}
+  drawBattlefield();if(gameRunning)animationFrame=requestAnimationFrame(gameLoop);
 }
-
-function updateTowerButtons() {
-    document.querySelectorAll(".tower-button").forEach(button => {
-        const type = button.dataset.tower;
-
-        button.disabled =
-            !currentRun ||
-            currentRun.gold < towerTypes[type].cost ||
-            currentRun.gameOver;
-    });
+function startGameLoop(){stopGameLoop();gameRunning=true;lastFrameTime=performance.now();animationFrame=requestAnimationFrame(gameLoop);}
+function stopGameLoop(){gameRunning=false;if(animationFrame!==null){cancelAnimationFrame(animationFrame);animationFrame=null;}}
+function isOnPath(x,y){
+  for(let i=0;i<pathPoints.length-1;i++){const a=pathPoints[i],b=pathPoints[i+1],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;let t=((x-a.x)*dx+(y-a.y)*dy)/l;t=Math.max(0,Math.min(1,t));if(Math.hypot(x-(a.x+t*dx),y-(a.y+t*dy))<38)return true;}return false;
 }
-
-function showBattleMessage(message) {
-    document.getElementById("battle-message").textContent = message;
+function canBuild(x,y,checkGold=true){
+  if(x<22||x>938||y<22||y>518||isOnPath(x,y)||Math.hypot(x-75,y-270)<62||(x>830&&y>200&&y<340))return false;
+  if(currentRun.towers.some(t=>Math.hypot(x-t.x,y-t.y)<37))return false;
+  return !checkGold||currentRun.gold>=towerTypes[selectedTower].cost;
 }
-
-function setWaveStatus(message) {
-    document.getElementById("wave-status").textContent = message;
+function canvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height};}
+function handleBattlefieldClick(e){
+  const p=canvasPoint(e);
+  const hit=[...currentRun.towers].reverse().find(t=>Math.abs(p.x-t.x)<=20&&Math.abs(p.y-t.y)<=20);
+  if(hit){selectedTowerEntity=hit;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();showBattleMessage(towerTypes[hit.type].name.toUpperCase()+" SELECTED");return;}
+  if(!selectedTower){selectedTowerEntity=null;updateTowerPanel();return;}
+  const type=towerTypes[selectedTower];if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
+  if(!canBuild(p.x,p.y)){showBattleMessage("THAT LOCATION IS BLOCKED — TRY ANOTHER OPEN AREA");return;}
+  currentRun.gold-=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}});
+  updateGameDisplay();showBattleMessage(type.name.toUpperCase()+" BUILT");
 }
-
-
-/* =========================================
-   BATTLEFIELD DRAWING
-========================================= */
-
-function drawBattlefield() {
-    ctx.fillStyle = "#263B2B";
-    ctx.fillRect(0, 0, 960, 540);
-
-    drawGroundTexture();
-    drawPath();
-    drawTrees();
-    drawPortal();
-    drawCastle();
-    drawTowers();
-    drawEnemies();
-    drawProjectiles();
+function selectTower(type){
+  if(!towerTypes[type])return;selectedTower=type;selectedTowerEntity=null;
+  document.querySelectorAll(".tower-button").forEach(b=>b.classList.toggle("selected",b.dataset.tower===type));
+  updateTowerPanel();showBattleMessage(type.toUpperCase()+" SELECTED — CLICK AN OPEN AREA TO BUILD");
 }
-
-function drawGroundTexture() {
-    for (let x = 0; x < 960; x += 32) {
-        for (let y = 0; y < 540; y += 32) {
-            const variation = (x * 7 + y * 13) % 5;
-
-            if (variation === 0) {
-                ctx.fillStyle = "#304632";
-                ctx.fillRect(x, y, 16, 16);
-            } else if (variation === 1) {
-                ctx.fillStyle = "#203326";
-                ctx.fillRect(x + 12, y + 8, 12, 12);
-            }
-        }
-    }
+function upgradeSelectedTower(stat){
+  const t=selectedTowerEntity;if(!t||!currentRun)return;const s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*45;
+  if(t.level>=4){showBattleMessage("THIS TOWER IS FULLY UPGRADED");return;}
+  if(currentRun.gold<cost){showBattleMessage("NOT ENOUGH GOLD FOR THIS UPGRADE");return;}
+  currentRun.gold-=cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
 }
-
-function drawPath() {
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    ctx.beginPath();
-
-    pathPoints.forEach((point, index) => {
-        if (index === 0) {
-            ctx.moveTo(point.x, point.y);
-        } else {
-            ctx.lineTo(point.x, point.y);
-        }
-    });
-
-    ctx.strokeStyle = "#382C29";
-    ctx.lineWidth = 68;
-    ctx.stroke();
-
-    ctx.strokeStyle = "#776047";
-    ctx.lineWidth = 54;
-    ctx.stroke();
-
-    ctx.strokeStyle = "#9B8060";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([12, 15]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+function updateTowerPanel(){
+  const panel=document.getElementById("tower-info-panel");if(!panel)return;
+  if(!selectedTowerEntity){panel.innerHTML='<div class="tower-panel-empty"><span class="panel-symbol">✧</span><strong> TOWER DETAILS</strong><p>Select a placed tower to view its statistics and upgrades. Select a tower below to build.</p></div>';return;}
+  const t=selectedTowerEntity,s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*45,disabled=t.level>=4||currentRun.gold<cost;
+  panel.innerHTML='<div class="tower-panel-heading"><span class="panel-symbol">'+(t.type==="archer"?"♜":t.type==="arcane"?"✧":"◆")+'</span><div><small>LEVEL '+t.level+'</small><strong>'+towerTypes[t.type].name+'</strong></div></div>'+
+    '<div class="tower-stat"><span>Damage</span><strong>'+Math.round(s.damage)+'</strong></div>'+
+    '<div class="tower-stat"><span>Cooldown</span><strong>'+s.cooldown.toFixed(2)+'s</strong></div>'+
+    '<div class="tower-stat"><span>Range</span><strong>'+Math.round(s.range)+' px</strong></div>'+
+    '<p class="panel-upgrade-title">UPGRADE · '+cost+' GOLD</p>'+
+    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="damage">Increase damage <span>+22%</span></button>'+
+    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="range">Increase range <span>+15%</span></button>'+
+    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="speed">Faster attacks <span>+18%</span></button>'+
+    '<p class="panel-hint">'+(t.level>=4?"MAX LEVEL REACHED":"Each upgrade increases the tower level. Maximum level: 4.")+'</p>';
+  panel.querySelectorAll("[data-upgrade]").forEach(b=>b.addEventListener("click",()=>upgradeSelectedTower(b.dataset.upgrade)));
 }
-
-function drawTrees() {
-    const trees = [
-        [70, 70], [145, 90], [90, 170],
-        [330, 55], [390, 65], [520, 70],
-        [610, 90], [780, 75], [900, 80],
-        [100, 390], [150, 465], [320, 470],
-        [540, 490], [800, 450], [900, 400],
-        [560, 230], [820, 170], [350, 330],
-        [110, 330], [760, 340], [920, 180]
-    ];
-
-    trees.forEach(([x, y]) => {
-        ctx.fillStyle = "#17251B";
-        ctx.fillRect(x - 15, y - 12, 38, 34);
-
-        ctx.fillStyle = "#152C20";
-        ctx.fillRect(x - 18, y - 25, 36, 35);
-
-        ctx.fillStyle = "#315438";
-        ctx.fillRect(x - 12, y - 30, 25, 25);
-
-        ctx.fillStyle = "#426443";
-        ctx.fillRect(x - 5, y - 25, 12, 12);
-
-        ctx.fillStyle = "#64472F";
-        ctx.fillRect(x - 5, y + 5, 10, 15);
-    });
+canvas.addEventListener("pointermove",e=>{if(!gameScreenIsHidden())pointerWorld=canvasPoint(e);});
+canvas.addEventListener("pointerleave",()=>pointerWorld=null);
+canvas.addEventListener("pointerdown",e=>{if(!currentRun||currentRun.gameOver||gameScreenIsHidden())return;e.preventDefault();handleBattlefieldClick(e);});
+canvas.addEventListener("contextmenu",e=>{e.preventDefault();selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();});
+function gameScreenIsHidden(){const s=document.getElementById("game-screen");return !s||s.hidden;}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&& !gameScreenIsHidden()){selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();}});
+function updateRestScreen(){
+  if(!currentRun)return;document.getElementById("rest-gold").textContent=currentRun.gold;
+  document.getElementById("rest-health").textContent=currentRun.castleHealth+" / "+currentRun.maxCastleHealth;
+  document.getElementById("rest-towers").textContent=currentRun.towers.length;
+  document.getElementById("rest-heal").disabled=currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth;
+  document.getElementById("rest-upgrade").disabled=currentRun.gold<75;
 }
-
-function drawPortal() {
-    const pulse = 1 + Math.sin(performance.now() / 300) * 0.12;
-
-    ctx.fillStyle = "rgba(129,85,184,0.15)";
-    ctx.beginPath();
-    ctx.arc(75, 270, 48 * pulse, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "#62447F";
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.ellipse(75, 270, 24, 38, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = "#21102F";
-    ctx.beginPath();
-    ctx.ellipse(75, 270, 18, 31, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "#B99AE8";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(75, 270, 15, 27, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = "#B99AE8";
-    ctx.fillRect(70, 250, 10, 40);
+function healAtRestSite(){if(currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth)return;currentRun.gold-=40;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateRestScreen();}
+function upgradeAtRestSite(){if(currentRun.gold<75)return;currentRun.gold-=75;currentRun.towerDamageBonus+=5;updateRestScreen();}
+function showRestScreen(){
+  stopGameLoop();document.getElementById("main-menu").style.display="none";document.getElementById("preparation-screen").hidden=true;
+  document.getElementById("game-screen").hidden=true;document.getElementById("rest-screen").hidden=false;document.getElementById("result-overlay").hidden=true;
+  document.getElementById("rest-area-label").textContent="AFTER THREE AREAS · THE OLD WAYSTONE";
+  document.getElementById("rest-finish-copy").textContent="You survived all 15 waves across three regions. Your run is complete.";
+  updateRestScreen();
 }
-
-function drawCastle() {
-    ctx.fillStyle = "#17251B";
-    ctx.fillRect(855, 225, 85, 100);
-
-    ctx.fillStyle = "#655A70";
-    ctx.fillRect(860, 235, 70, 70);
-
-    ctx.fillStyle = "#98899E";
-    ctx.fillRect(870, 245, 50, 50);
-
-    ctx.fillStyle = "#4A3B55";
-    ctx.fillRect(852, 220, 22, 35);
-    ctx.fillRect(916, 220, 22, 35);
-    ctx.fillRect(852, 285, 22, 35);
-    ctx.fillRect(916, 285, 22, 35);
-
-    ctx.fillStyle = "#B99AE8";
-    ctx.fillRect(852, 216, 22, 6);
-    ctx.fillRect(916, 216, 22, 6);
-
-    ctx.fillStyle = "#241932";
-    ctx.fillRect(885, 275, 22, 30);
+function hideAllScreens(){
+  document.getElementById("main-menu").style.display="none";document.getElementById("preparation-screen").hidden=true;
+  document.getElementById("game-screen").hidden=true;document.getElementById("rest-screen").hidden=true;
 }
-
-
-/* =========================================
-   TOWER DRAWING
-========================================= */
-
-function drawTowers() {
-    if (!currentRun) return;
-
-    currentRun.towers.forEach(tower => {
-        const type = towerTypes[tower.type];
-
-        if (typeof settings !== "undefined" && settings.towerRanges) {
-            ctx.beginPath();
-            ctx.arc(tower.x, tower.y, type.range, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(185,154,232,0.07)";
-            ctx.fill();
-
-            ctx.strokeStyle = "rgba(185,154,232,0.2)";
-            ctx.stroke();
-        }
-
-        ctx.fillStyle = "#241932";
-        ctx.fillRect(tower.x - 16, tower.y - 16, 32, 32);
-
-        ctx.strokeStyle = type.color;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(tower.x - 16, tower.y - 16, 32, 32);
-
-        ctx.fillStyle = type.color;
-        ctx.fillRect(tower.x - 8, tower.y - 8, 16, 16);
-
-        ctx.fillStyle = "#E5DDF0";
-        ctx.fillRect(tower.x - 3, tower.y - 3, 6, 6);
-
-        if (tower.level > 1) {
-            ctx.fillStyle = "#F0D58A";
-            ctx.font = "11px Georgia";
-            ctx.fillText("+" + (tower.level - 1), tower.x + 12, tower.y - 12);
-        }
-    });
-}
-
-
-/* =========================================
-   ENEMY DRAWING
-========================================= */
-
-function drawEnemies() {
-    if (!currentRun) return;
-
-    currentRun.enemies.forEach(enemy => {
-        const type = enemyTypes[enemy.type];
-        const size = type.size;
-
-        // Enemy shadow
-        ctx.fillStyle = "rgba(0,0,0,0.3)";
-        ctx.fillRect(enemy.x - size, enemy.y + size / 2, size * 2, 5);
-
-        // Enemy body
-        ctx.fillStyle = type.color;
-        ctx.fillRect(
-            enemy.x - size / 2,
-            enemy.y - size / 2,
-            size,
-            size
-        );
-
-        // Eyes
-        ctx.fillStyle = "#241932";
-        ctx.fillRect(enemy.x - 4, enemy.y - 3, 3, 3);
-        ctx.fillRect(enemy.x + 2, enemy.y - 3, 3, 3);
-
-        // Health bar
-        const barWidth = enemy.type === "treant" ? 60 : 34;
-        const percent = Math.max(0, enemy.health / enemy.maxHealth);
-
-        ctx.fillStyle = "#241932";
-        ctx.fillRect(
-            enemy.x - barWidth / 2,
-            enemy.y - size - 11,
-            barWidth,
-            6
-        );
-
-        ctx.fillStyle = percent > 0.5 ? "#75C77A" : "#D66B75";
-        ctx.fillRect(
-            enemy.x - barWidth / 2,
-            enemy.y - size - 11,
-            barWidth * percent,
-            6
-        );
-
-        if (enemy.type === "treant") {
-            ctx.fillStyle = "#F0D58A";
-            ctx.font = "12px Georgia";
-            ctx.textAlign = "center";
-            ctx.fillText("ANCIENT TREANT", enemy.x, enemy.y - size - 17);
-            ctx.textAlign = "left";
-        }
-    });
-}
-
-
-/* =========================================
-   PROJECTILE DRAWING
-========================================= */
-
-function drawProjectiles() {
-    if (!currentRun) return;
-
-    currentRun.projectiles.forEach(projectile => {
-        ctx.fillStyle = projectile.color;
-        ctx.beginPath();
-        ctx.arc(projectile.x, projectile.y, 5, 0, Math.PI * 2);
-        ctx.fill();
-    });
-}
-
-
-/* =========================================
-   PATH CALCULATIONS
-========================================= */
-
-function getTotalPathLength() {
-    let total = 0;
-
-    for (let i = 0; i < pathPoints.length - 1; i++) {
-        total += Math.hypot(
-            pathPoints[i + 1].x - pathPoints[i].x,
-            pathPoints[i + 1].y - pathPoints[i].y
-        );
-    }
-
-    return total;
-}
-
-const totalPathLength = getTotalPathLength();
-
-function getPathPosition(progress) {
-    let targetDistance = progress * totalPathLength;
-
-    for (let i = 0; i < pathPoints.length - 1; i++) {
-        const a = pathPoints[i];
-        const b = pathPoints[i + 1];
-
-        const length = Math.hypot(b.x - a.x, b.y - a.y);
-
-        if (targetDistance <= length) {
-            const t = targetDistance / length;
-
-            return {
-                x: a.x + (b.x - a.x) * t,
-                y: a.y + (b.y - a.y) * t
-            };
-        }
-
-        targetDistance -= length;
-    }
-
-    return pathPoints[pathPoints.length - 1];
-}
-
-
-/* =========================================
-   WAVE COMPOSITIONS
-========================================= */
-
-function createWaveQueue(wave) {
-    const queue = [];
-
-    if (wave === 15) {
-        return ["treant"];
-    }
-
-    const count = 5 + wave * 2;
-
-    for (let i = 0; i < count; i++) {
-        if (wave >= 9 && i % 3 === 0) {
-            queue.push("brute");
-        } else if (wave >= 6 && i % 3 === 1) {
-            queue.push("riftwing");
-        } else if (wave >= 3 && i % 4 === 0) {
-            queue.push("brute");
-        } else {
-            queue.push("riftling");
-        }
-    }
-
-    return queue;
-}
-
-function startWave() {
-    if (!currentRun || currentRun.waveActive || currentRun.gameOver) return;
-    if (currentRun.currentWave >= currentRun.totalWaves) return;
-
-    currentRun.currentWave++;
-    currentRun.waveActive = true;
-    currentRun.spawnQueue = createWaveQueue(currentRun.currentWave);
-    currentRun.enemies = [];
-    currentRun.projectiles = [];
-
-    spawnTimer = 0;
-
-    document.getElementById("start-wave").disabled = true;
-
-    if (currentRun.currentWave === 15) {
-        setWaveStatus("BOSS WAVE");
-        showBattleMessage("THE ANCIENT TREANT HAS AWAKENED!");
-    } else {
-        setWaveStatus("WAVE " + currentRun.currentWave + " IN PROGRESS");
-        showBattleMessage("WAVE " + currentRun.currentWave + " HAS BEGUN");
-    }
-
-    updateGameDisplay();
-}
-
-function spawnEnemy(type) {
-    const data = enemyTypes[type];
-    const difficulty = (typeof settings !== "undefined" && settings.difficulty) || "normal";
-
-    let multiplier = 1 + currentRun.currentWave * 0.055;
-
-    if (difficulty === "easy") multiplier *= 0.8;
-    if (difficulty === "hard") multiplier *= 1.25;
-
-    const health = data.health * multiplier;
-
-    currentRun.enemies.push({
-        type,
-        x: pathPoints[0].x,
-        y: pathPoints[0].y,
-        health,
-        maxHealth: health,
-        progress: 0,
-        reward: data.reward,
-        damage: data.damage
-    });
-}
-
-
-/* =========================================
-   ENEMY MOVEMENT
-========================================= */
-
-function updateEnemies(deltaTime) {
-    if (!currentRun) return;
-
-    if (currentRun.waveActive && currentRun.spawnQueue.length > 0) {
-        spawnTimer -= deltaTime;
-
-        if (spawnTimer <= 0) {
-            spawnEnemy(currentRun.spawnQueue.shift());
-            spawnTimer = currentRun.currentWave === 15 ? 0 : 0.9;
-        }
-    }
-
-    currentRun.enemies.forEach(enemy => {
-        const type = enemyTypes[enemy.type];
-
-        enemy.progress += type.speed * deltaTime / totalPathLength;
-
-        const position = getPathPosition(enemy.progress);
-        enemy.x = position.x;
-        enemy.y = position.y;
-    });
-
-    currentRun.enemies = currentRun.enemies.filter(enemy => {
-        if (enemy.progress >= 1) {
-            currentRun.castleHealth = Math.max(
-                0,
-                currentRun.castleHealth - enemy.damage
-            );
-
-            updateGameDisplay();
-
-            if (currentRun.castleHealth <= 0) {
-                endGame();
-            }
-
-            return false;
-        }
-
-        return enemy.health > 0;
-    });
-}
-
-
-/* =========================================
-   TOWER TARGETING AND ATTACKS
-========================================= */
-
-function updateTowers(deltaTime) {
-    if (!currentRun) return;
-
-    currentRun.towers.forEach(tower => {
-        const type = towerTypes[tower.type];
-
-        tower.cooldown -= deltaTime;
-
-        if (tower.cooldown > 0) return;
-
-        let target = null;
-        let highestProgress = -1;
-
-        currentRun.enemies.forEach(enemy => {
-            const distance = Math.hypot(
-                enemy.x - tower.x,
-                enemy.y - tower.y
-            );
-
-            if (
-                distance <= type.range &&
-                enemy.progress > highestProgress
-            ) {
-                highestProgress = enemy.progress;
-                target = enemy;
-            }
-        });
-
-        if (!target) return;
-
-        currentRun.projectiles.push({
-            x: tower.x,
-            y: tower.y,
-            target,
-            damage: type.damage + currentRun.towerDamageBonus,
-            color: type.color,
-            speed: type.projectileSpeed,
-            towerType: tower.type
-        });
-
-        tower.cooldown = 1 / type.fireRate;
-    });
-}
-
-
-/* =========================================
-   PROJECTILE COLLISION
-========================================= */
-
-function damageEnemy(enemy, damage) {
-    enemy.health -= damage;
-
-    if (enemy.health <= 0 && !enemy.rewarded) {
-        enemy.rewarded = true;
-        currentRun.gold += enemy.reward;
-
-        updateGameDisplay();
-    }
-}
-
-function updateProjectiles(deltaTime) {
-    if (!currentRun) return;
-
-    currentRun.projectiles = currentRun.projectiles.filter(projectile => {
-        const target = projectile.target;
-
-        if (!currentRun.enemies.includes(target) || target.health <= 0) {
-            return false;
-        }
-
-        const dx = target.x - projectile.x;
-        const dy = target.y - projectile.y;
-        const distance = Math.hypot(dx, dy);
-
-        if (distance < 9) {
-            damageEnemy(target, projectile.damage);
-
-            // Cannon splash damage
-            if (projectile.towerType === "cannon") {
-                currentRun.enemies.forEach(enemy => {
-                    if (enemy !== target) {
-                        const splashDistance = Math.hypot(
-                            enemy.x - target.x,
-                            enemy.y - target.y
-                        );
-
-                        if (splashDistance < 48) {
-                            damageEnemy(enemy, projectile.damage * 0.5);
-                        }
-                    }
-                });
-            }
-
-            return false;
-        }
-
-        const movement = projectile.speed * deltaTime;
-
-        projectile.x += dx / distance * movement;
-        projectile.y += dy / distance * movement;
-
-        return true;
-    });
-
-    currentRun.enemies = currentRun.enemies.filter(enemy => {
-        return enemy.health > 0;
-    });
-}
-
-
-/* =========================================
-   WAVE COMPLETION
-========================================= */
-
-function checkWaveCompletion() {
-    if (!currentRun || !currentRun.waveActive) return;
-
-    if (
-        currentRun.spawnQueue.length === 0 &&
-        currentRun.enemies.length === 0
-    ) {
-        currentRun.waveActive = false;
-        currentRun.projectiles = [];
-
-        updateGameDisplay();
-
-        if (currentRun.currentWave === 15) {
-            finishRegion();
-            return;
-        }
-
-        document.getElementById("start-wave").disabled = false;
-
-        setWaveStatus("WAVE COMPLETE");
-        showBattleMessage(
-            "WAVE " + currentRun.currentWave + " COMPLETE - PREPARE FOR THE NEXT WAVE"
-        );
-    }
-}
-
-
-/* =========================================
-   GAME RESULTS
-========================================= */
-
-function endGame() {
-    if (currentRun.gameOver) return;
-
-    currentRun.gameOver = true;
-    currentRun.waveActive = false;
-
-    stopGameLoop();
-
-    setWaveStatus("DEFEAT");
-    showBattleMessage("THE CASTLE HAS FALLEN");
-
-    document.getElementById("result-eyebrow").textContent =
-        "THE FORTRESS HAS FALLEN";
-
-    document.getElementById("result-title").textContent = "DEFEAT";
-
-    document.getElementById("result-description").textContent =
-        "You reached wave " + currentRun.currentWave + ". Your defense has ended.";
-
-    document.getElementById("result-continue").textContent = "RETURN TO MENU";
-    document.getElementById("result-continue").dataset.action = "menu";
-
-    document.getElementById("result-overlay").hidden = false;
-}
-
-function finishRegion() {
-    currentRun.gameOver = true;
-    currentRun.waveActive = false;
-
-    stopGameLoop();
-
-    setWaveStatus("REGION COMPLETE");
-    showBattleMessage("THE ANCIENT TREANT HAS BEEN DEFEATED!");
-
-    document.getElementById("result-eyebrow").textContent =
-        "THE RIFT HAS BEEN SEALED";
-
-    document.getElementById("result-title").textContent = "VICTORY";
-
-    document.getElementById("result-description").textContent =
-        "You survived all 15 waves and defeated the Ancient Treant.";
-
-    document.getElementById("result-continue").textContent =
-        "VISIT RESTING SITE";
-
-    document.getElementById("result-continue").dataset.action = "rest";
-
-    document.getElementById("result-overlay").hidden = false;
-}
-
-
-/* =========================================
-   GAME LOOP
-========================================= */
-
-function gameLoop(timestamp) {
-    if (!gameRunning || !currentRun) return;
-
-    const deltaTime = Math.min(
-        Math.max((timestamp - lastFrameTime) / 1000, 0),
-        0.033
-    );
-
-    lastFrameTime = timestamp;
-
-    if (currentRun.waveActive) {
-        updateEnemies(deltaTime);
-        updateTowers(deltaTime);
-        updateProjectiles(deltaTime);
-        checkWaveCompletion();
-    }
-
-    drawBattlefield();
-
-    if (gameRunning) {
-        animationFrame = requestAnimationFrame(gameLoop);
-    }
-}
-
-function startGameLoop() {
-    stopGameLoop();
-
-    gameRunning = true;
-    lastFrameTime = performance.now();
-
-    animationFrame = requestAnimationFrame(gameLoop);
-}
-
-function stopGameLoop() {
-    gameRunning = false;
-
-    if (animationFrame !== null) {
-        cancelAnimationFrame(animationFrame);
-        animationFrame = null;
-    }
-}
-
-
-/* =========================================
-   BUILDING VALIDATION
-========================================= */
-
-function isOnPath(x, y) {
-    for (let i = 0; i < pathPoints.length - 1; i++) {
-        const a = pathPoints[i];
-        const b = pathPoints[i + 1];
-
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-
-        const lengthSquared = dx * dx + dy * dy;
-
-        let t = ((x - a.x) * dx + (y - a.y) * dy) / lengthSquared;
-        t = Math.max(0, Math.min(1, t));
-
-        const nearestX = a.x + t * dx;
-        const nearestY = a.y + t * dy;
-
-        if (Math.hypot(x - nearestX, y - nearestY) < 43) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-function handleBattlefieldClick(event) {
-    if (!currentRun || currentRun.gameOver) return;
-
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-
-    const x = (event.clientX - rect.left) * (canvas.width / rect.width);
-    const y = (event.clientY - rect.top) * (canvas.height / rect.height);
-
-    const type = towerTypes[selectedTower];
-    if (!type) return;
-
-    if (currentRun.gold < type.cost) {
-        showBattleMessage("NOT ENOUGH GOLD");
-        return;
-    }
-
-    if (isOnPath(x, y)) {
-        showBattleMessage("YOU CANNOT BUILD ON THE PATH");
-        return;
-    }
-
-    if (
-        Math.hypot(x - 75, y - 270) < 65 ||
-        (x > 830 && y > 200 && y < 340) ||
-        x < 25 || x > 935 || y < 25 || y > 515
-    ) {
-        showBattleMessage("THAT AREA IS BLOCKED");
-        return;
-    }
-
-    const tooClose = currentRun.towers.some(tower => {
-        return Math.hypot(x - tower.x, y - tower.y) < 48;
-    });
-
-    if (tooClose) {
-        showBattleMessage("TOO CLOSE TO ANOTHER TOWER");
-        return;
-    }
-
-    currentRun.gold -= type.cost;
-
-    currentRun.towers.push({
-        type: selectedTower,
-        x,
-        y,
-        cooldown: 0,
-        level: 1
-    });
-
-    updateGameDisplay();
-    drawBattlefield();
-
-    showBattleMessage(type.name.toUpperCase() + " TOWER BUILT");
-}
-
-
-/* =========================================
-   TOWER SELECTION
-========================================= */
-
-function selectTower(type) {
-    if (!towerTypes[type]) return;
-
-    selectedTower = type;
-
-    document.querySelectorAll(".tower-button").forEach(button => {
-        button.classList.toggle(
-            "selected",
-            button.dataset.tower === type
-        );
-    });
-
-    showBattleMessage(towerTypes[type].name.toUpperCase() + " SELECTED");
-}
-
-
-/* =========================================
-   BATTLEFIELD INPUT
-========================================= */
-
-// Pointer events work with both a mouse and a touchscreen.
-// The canvas coordinates are converted from its displayed size to
-// the fixed 960x540 game-world coordinate system.
-canvas.addEventListener("pointerdown", event => {
-    if (!currentRun || currentRun.gameOver || gameScreenIsHidden()) return;
-
-    event.preventDefault();
-    handleBattlefieldClick(event);
-});
-
-function gameScreenIsHidden() {
-    const screen = document.getElementById("game-screen");
-    return !screen || screen.hidden;
-}
-
-/* =========================================
-   RESTING SITE
-========================================= */
-
-function updateRestScreen() {
-    document.getElementById("rest-gold").textContent =
-        currentRun.gold;
-
-    document.getElementById("rest-health").textContent =
-        currentRun.castleHealth + " / " + currentRun.maxCastleHealth;
-
-    document.getElementById("rest-towers").textContent =
-        currentRun.towers.length;
-
-    document.getElementById("rest-heal").disabled =
-        currentRun.gold < 40 ||
-        currentRun.castleHealth >= currentRun.maxCastleHealth;
-
-    document.getElementById("rest-upgrade").disabled =
-        currentRun.gold < 75;
-}
-
-function healAtRestSite() {
-    if (currentRun.gold < 40) return;
-
-    if (currentRun.castleHealth >= currentRun.maxCastleHealth) {
-        return;
-    }
-
-    currentRun.gold -= 40;
-    currentRun.castleHealth = Math.min(
-        currentRun.maxCastleHealth,
-        currentRun.castleHealth + 30
-    );
-
-    updateRestScreen();
-}
-
-function upgradeAtRestSite() {
-    if (currentRun.gold < 75) return;
-
-    currentRun.gold -= 75;
-    currentRun.towerDamageBonus += 5;
-
-    updateRestScreen();
-}
+function showMainMenu(){stopGameLoop();hideAllScreens();document.getElementById("main-menu").style.display="flex";document.getElementById("result-overlay").hidden=true;document.getElementById("card-overlay").hidden=true;document.getElementById("settings-overlay").hidden=true;}
+function showPreparationScreen(){stopGameLoop();hideAllScreens();document.getElementById("preparation-screen").hidden=false;document.getElementById("result-overlay").hidden=true;}
+function updatePreparationArea(){document.getElementById("preparation-screen").querySelector(".prep-eyebrow").textContent="YOUR NEXT EXPEDITION · AREA 01";document.querySelector(".region-details span").textContent="5 WAVES";}
