@@ -1,38 +1,170 @@
-/* RIFTBOUND - MENU, SETTINGS AND NAVIGATION */
-const mainMenu=document.getElementById("main-menu");
-const preparationScreen=document.getElementById("preparation-screen");
-const gameScreen=document.getElementById("game-screen");
-const restScreen=document.getElementById("rest-screen");
-const resultOverlay=document.getElementById("result-overlay");
-const settingsOverlay=document.getElementById("settings-overlay");
-const defaultSettings={masterVolume:100,musicVolume:70,sfxVolume:80,screenShake:true,damageNumbers:true,towerRanges:false,difficulty:"normal"};
-function loadSettings(){try{const saved=localStorage.getItem("riftbound-settings");return saved?{...defaultSettings,...JSON.parse(saved)}:{...defaultSettings};}catch(e){return {...defaultSettings};}}
-let settings=loadSettings();
-function displaySettings(){document.getElementById("master-volume").value=settings.masterVolume;document.getElementById("music-volume").value=settings.musicVolume;document.getElementById("sfx-volume").value=settings.sfxVolume;document.getElementById("screen-shake").checked=settings.screenShake;document.getElementById("damage-numbers").checked=settings.damageNumbers;document.getElementById("tower-ranges").checked=settings.towerRanges;document.getElementById("difficulty").value=settings.difficulty;updateVolumeLabels();}
-function updateVolumeLabels(){["master","music","sfx"].forEach(k=>document.getElementById(k+"-value").textContent=document.getElementById(k+"-volume").value+"%");}
-function readSettings(){return {masterVolume:+document.getElementById("master-volume").value,musicVolume:+document.getElementById("music-volume").value,sfxVolume:+document.getElementById("sfx-volume").value,screenShake:document.getElementById("screen-shake").checked,damageNumbers:document.getElementById("damage-numbers").checked,towerRanges:document.getElementById("tower-ranges").checked,difficulty:document.getElementById("difficulty").value};}
-function saveSettings(){settings=readSettings();try{localStorage.setItem("riftbound-settings",JSON.stringify(settings));}catch(e){console.warn(e);}}
-function closeSettings(){settingsOverlay.hidden=true;}
-document.getElementById("settings").addEventListener("click",()=>{settingsOverlay.hidden=false;displaySettings();});
-document.getElementById("close-settings").addEventListener("click",closeSettings);
-document.getElementById("save-settings").addEventListener("click",()=>{saveSettings();closeSettings();});
-document.getElementById("reset-settings").addEventListener("click",()=>{settings={...defaultSettings};displaySettings();try{localStorage.setItem("riftbound-settings",JSON.stringify(settings));}catch(e){console.warn(e);}});
-settingsOverlay.addEventListener("click",e=>{if(e.target===settingsOverlay)closeSettings();});
-["master-volume","music-volume","sfx-volume"].forEach(id=>document.getElementById(id).addEventListener("input",updateVolumeLabels));
-document.getElementById("fullscreen-button").addEventListener("click",async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();}catch(e){console.warn("Fullscreen unavailable",e);}});
-displaySettings();
-function hideAllScreens(){mainMenu.style.display="none";preparationScreen.hidden=true;gameScreen.hidden=true;restScreen.hidden=true;}
-function showMainMenu(){stopGameLoop();hideAllScreens();mainMenu.style.display="flex";resultOverlay.hidden=true;settingsOverlay.hidden=true;document.getElementById("card-overlay").hidden=true;}
-function showPreparationScreen(){stopGameLoop();hideAllScreens();preparationScreen.hidden=false;resultOverlay.hidden=true;}
-document.getElementById("new-run").addEventListener("click",()=>{startNewRun();showPreparationScreen();});
-document.getElementById("back-to-menu").addEventListener("click",showMainMenu);
-document.getElementById("begin-defense").addEventListener("click",()=>{hideAllScreens();gameScreen.hidden=false;initBattlefield();});
-document.querySelectorAll(".tower-button").forEach(b=>b.addEventListener("click",()=>selectTower(b.dataset.tower)));
-document.getElementById("leave-battle").addEventListener("click",()=>{if(window.confirm("Leave this battle and return to the main menu? Your current run will be lost."))showMainMenu();});
-document.getElementById("result-continue").addEventListener("click",()=>{resultOverlay.hidden=true;showMainMenu();});
-document.getElementById("rest-heal").addEventListener("click",healAtRestSite);
-document.getElementById("rest-upgrade").addEventListener("click",upgradeAtRestSite);
-document.getElementById("finish-run").addEventListener("click",showMainMenu);
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!settingsOverlay.hidden){closeSettings();return;}if(!gameScreen.hidden){selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();}}});
-document.getElementById("upgrades").addEventListener("click",()=>alert("Permanent upgrades are planned for a future update."));
-document.getElementById("collection").addEventListener("click",()=>alert("The collection and bestiary are planned for a future update."));
+/* RIFTBOUND - MENU, SETTINGS AND NAVIGATION
+   Keep settings on window so both classic scripts share one object safely.
+*/
+(() => {
+  "use strict";
+
+  const DEFAULT_SETTINGS = {
+    masterVolume: 100,
+    musicVolume: 70,
+    sfxVolume: 80,
+    screenShake: true,
+    damageNumbers: true,
+    towerRanges: false,
+    difficulty: "normal"
+  };
+
+  function loadSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("riftbound-settings") || "null");
+      return saved && typeof saved === "object"
+        ? { ...DEFAULT_SETTINGS, ...saved }
+        : { ...DEFAULT_SETTINGS };
+    } catch (error) {
+      console.warn("Could not load Riftbound settings:", error);
+      return { ...DEFAULT_SETTINGS };
+    }
+  }
+
+  window.riftboundSettings = loadSettings();
+
+  const byId = id => document.getElementById(id);
+  const mainMenu = byId("main-menu");
+  const preparationScreen = byId("preparation-screen");
+  const gameScreen = byId("game-screen");
+  const restScreen = byId("rest-screen");
+  const resultOverlay = byId("result-overlay");
+  const settingsOverlay = byId("settings-overlay");
+
+  function displaySettings() {
+    const s = window.riftboundSettings;
+    byId("master-volume").value = s.masterVolume;
+    byId("music-volume").value = s.musicVolume;
+    byId("sfx-volume").value = s.sfxVolume;
+    byId("screen-shake").checked = s.screenShake;
+    byId("damage-numbers").checked = s.damageNumbers;
+    byId("tower-ranges").checked = s.towerRanges;
+    byId("difficulty").value = s.difficulty;
+    updateVolumeLabels();
+  }
+
+  function updateVolumeLabels() {
+    ["master", "music", "sfx"].forEach(key => {
+      byId(key + "-value").textContent = byId(key + "-volume").value + "%";
+    });
+  }
+
+  function readSettings() {
+    return {
+      masterVolume: Number(byId("master-volume").value),
+      musicVolume: Number(byId("music-volume").value),
+      sfxVolume: Number(byId("sfx-volume").value),
+      screenShake: byId("screen-shake").checked,
+      damageNumbers: byId("damage-numbers").checked,
+      towerRanges: byId("tower-ranges").checked,
+      difficulty: byId("difficulty").value
+    };
+  }
+
+  function persistSettings() {
+    try {
+      localStorage.setItem("riftbound-settings", JSON.stringify(window.riftboundSettings));
+    } catch (error) {
+      console.warn("Could not save Riftbound settings:", error);
+    }
+  }
+
+  function closeSettings() {
+    settingsOverlay.hidden = true;
+  }
+
+  function hideScreens() {
+    mainMenu.style.display = "none";
+    preparationScreen.hidden = true;
+    gameScreen.hidden = true;
+    restScreen.hidden = true;
+  }
+
+  function returnToMenu() {
+    if (typeof stopGameLoop === "function") stopGameLoop();
+    hideScreens();
+    mainMenu.style.display = "flex";
+    resultOverlay.hidden = true;
+    settingsOverlay.hidden = true;
+    byId("card-overlay").hidden = true;
+  }
+
+  function openPreparation() {
+    if (typeof stopGameLoop === "function") stopGameLoop();
+    hideScreens();
+    preparationScreen.hidden = false;
+    resultOverlay.hidden = true;
+    settingsOverlay.hidden = true;
+  }
+
+  byId("settings").addEventListener("click", () => {
+    displaySettings();
+    settingsOverlay.hidden = false;
+  });
+  byId("close-settings").addEventListener("click", closeSettings);
+  byId("save-settings").addEventListener("click", () => {
+    window.riftboundSettings = readSettings();
+    persistSettings();
+    closeSettings();
+  });
+  byId("reset-settings").addEventListener("click", () => {
+    window.riftboundSettings = { ...DEFAULT_SETTINGS };
+    displaySettings();
+    persistSettings();
+  });
+  settingsOverlay.addEventListener("click", event => {
+    if (event.target === settingsOverlay) closeSettings();
+  });
+  ["master-volume", "music-volume", "sfx-volume"].forEach(id => {
+    byId(id).addEventListener("input", updateVolumeLabels);
+  });
+  byId("fullscreen-button").addEventListener("click", async () => {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch (error) {
+      console.warn("Fullscreen is unavailable:", error);
+    }
+  });
+
+  byId("new-run").addEventListener("click", () => {
+    startNewRun();
+    openPreparation();
+  });
+  byId("back-to-menu").addEventListener("click", returnToMenu);
+  byId("begin-defense").addEventListener("click", () => {
+    hideScreens();
+    gameScreen.hidden = false;
+    initBattlefield();
+  });
+  document.querySelectorAll(".tower-button").forEach(button => {
+    button.addEventListener("click", () => selectTower(button.dataset.tower));
+  });
+  byId("leave-battle").addEventListener("click", () => {
+    if (window.confirm("Leave this battle and return to the main menu? Your current run will be lost.")) {
+      returnToMenu();
+    }
+  });
+  byId("result-continue").addEventListener("click", returnToMenu);
+  byId("rest-heal").addEventListener("click", healAtRestSite);
+  byId("rest-upgrade").addEventListener("click", upgradeAtRestSite);
+  byId("finish-run").addEventListener("click", returnToMenu);
+
+  byId("upgrades").addEventListener("click", () => {
+    window.alert("Permanent upgrades are planned for a future update. Tower upgrades during a run are available on the battlefield.");
+  });
+  byId("collection").addEventListener("click", () => {
+    window.alert("The collection and bestiary are planned for a future update. Your run cards are shown when you earn a reward.");
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !settingsOverlay.hidden) closeSettings();
+  });
+
+  displaySettings();
+})();
