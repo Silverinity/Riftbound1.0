@@ -1,0 +1,283 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riftbound</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+
+    <!-- MAIN MENU -->
+    <main class="main-menu" id="main-menu">
+        <div class="menu-content">
+            <p class="subtitle">THE REALMS ARE BREAKING</p>
+            <h1>RIFTBOUND</h1>
+            <p class="description">DEFEND THE LAST FORTRESS</p>
+
+            <div class="menu-buttons">
+                <button id="new-run">NEW RUN</button>
+                <button id="upgrades">UPGRADES</button>
+                <button id="collection">COLLECTION</button>
+                <button id="settings">SETTINGS</button>
+            </div>
+
+            <p class="version">EARLY DEVELOPMENT BUILD</p>
+        </div>
+    </main>
+
+    <!-- SETTINGS -->
+    <div id="settings-overlay" class="settings-overlay" hidden>
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h2>SETTINGS</h2>
+                <button id="close-settings">X</button>
+            </div>
+
+            <div class="setting-group">
+                <h3>AUDIO</h3>
+
+                <label>Master Volume <span id="master-value">100%</span></label>
+                <input type="range" id="master-volume" min="0" max="100">
+
+                <label>Music Volume <span id="music-value">70%</span></label>
+                <input type="range" id="music-volume" min="0" max="100">
+
+                <label>SFX Volume <span id="sfx-value">80%</span></label>
+                <input type="range" id="sfx-volume" min="0" max="100">
+            </div>
+
+            <div class="setting-group">
+                <h3>GAMEPLAY</h3>
+
+                <label class="checkbox-setting">
+                    <span>Screen Shake</span>
+                    <input type="checkbox" id="screen-shake">
+                </label>
+
+                <label class="checkbox-setting">
+                    <span>Damage Numbers</span>
+                    <input type="checkbox" id="damage-numbers">
+                </label>
+
+                <label class="checkbox-setting">
+                    <span>Show Tower Ranges</span>
+                    <input type="checkbox" id="tower-ranges">
+                </label>
+            </div>
+
+            <div class="setting-group">
+                <h3>DIFFICULTY</h3>
+                <select id="difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="normal">Normal</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+
+            <div class="settings-footer">
+                <button id="reset-settings">RESET</button>
+                <button id="save-settings">SAVE SETTINGS</button>
+                <button id="fullscreen-button">FULLSCREEN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PREPARATION SCREEN -->
+    <section id="preparation-screen" class="preparation-screen" hidden>
+        <header class="preparation-header">
+            <div>
+                <p class="prep-eyebrow">YOUR NEXT EXPEDITION</p>
+                <h1>PREPARE FOR DEFENSE</h1>
+            </div>
+            <button id="back-to-menu">BACK</button>
+        </header>
+
+        <div class="region-banner">
+            <div class="region-heading">
+                <p class="prep-eyebrow">REGION 01</p>
+                <h2>VERDANT WOODS</h2>
+                <p class="region-description">
+                    An ancient forest consumed by unstable rifts.
+                    Something is stirring beneath the trees.
+                </p>
+            </div>
+
+            <div class="region-details">
+                <span>15 WAVES</span>
+                <span>ANCIENT TREANT BOSS</span>
+                <span>UNKNOWN THREATS</span>
+            </div>
+        </div>
+
+        <div class="preparation-content">
+            <div class="prep-column">
+                <h3>STARTING RESOURCES</h3>
+                <div class="prep-stat"><span>GOLD</span><strong>100</strong></div>
+                <div class="prep-stat"><span>CASTLE HP</span><strong>100</strong></div>
+                <div class="prep-stat"><span>STARTING TOWERS</span><strong>1</strong></div>
+            </div>
+
+            <div class="prep-column">
+                <h3>STARTING TOWER</h3>
+                <div class="starting-tower">
+                    <div class="tower-symbol">♜</div>
+                    <div>
+                        <h4>ARCHER TOWER</h4>
+                        <p>A reliable defensive structure.</p>
+                        <span>10 DAMAGE · 120 RANGE</span>
+                    </div>
+                </div>
+                <p class="prep-note">
+                    Build additional towers using the gold you collect.
+                </p>
+            </div>
+        </div>
+
+        <div class="preparation-footer">
+            <div>
+                <h3>READY TO BEGIN?</h3>
+                <p>Survive all 15 waves and defeat the Ancient Treant.</p>
+            </div>
+            <button id="begin-defense">BEGIN DEFENSE</button>
+        </div>
+    </section>
+
+    <!-- BATTLEFIELD -->
+    <section id="game-screen" class="game-screen" hidden>
+        <header class="battle-topbar">
+            <div class="battle-region">
+                <span>REGION 01 · VERDANT WOODS</span>
+                <h1>THE LAST FORTRESS</h1>
+            </div>
+
+            <div class="wave-counter">
+                <span>CURRENT WAVE</span>
+                <strong id="wave-display">0 / 15</strong>
+            </div>
+
+        </header>
+
+        <main class="battlefield-area">
+            <canvas id="battlefield" width="960" height="540"></canvas>
+        </main>
+
+        <div class="wave-controls">
+            <button id="start-wave">START WAVE</button>
+            <span id="wave-status">PREPARE YOUR DEFENSE</span>
+        </div>
+
+        <footer class="battle-bottom-bar">
+            <div class="resource-display">
+                <div class="resource">
+                    <span>GOLD</span>
+                    <strong id="gold-display">100</strong>
+                </div>
+                <div class="resource">
+                    <span>CASTLE HP</span>
+                    <strong id="health-display">100 / 100</strong>
+                </div>
+            </div>
+
+            <div class="tower-selection">
+                <span class="tower-selection-title">BUILD TOWERS</span>
+                <div class="tower-options">
+                    <button class="tower-button selected" data-tower="archer">
+                        <span class="tower-icon">♜</span>
+                        <span>ARCHER</span>
+                        <strong>50 G</strong>
+                    </button>
+
+                    <button class="tower-button" data-tower="arcane">
+                        <span class="tower-icon">✧</span>
+                        <span>ARCANE</span>
+                        <strong>100 G</strong>
+                    </button>
+
+                    <button class="tower-button" data-tower="cannon">
+                        <span class="tower-icon">◆</span>
+                        <span>CANNON</span>
+                        <strong>125 G</strong>
+                    </button>
+                </div>
+            </div>
+
+            <button id="leave-battle" class="leave-battle-button">LEAVE</button>
+        </footer>
+
+        <p id="battle-message" class="battle-message">
+            SELECT A TOWER AND CLICK AN OPEN AREA TO BUILD
+        </p>
+    </section>
+
+    <!-- RESTING SITE -->
+    <section id="rest-screen" class="preparation-screen" hidden>
+        <header class="preparation-header">
+            <div>
+                <p class="prep-eyebrow">REGION 01 · AFTER THE BATTLE</p>
+                <h1>THE RESTING SITE</h1>
+            </div>
+            <span class="rest-status">SAFE AREA</span>
+        </header>
+
+        <div class="region-banner">
+            <div class="region-heading">
+                <p class="prep-eyebrow">A MOMENT OF PEACE</p>
+                <h2>THE OLD WAYSTONE</h2>
+                <p class="region-description">
+                    The forest grows quiet. The rifts have weakened,
+                    but the journey is far from over. Take time to prepare.
+                </p>
+            </div>
+        </div>
+
+        <div class="preparation-content">
+            <div class="prep-column">
+                <h3>YOUR RESOURCES</h3>
+                <div class="prep-stat"><span>GOLD</span><strong id="rest-gold">0</strong></div>
+                <div class="prep-stat"><span>CASTLE HP</span><strong id="rest-health">0</strong></div>
+                <div class="prep-stat"><span>TOWERS</span><strong id="rest-towers">0</strong></div>
+            </div>
+
+            <div class="prep-column">
+                <h3>REST AND RECOVER</h3>
+                <p class="prep-note">
+                    Restore 30 castle health. The cost is 40 gold.
+                </p>
+                <button id="rest-heal" class="large-action-button">RESTORE CASTLE · 40 G</button>
+
+                <p class="prep-note">
+                    Improve the damage of all your towers. The cost is 75 gold.
+                </p>
+                <button id="rest-upgrade" class="large-action-button">UPGRADE TOWERS · 75 G</button>
+            </div>
+        </div>
+
+        <div class="preparation-footer">
+            <div>
+                <h3>REGION CLEARED</h3>
+                <p>You survived all 15 waves of Verdant Woods.</p>
+            </div>
+            <button id="finish-run">RETURN TO MENU</button>
+        </div>
+    </section>
+
+    <!-- VICTORY / DEFEAT -->
+    <div id="result-overlay" class="game-overlay" hidden>
+        <div class="overlay-panel">
+            <p class="prep-eyebrow" id="result-eyebrow">THE BATTLE IS OVER</p>
+            <h2 id="result-title">VICTORY</h2>
+            <p id="result-description">The fortress stands.</p>
+            <button id="result-continue">CONTINUE</button>
+        </div>
+    </div>
+
+    <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

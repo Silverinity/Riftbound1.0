@@ -1,0 +1,26 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --background: #0B0812;
+    --dark-purple: #171022;
+    --purple: #302044;
+    --accent: #8155B8;
+    --glow: #B99AE8;
+    --text: #E5DDF0;
+    --muted: #93879F;
+}
+
+body {
+    background: var(--background);
+    color: var(--text);
+    font-family: Georgia, serif;
+}
+
+button {
+    font-family: inherit;
+}
