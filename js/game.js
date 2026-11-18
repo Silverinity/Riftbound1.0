@@ -315,6 +315,9 @@ canvas.addEventListener("pointerdown",e=>{if(!currentRun||currentRun.gameOver||g
 canvas.addEventListener("contextmenu",e=>{e.preventDefault();selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();});
 function gameScreenIsHidden(){const s=document.getElementById("game-screen");return !s||s.hidden;}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&& !gameScreenIsHidden()){selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();}});
+document.getElementById("start-wave").addEventListener("click",startWave);
+document.getElementById("progress-continue").addEventListener("click",continueFromProgress);
+
 function updateRestScreen(){
   if(!currentRun)return;document.getElementById("rest-gold").textContent=currentRun.gold;
   document.getElementById("rest-health").textContent=currentRun.castleHealth+" / "+currentRun.maxCastleHealth;
@@ -328,7 +331,7 @@ function showRestScreen(){
   stopGameLoop();document.getElementById("main-menu").style.display="none";document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=true;document.getElementById("rest-screen").hidden=false;document.getElementById("result-overlay").hidden=true;
   document.getElementById("rest-area-label").textContent="AFTER THREE AREAS · THE OLD WAYSTONE";
-  document.getElementById("rest-finish-copy").textContent="You survived all 15 waves across three regions. Your run is complete.";
+  document.getElementById("rest-finish-copy").textContent="You survived 90 waves across three areas. Your run is complete.";
   updateRestScreen();
 }
 function hideAllScreens(){
@@ -337,4 +340,4 @@ function hideAllScreens(){
 }
 function showMainMenu(){stopGameLoop();hideAllScreens();document.getElementById("main-menu").style.display="flex";document.getElementById("result-overlay").hidden=true;document.getElementById("card-overlay").hidden=true;document.getElementById("settings-overlay").hidden=true;}
 function showPreparationScreen(){stopGameLoop();hideAllScreens();document.getElementById("preparation-screen").hidden=false;document.getElementById("result-overlay").hidden=true;}
-function updatePreparationArea(){document.getElementById("preparation-screen").querySelector(".prep-eyebrow").textContent="YOUR NEXT EXPEDITION · AREA 01";document.querySelector(".region-details span").textContent="5 WAVES";}
+function updatePreparationArea(){document.getElementById("preparation-screen").querySelector(".prep-eyebrow").textContent="YOUR NEXT EXPEDITION · AREA 01";document.querySelector(".region-details span").textContent="30 WAVES · 2 CAMPSITES";}
