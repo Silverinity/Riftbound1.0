@@ -46,7 +46,7 @@ function createNewRun(){
   return {
     gold:100,castleHealth:100,maxCastleHealth:100,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
     towers:[{type:"archer",x:330,y:75,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
-    enemies:[],projectiles:[],spawnQueue:[],waveActive:false,gameOver:false,waveStarted:false,
+    enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false
   };
 }
@@ -68,7 +68,7 @@ function initBattlefield(){
   if(!currentRun)startNewRun();
   stopGameLoop();selectedTowerEntity=null;updateAreaLabels();updateGameDisplay();drawBattlefield();
   setWaveStatus("READY WHEN YOU ARE");showBattleMessage("BUILD YOUR DEFENSE, THEN PRESS START WAVE WHEN READY");
-  currentRun.waitingForWave=false;currentRun.nextWaveTimer=0;startGameLoop();
+  currentRun.waitingForWave=false;currentRun.nextWaveTimer=0;currentRun.waveIntervalTimer=0;startGameLoop();
 }
 function updateGameDisplay(){
   if(!currentRun)return;
@@ -179,21 +179,32 @@ function createWaveQueue(wave){
     else queue.push("riftling");
   }return queue;
 }
-function startWave(){
-  if(!currentRun||currentRun.waveActive||currentRun.gameOver||currentRun.currentWave>=5)return;
-  currentRun.currentWave++;currentRun.waveActive=true;currentRun.waitingForWave=false;currentRun.waveStarted=true;currentRun.spawnQueue=createWaveQueue(currentRun.currentWave);currentRun.enemies=[];currentRun.projectiles=[];spawnTimer=0;
+function startWave(automatic=false){
+  if(!currentRun||currentRun.gameOver||currentRun.currentWave>=5)return;
+  if(currentRun.waveActive&&!automatic)return;
+  currentRun.currentWave++;currentRun.waveActive=true;currentRun.waitingForWave=false;currentRun.waveStarted=true;
+  currentRun.spawnBatches.push({wave:currentRun.currentWave,queue:createWaveQueue(currentRun.currentWave),timer:0});
+  currentRun.waveIntervalTimer=currentRun.currentWave<5?10:0;
   const total=((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave;
   if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&currentRun.currentWave===5){setWaveStatus("AREA BOSS");showBattleMessage("THE ANCIENT TREANT HAS AWAKENED!");}
   else{setWaveStatus("WAVE "+total+" / 30 IN PROGRESS");showBattleMessage("WAVE "+total+" HAS BEGUN");}
   updateGameDisplay();
 }
-function spawnEnemy(type){
-  const d=enemyTypes[type],difficulty=getSettings().difficulty||"normal";let mult=areaData().enemyScale*(1+currentRun.currentWave*.06);
+function spawnEnemy(type,waveNumber){
+  const d=enemyTypes[type],difficulty=getSettings().difficulty||"normal";let mult=areaData().enemyScale*(1+waveNumber*.06);
   if(difficulty==="easy")mult*=.8;if(difficulty==="hard")mult*=1.25;
   const health=d.health*mult;currentRun.enemies.push({type,x:pathPoints[0].x,y:pathPoints[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage});
 }
 function updateEnemies(dt){
-  if(currentRun.waveActive&&currentRun.spawnQueue.length){spawnTimer-=dt;if(spawnTimer<=0){spawnEnemy(currentRun.spawnQueue.shift());spawnTimer=currentRun.currentWave===5&&currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3?1.2:.85;}}
+  currentRun.spawnBatches.forEach(batch=>{
+    if(!batch.queue.length)return;
+    batch.timer-=dt;
+    if(batch.timer<=0){
+      spawnEnemy(batch.queue.shift(),batch.wave);
+      batch.timer=batch.wave===5&&currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3?1.2:.85;
+    }
+  });
+  currentRun.spawnBatches=currentRun.spawnBatches.filter(batch=>batch.queue.length>0);
   currentRun.enemies.forEach(e=>{e.progress+=enemyTypes[e.type].speed*dt/totalPathLength;const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;});
   currentRun.enemies=currentRun.enemies.filter(e=>{
     if(e.progress>=1){currentRun.castleHealth=Math.max(0,currentRun.castleHealth-e.damage);updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
@@ -219,10 +230,9 @@ function updateProjectiles(dt){
   });currentRun.enemies=currentRun.enemies.filter(e=>e.health>0);
 }
 function checkWaveCompletion(){
-  if(!currentRun.waveActive||currentRun.spawnQueue.length||currentRun.enemies.length)return;
-  currentRun.waveActive=false;currentRun.projectiles=[];updateGameDisplay();
-  if(currentRun.currentWave===5){showCardSelection();return;}
-  currentRun.waitingForWave=false;currentRun.nextWaveTimer=0;setWaveStatus("WAVE CLEARED");showBattleMessage("WAVE CLEARED — BUILD OR ADJUST YOUR DEFENSE, THEN START THE NEXT WAVE");updateGameDisplay();
+  if(!currentRun.waveActive||currentRun.currentWave<5||currentRun.spawnBatches.length||currentRun.enemies.length)return;
+  currentRun.waveActive=false;currentRun.projectiles=[];currentRun.waveIntervalTimer=0;updateGameDisplay();
+  showCardSelection();
 }
 function endGame(){
   if(currentRun.gameOver)return;currentRun.gameOver=true;currentRun.waveActive=false;stopGameLoop();setWaveStatus("DEFEAT");showBattleMessage("THE CASTLE HAS FALLEN");
@@ -250,7 +260,7 @@ function chooseCard(id){
   else if(currentRun.campsite<2){currentRun.campsite++;currentRun.stage=1;}
   else if(currentRun.area<3){currentRun.area++;currentRun.campsite=1;currentRun.stage=1;}
   else{currentRun.runFinished=true;showRestScreen();return;}
-  currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnQueue=[];currentRun.waveActive=false;currentRun.waitingForWave=false;currentRun.waveStarted=false;
+  currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];currentRun.waveActive=false;currentRun.waitingForWave=false;currentRun.waveStarted=false;currentRun.waveIntervalTimer=0;
   selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
   updateAreaLabels();updateGameDisplay();
   const next=document.getElementById("progress-overlay");
@@ -264,7 +274,15 @@ function chooseCard(id){
 function continueFromProgress(){document.getElementById("progress-overlay").hidden=true;setWaveStatus("READY WHEN YOU ARE");showBattleMessage("PREPARE YOUR DEFENSE, THEN PRESS START WAVE");startGameLoop();}
 function gameLoop(timestamp){
   if(!gameRunning||!currentRun)return;const dt=Math.min(Math.max((timestamp-lastFrameTime)/1000,0),.033);lastFrameTime=timestamp;
-  if(currentRun.waveActive){updateEnemies(dt);updateTowers(dt);updateProjectiles(dt);checkWaveCompletion();}
+  if(currentRun.waveActive){
+    updateEnemies(dt);updateTowers(dt);updateProjectiles(dt);
+    if(currentRun.currentWave<5){
+      currentRun.waveIntervalTimer-=dt;
+      if(currentRun.waveIntervalTimer<=0)startWave(true);
+      else {const seconds=Math.ceil(currentRun.waveIntervalTimer);setWaveStatus("NEXT WAVE IN "+seconds+"s · "+currentRun.currentWave+"/5 STARTED");}
+    } else {setWaveStatus("ALL 5 WAVES RELEASED · CLEAR THE REMAINING ENEMIES");}
+    checkWaveCompletion();
+  }
   drawBattlefield();if(gameRunning)animationFrame=requestAnimationFrame(gameLoop);
 }
 function startGameLoop(){stopGameLoop();gameRunning=true;lastFrameTime=performance.now();animationFrame=requestAnimationFrame(gameLoop);}
