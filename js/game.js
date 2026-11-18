@@ -35,10 +35,10 @@ const enemyTypes = {
   treant:{name:"Ancient Treant",health:2000,speed:15,reward:150,damage:35,color:"#83A66C",size:27}
 };
 const cardPool = [
-  {id:"arrows",name:"Sharpened Arrows",rarity:"COMMON",type:"TOWER",description:"Archer Tower damage increased by 20%.",icon:"➶"},
-  {id:"arcane",name:"Arcane Knowledge",rarity:"RARE",type:"TOWER",description:"Wizard Tower damage increased by 25%.",icon:"✧"},
-  {id:"siege",name:"Siege Engineering",rarity:"RARE",type:"TOWER",description:"Cannon Tower range increased by 25%.",icon:"◆"},
-  {id:"greed",name:"Greedy Kingdom",rarity:"COMMON",type:"ECONOMY",description:"Earn 15% more gold from defeated enemies.",icon:"♜"},
+  {id:"arrows",name:"Sharpened Arrows",rarity:"COMMON",type:"TOWER",description:"Archer Towers deal +5 damage per hit.",icon:"➶"},
+  {id:"arcane",name:"Arcane Knowledge",rarity:"RARE",type:"TOWER",description:"Wizard Towers deal +10 damage per hit.",icon:"✧"},
+  {id:"siege",name:"Siege Engineering",rarity:"RARE",type:"TOWER",description:"Cannon Towers gain +25 range.",icon:"◆"},
+  {id:"greed",name:"Greedy Kingdom",rarity:"COMMON",type:"ECONOMY",description:"Earn +3 gold for every enemy defeated.",icon:"♜"},
   {id:"walls",name:"Reinforced Walls",rarity:"RARE",type:"DEFENSE",description:"Increase maximum castle HP by 20 and restore 20 HP.",icon:"⬟"}
 ];
 
@@ -88,14 +88,15 @@ function showBattleMessage(s){document.getElementById("battle-message").textCont
 function setWaveStatus(s){document.getElementById("wave-status").textContent=s;}
 function getTowerStats(t){
   const base=towerTypes[t.type],u=t.upgrades||{damage:0,range:0,speed:0};
-  let damage=base.damage*Math.pow(1.22,u.damage||0);
-  let range=base.range*Math.pow(1.15,u.range||0);
-  let fireRate=base.fireRate*Math.pow(1.18,u.speed||0);
-  if(t.type==="archer")damage*=1+(currentRun.cards.filter(c=>c==="arrows").length*.2);
-  if(t.type==="arcane")damage*=1+(currentRun.cards.filter(c=>c==="arcane").length*.25);
-  if(t.type==="cannon")range*=Math.pow(1.25,currentRun.cards.filter(c=>c==="siege").length);
+  let damage=base.damage+(u.damage||0)*5;
+  let range=base.range+(u.range||0)*15;
+  let cooldown=Math.max(.15,1/base.fireRate-(u.speed||0)*.1);
+  let fireRate=1/cooldown;
+  if(t.type==="archer")damage+=currentRun.cards.filter(c=>c==="arrows").length*5;
+  if(t.type==="arcane")damage+=currentRun.cards.filter(c=>c==="arcane").length*10;
+  if(t.type==="cannon")range+=currentRun.cards.filter(c=>c==="siege").length*25;
   damage+=currentRun.towerDamageBonus;
-  return {...base,damage,range,fireRate,cooldown:1/fireRate};
+  return {...base,damage,range,fireRate,cooldown};
 }
 function environmentPalette(){
   if(currentRun.area===2)return {ground:"#302B2A",textureA:"#403634",textureB:"#211F20",pathDark:"#29201F",path:"#665047",pathEdge:"#9A7965",treeDark:"#211C1B",tree:"#49403A",treeLight:"#6A5B50",trunk:"#554137"};
@@ -218,7 +219,7 @@ function updateTowers(dt){
   });
 }
 function damageEnemy(e,dmg){
-  e.health-=dmg;if(e.health<=0&&!e.rewarded){e.rewarded=true;let bonus=1+currentRun.cards.filter(c=>c==="greed").length*.15;currentRun.gold+=Math.round(e.reward*bonus);updateGameDisplay();}
+  e.health-=dmg;if(e.health<=0&&!e.rewarded){e.rewarded=true;let bonus=currentRun.cards.filter(c=>c==="greed").length*3;currentRun.gold+=e.reward+bonus;updateGameDisplay();}
 }
 function updateProjectiles(dt){
   currentRun.projectiles=currentRun.projectiles.filter(p=>{
@@ -327,9 +328,9 @@ function updateTowerPanel(){
     '<div class="tower-stat"><span>Cooldown</span><strong>'+s.cooldown.toFixed(2)+'s</strong></div>'+
     '<div class="tower-stat"><span>Range</span><strong>'+Math.round(s.range)+' px</strong></div>'+
     '<p class="panel-upgrade-title">UPGRADE · '+cost+' GOLD</p>'+
-    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="damage">Increase damage <span>+22%</span></button>'+
-    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="range">Increase range <span>+15%</span></button>'+
-    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="speed">Faster attacks <span>+18%</span></button>'+
+    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="damage">Increase damage <span>+5 damage</span></button>'+
+    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="range">Increase range <span>+15 px</span></button>'+
+    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="speed">Faster attacks <span>-0.10s cooldown</span></button>'+
     '<p class="panel-hint">'+(t.level>=4?"MAX LEVEL REACHED":"Each upgrade increases the tower level. Maximum level: 4.")+'</p>';
   panel.querySelectorAll("[data-upgrade]").forEach(b=>b.addEventListener("click",()=>upgradeSelectedTower(b.dataset.upgrade)));
 }
