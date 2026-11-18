@@ -652,3 +652,76 @@ button:disabled {
         animation-iteration-count: 1 !important;
     }
 }
+
+
+/* Manual wave controls and journey progression */
+.wave-controls {
+    gap: 18px;
+    flex-wrap: wrap;
+    min-height: 58px;
+}
+#start-wave,
+#progress-continue {
+    padding: 12px 24px;
+    background: #62447F;
+    border: 1px solid #B99AE8;
+    color: #fff;
+    letter-spacing: 2px;
+    font-size: 10px;
+    cursor: pointer;
+}
+#start-wave:hover:not(:disabled),
+#progress-continue:hover {
+    background: #8155B8;
+    box-shadow: 0 0 18px rgba(185,154,232,.2);
+}
+#start-wave:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+#wave-status { text-align:center; }
+#progress-summary {
+    display:block;
+    margin-top:5px;
+    color:#B99AE8;
+    font-size:9px;
+    letter-spacing:1.5px;
+}
+.progress-screen { max-width:720px; }
+.progress-area {
+    margin:18px 0 25px;
+    color:#D8C0FF;
+    font-size:13px;
+    letter-spacing:3px;
+}
+.progress-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin:20px 0;
+}
+.progress-grid > div {
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:20px 12px;
+    background:#241932;
+    border:1px solid #62447F;
+}
+.progress-grid span {
+    color:#93879F;
+    font-size:9px;
+    letter-spacing:2px;
+}
+.progress-grid strong {
+    color:#E5DDF0;
+    font-size:15px;
+    letter-spacing:1px;
+}
+.progress-next { color:#E5DDF0; margin:18px 0 8px; }
+.progress-wave { color:#93879F; font-size:11px; margin-bottom:24px; }
+@media(max-width:560px) {
+    .wave-controls { gap:10px; padding:12px 8px; }
+    #start-wave { width:100%; }
+    .progress-grid { grid-template-columns:1fr; }
+}
