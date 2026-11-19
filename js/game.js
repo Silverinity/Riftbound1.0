@@ -266,7 +266,7 @@ function chooseCard(id){
   if(currentRun.stage<3)currentRun.stage++;
   else if(currentRun.campsite<2){currentRun.campsite++;currentRun.stage=1;}
   else if(currentRun.area<3){currentRun.area++;currentRun.campsite=1;currentRun.stage=1;}
-  else{currentRun.runFinished=true;showRestScreen();return;}
+  else{currentRun.runFinished=true;showRunCompleteScreen();return;}
   currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];currentRun.waveActive=false;currentRun.waitingForWave=false;currentRun.waveStarted=false;currentRun.waveIntervalTimer=0;
   selectedTowerEntity=null;selectedTower=null;currentRun.campsiteRestUsed=false;
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
@@ -382,7 +382,6 @@ function showCampsiteScreen(completedWaves){
   document.getElementById("main-menu").style.display="none";
   document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=true;
-  document.getElementById("rest-screen").hidden=true;
   document.getElementById("campsite-screen").hidden=false;
   document.getElementById("result-overlay").hidden=true;
   document.getElementById("campsite-checkpoint").textContent=completedWaves+" WAVES SURVIVED · AREA "+String(currentRun.area).padStart(2,"0");
@@ -399,26 +398,18 @@ function continueFromCampsite(){
   showBattleMessage("YOU ARE RESTED. PREPARE YOUR DEFENSE, THEN START THE NEXT WAVE.");
   startGameLoop();
 }
-function updateRestScreen(){
-  if(!currentRun)return;document.getElementById("rest-gold").textContent=currentRun.gold;
-  document.getElementById("rest-health").textContent=currentRun.castleHealth+" / "+currentRun.maxCastleHealth;
-  document.getElementById("rest-towers").textContent=currentRun.towers.length;
-  document.getElementById("rest-heal").disabled=currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth;
-  document.getElementById("rest-upgrade").disabled=currentRun.gold<75;
+function showRunCompleteScreen(){
+  stopGameLoop();
+  document.getElementById("main-menu").style.display="none";
+  document.getElementById("preparation-screen").hidden=true;
+  document.getElementById("game-screen").hidden=true;
+  document.getElementById("campsite-screen").hidden=true;
+  document.getElementById("card-overlay").hidden=true;
+  document.getElementById("progress-overlay").hidden=true;
+  document.getElementById("result-eyebrow").textContent="THE RIFT HAS BEEN SEALED";
+  document.getElementById("result-title").textContent="EXPEDITION COMPLETE";
+  document.getElementById("result-description").textContent="You survived all 90 waves across the three areas. The fortress stands, and the realms are safe — for now.";
+  document.getElementById("result-continue").textContent="RETURN TO MENU";
+  document.getElementById("result-overlay").hidden=false;
 }
-function healAtRestSite(){if(currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth)return;currentRun.gold-=40;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateRestScreen();}
-function upgradeAtRestSite(){if(currentRun.gold<75)return;currentRun.gold-=75;currentRun.towerDamageBonus+=5;updateRestScreen();}
-function showRestScreen(){
-  stopGameLoop();document.getElementById("main-menu").style.display="none";document.getElementById("preparation-screen").hidden=true;
-  document.getElementById("game-screen").hidden=true;document.getElementById("campsite-screen").hidden=true;document.getElementById("rest-screen").hidden=false;document.getElementById("result-overlay").hidden=true;
-  document.getElementById("rest-area-label").textContent="AFTER THREE AREAS · THE OLD WAYSTONE";
-  document.getElementById("rest-finish-copy").textContent="You survived 90 waves across three areas. Your run is complete.";
-  updateRestScreen();
-}
-function hideAllScreens(){
-  document.getElementById("main-menu").style.display="none";document.getElementById("preparation-screen").hidden=true;
-  document.getElementById("game-screen").hidden=true;document.getElementById("campsite-screen").hidden=true;document.getElementById("rest-screen").hidden=true;
-}
-function showMainMenu(){stopGameLoop();hideAllScreens();document.getElementById("main-menu").style.display="flex";document.getElementById("result-overlay").hidden=true;document.getElementById("card-overlay").hidden=true;document.getElementById("settings-overlay").hidden=true;}
-function showPreparationScreen(){stopGameLoop();hideAllScreens();document.getElementById("preparation-screen").hidden=false;document.getElementById("result-overlay").hidden=true;}
 function updatePreparationArea(){document.getElementById("preparation-screen").querySelector(".prep-eyebrow").textContent="YOUR NEXT EXPEDITION · AREA 01";document.querySelector(".region-details span").textContent="30 WAVES · 2 CAMPSITES";}
