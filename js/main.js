@@ -33,7 +33,6 @@
   const mainMenu = byId("main-menu");
   const preparationScreen = byId("preparation-screen");
   const gameScreen = byId("game-screen");
-  const restScreen = byId("rest-screen");
   const campsiteScreen = byId("campsite-screen");
   const resultOverlay = byId("result-overlay");
   const settingsOverlay = byId("settings-overlay");
@@ -86,7 +85,6 @@
     mainMenu.style.display = "none";
     preparationScreen.hidden = true;
     gameScreen.hidden = true;
-    if (restScreen) restScreen.hidden = true;
     if (campsiteScreen) campsiteScreen.hidden = true;
   }
 
@@ -158,9 +156,6 @@
     }
   });
   byId("result-continue").addEventListener("click", returnToMenu);
-  byId("rest-heal").addEventListener("click", healAtRestSite);
-  byId("rest-upgrade").addEventListener("click", upgradeAtRestSite);
-  byId("finish-run").addEventListener("click", returnToMenu);
 
   byId("upgrades").addEventListener("click", () => {
     window.alert("Permanent upgrades are planned for a future update. Tower upgrades during a run are available on the battlefield.");
