@@ -36,6 +36,84 @@
   const campsiteScreen = byId("campsite-screen");
   const resultOverlay = byId("result-overlay");
   const settingsOverlay = byId("settings-overlay");
+  const API_BASE = (window.RIFTBOUND_API_BASE || "http://localhost:3000").replace(/\\/$/, "");
+  let betaAuthenticated = false;
+
+  async function checkBetaSession() {
+    const status = byId("auth-status");
+    const login = byId("discord-login");
+    const logout = byId("discord-logout");
+    const userLabel = byId("auth-user");
+    const newRun = byId("new-run");
+
+    status.textContent = "CHECKING BETA ACCESS...";
+    login.hidden = true;
+    logout.hidden = true;
+    userLabel.hidden = true;
+    newRun.disabled = true;
+
+    try {
+      const response = await fetch(API_BASE + "/api/session", {
+        method: "GET",
+        credentials: "include",
+        headers: { "Accept": "application/json" }
+      });
+      const data = await response.json();
+
+      if (response.ok && data.authenticated) {
+        betaAuthenticated = true;
+        status.textContent = "BETA ACCESS VERIFIED";
+        userLabel.textContent = "SIGNED IN AS " + (data.user?.username || "DISCORD USER");
+        userLabel.hidden = false;
+        logout.hidden = false;
+        newRun.disabled = false;
+        return;
+      }
+
+      betaAuthenticated = false;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("discord") === "denied" || data.reason === "beta-access-required") {
+        status.textContent = "ACCESS DENIED · BETA TESTER ROLE REQUIRED";
+      } else if (params.get("discord") === "cancelled") {
+        status.textContent = "DISCORD LOGIN CANCELLED";
+      } else if (params.get("discord") === "login-error") {
+        status.textContent = "DISCORD LOGIN FAILED · PLEASE TRY AGAIN";
+      } else {
+        status.textContent = "SIGN IN WITH DISCORD TO ACCESS THE CLOSED BETA";
+      }
+      login.hidden = false;
+    } catch (error) {
+      betaAuthenticated = false;
+      status.textContent = "AUTH SERVER UNAVAILABLE · START THE RIFTBOUND BACKEND";
+      login.hidden = true;
+      console.error("Could not check Riftbound beta access:", error);
+    } finally {
+      if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }
+
+  byId("discord-login").addEventListener("click", () => {
+    window.location.href = API_BASE + "/auth/discord";
+  });
+
+  byId("discord-logout").addEventListener("click", async () => {
+    try {
+      await fetch(API_BASE + "/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (error) {
+      console.warn("Could not contact the auth server during logout:", error);
+    }
+    betaAuthenticated = false;
+    byId("new-run").disabled = true;
+    byId("auth-status").textContent = "YOU HAVE BEEN LOGGED OUT";
+    byId("auth-user").hidden = true;
+    byId("discord-logout").hidden = true;
+    byId("discord-login").hidden = false;
+  });
 
   function displaySettings() {
     const s = window.riftboundSettings;
@@ -142,6 +220,10 @@
   });
 
   byId("new-run").addEventListener("click", () => {
+    if (!betaAuthenticated) {
+      byId("auth-status").textContent = "PLEASE SIGN IN WITH AN APPROVED BETA TESTER ACCOUNT";
+      return;
+    }
     startNewRun();
     openPreparation();
   });
@@ -173,4 +255,5 @@
   });
 
   displaySettings();
+  checkBetaSession();
 })();
