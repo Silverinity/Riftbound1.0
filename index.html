@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/settings.css">
     <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="css/devpanel.css">
 </head>
 <body>
 
@@ -68,6 +69,10 @@
                 <label class="checkbox-setting">
                     <span>Show Tower Ranges</span>
                     <input type="checkbox" id="tower-ranges">
+                </label>
+                <label class="checkbox-setting dev-setting">
+                    <span>Enable Developer Mode</span>
+                    <input type="checkbox" id="developer-mode">
                 </label>
             </div>
 
@@ -173,7 +178,53 @@
             </aside>
             <canvas id="battlefield" width="960" height="540"></canvas>
         </main>
-        <div class="wave-controls"><span id="wave-status">READY WHEN YOU ARE</span><button id="start-wave" type="button">START WAVE</button></div>
+        <div class="wave-controls">
+            <span id="wave-status">READY WHEN YOU ARE</span>
+            <button id="start-wave" type="button">START WAVE</button>
+            <button id="dev-panel-toggle" type="button" hidden>DEVELOPER PANEL</button>
+        </div>
+        <section id="developer-panel" class="developer-panel" hidden aria-label="Developer panel">
+            <header id="developer-panel-header" class="developer-panel-header">
+                <div><span class="dev-eyebrow">RIFTBOUND · DEBUG TOOLS</span><h2>DEVELOPER PANEL</h2></div>
+                <button id="dev-panel-close" type="button" aria-label="Close developer panel">×</button>
+            </header>
+            <div class="developer-panel-content">
+                <section class="dev-section">
+                    <h3>ECONOMY</h3>
+                    <div class="dev-button-row">
+                        <button data-dev-gold="100">+100 GOLD</button><button data-dev-gold="500">+500 GOLD</button><button data-dev-gold="1000">+1,000 GOLD</button>
+                    </div>
+                    <div class="dev-input-row"><input id="dev-gold-amount" type="number" min="0" max="100000000" value="1000" aria-label="Gold amount"><button id="dev-add-gold">ADD GOLD</button><button id="dev-remove-gold">REMOVE</button></div>
+                </section>
+                <section class="dev-section">
+                    <h3>WAVE CONTROL</h3>
+                    <div class="dev-button-row"><button id="dev-skip-wave">SKIP CURRENT WAVE</button><button id="dev-complete-stage">COMPLETE STAGE</button><button id="dev-clear-enemies">CLEAR ENEMIES</button></div>
+                    <div class="dev-input-row"><label for="dev-wave-number">Wave</label><input id="dev-wave-number" type="number" min="1" max="5" value="1"><button id="dev-jump-wave">START WAVE</button></div>
+                </section>
+                <section class="dev-section">
+                    <h3>PLAYER</h3>
+                    <div class="dev-input-row"><label for="dev-health-amount">Castle HP</label><input id="dev-health-amount" type="number" min="0" max="1000000" value="100"><button id="dev-set-health">SET HP</button><button id="dev-heal">FULL HEAL</button></div>
+                    <label class="dev-check"><span>Invincibility</span><input id="dev-invincible" type="checkbox"></label>
+                </section>
+                <section class="dev-section">
+                    <h3>TOWERS</h3>
+                    <div class="dev-input-row"><label for="dev-tower-type">Add tower</label><select id="dev-tower-type"><option value="archer">Archer</option><option value="arcane">Wizard</option><option value="cannon">Cannon</option></select><button id="dev-add-tower">ADD FREE TOWER</button></div>
+                    <div class="dev-button-row"><button id="dev-max-towers">MAX ALL TOWERS</button><button id="dev-reset-cooldowns">RESET COOLDOWNS</button></div>
+                </section>
+                <section class="dev-section">
+                    <h3>PROGRESSION</h3>
+                    <div class="dev-input-row"><label for="dev-area">Area</label><select id="dev-area"><option value="1">1 · Verdant Woods</option><option value="2">2 · Ashen Wastes</option><option value="3">3 · Frostbound Kingdom</option></select></div>
+                    <div class="dev-input-row"><label for="dev-campsite">Campsite</label><select id="dev-campsite"><option value="1">Campsite 1</option><option value="2">Campsite 2</option></select><label for="dev-stage">Stage</label><select id="dev-stage"><option value="1">Stage 1</option><option value="2">Stage 2</option><option value="3">Stage 3</option></select><button id="dev-jump-progress">GO</button></div>
+                    <div class="dev-button-row"><button id="dev-all-cards">GIVE ALL CARDS</button><button id="dev-trigger-boss">START FINAL BOSS</button></div>
+                </section>
+                <section class="dev-section">
+                    <h3>TESTING</h3>
+                    <div class="dev-button-row"><button id="dev-pause">PAUSE GAME</button><button id="dev-resume">RESUME GAME</button></div>
+                    <div class="dev-input-row"><label for="dev-speed">Game speed</label><select id="dev-speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="3">3×</option></select><button id="dev-apply-speed">APPLY</button></div>
+                </section>
+                <p id="dev-feedback" class="dev-feedback">Developer tools are local testing controls.</p>
+            </div>
+        </section>
 
         <footer class="battle-bottom-bar">
             <div class="resource-display">
@@ -308,5 +359,6 @@
 
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/devpanel.js"></script>
 </body>
 </html>
