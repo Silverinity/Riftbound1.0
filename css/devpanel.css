@@ -1,0 +1,24 @@
+/* Draggable developer tools */
+#dev-panel-toggle{padding:10px 15px;background:#302044;border:1px solid #B99AE8;color:#E5DDF0;font-size:10px;letter-spacing:1px;cursor:pointer;}
+#dev-panel-toggle:hover{background:#62447F;}
+#dev-panel-toggle[hidden]{display:none;}
+.developer-panel{position:fixed;z-index:80;top:110px;right:24px;width:min(430px,calc(100vw - 24px));max-height:min(78vh,760px);display:flex;flex-direction:column;background:rgba(18,12,28,.98);border:1px solid #B99AE8;box-shadow:0 18px 65px rgba(0,0,0,.65),0 0 24px rgba(129,85,184,.2);color:#E5DDF0;}
+.developer-panel[hidden]{display:none;}
+.developer-panel-header{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px 16px;background:#241932;border-bottom:1px solid #62447F;cursor:move;user-select:none;touch-action:none;}
+.dev-eyebrow{font-size:8px;letter-spacing:2px;color:#B99AE8;}
+.developer-panel-header h2{font-size:15px;letter-spacing:2px;margin-top:5px;}
+#dev-panel-close{width:30px;height:30px;background:transparent;border:1px solid #62447F;color:#E5DDF0;font-size:22px;cursor:pointer;}
+.developer-panel-content{overflow:auto;padding:4px 16px 14px;}
+.dev-section{padding:13px 0;border-bottom:1px solid #38264C;}
+.dev-section h3{margin:0 0 10px;color:#B99AE8;font-size:9px;letter-spacing:2px;}
+.dev-button-row,.dev-input-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0;}
+.developer-panel button,.developer-panel input,.developer-panel select{min-height:30px;padding:6px 8px;background:#241932;border:1px solid #62447F;color:#E5DDF0;font:inherit;font-size:10px;}
+.developer-panel button{cursor:pointer;letter-spacing:.5px;}
+.developer-panel button:hover{background:#49335F;border-color:#B99AE8;}
+.developer-panel input[type=number]{width:90px;}
+.developer-panel select{max-width:100%;}
+.dev-input-row label,.dev-check{font-size:10px;color:#B8ADBF;}
+.dev-check{display:flex;justify-content:space-between;align-items:center;margin-top:10px;}
+.dev-check input{accent-color:#8155B8;}
+.dev-feedback{padding-top:12px;color:#B99AE8;font-size:10px;line-height:1.5;}
+@media(max-width:560px){.developer-panel{top:75px;right:8px;width:calc(100vw - 16px);max-height:82vh;}.developer-panel-content{padding-left:10px;padding-right:10px;}#dev-panel-toggle{width:100%;}}
