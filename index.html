@@ -295,56 +295,46 @@
         </div>
     </div>
 
-    <!-- RESTING SITE -->
-    <section id="rest-screen" class="preparation-screen" hidden>
-        <header class="preparation-header">
-            <div>
-                <p class="prep-eyebrow" id="rest-area-label">AFTER THREE AREAS · THE OLD WAYSTONE</p>
-                <h1>THE RESTING SITE</h1>
-            </div>
-            <span class="rest-status">SAFE AREA</span>
-        </header>
 
-        <div class="region-banner">
-            <div class="region-heading">
-                <p class="prep-eyebrow">A MOMENT OF PEACE</p>
-                <h2>THE OLD WAYSTONE</h2>
-                <p class="region-description">
-                    The forest grows quiet. The rifts have weakened,
-                    but the journey is far from over. Take time to prepare.
-                </p>
-            </div>
+    <!-- SAFE CAMPSITE -->
+    <section id="campsite-screen" class="preparation-screen campsite-screen" hidden>
+      <header class="preparation-header">
+        <div><p class="prep-eyebrow" id="campsite-checkpoint">15 WAVES SURVIVED</p><h1>THE WAYFARER'S CAMP</h1></div>
+        <span class="rest-status">SAFE AREA · NO COMBAT</span>
+      </header>
+      <div class="campsite-scene">
+        <div class="camp-moon"></div><div class="camp-stars">✦　·　✧　　　·　✦</div>
+        <div class="camp-tent tent-left"></div><div class="camp-tent tent-right"></div>
+        <div class="campfire"><i></i><b></b></div><div class="camp-ground"></div>
+        <p class="camp-scene-caption">THE RIFTS FEEL DISTANT HERE. TAKE A BREATH.</p>
+      </div>
+      <div class="campsite-intro">
+        <p class="prep-eyebrow">A MOMENT OF PEACE</p>
+        <h2 id="campsite-title">THE PATH GROWS QUIET</h2>
+        <p id="campsite-description">Your companions have made camp. Enemies cannot reach this place. Recover, prepare, and set out when ready.</p>
+      </div>
+      <div class="preparation-content campsite-options">
+        <div class="prep-column">
+          <h3>YOUR EXPEDITION</h3>
+          <div class="prep-stat"><span>GOLD</span><strong id="campsite-gold">0</strong></div>
+          <div class="prep-stat"><span>CASTLE HP</span><strong id="campsite-health">0</strong></div>
+          <div class="prep-stat"><span>TOWERS</span><strong id="campsite-towers">0</strong></div>
+          <div class="prep-stat"><span>CARDS COLLECTED</span><strong id="campsite-cards">0</strong></div>
         </div>
-
-        <div class="preparation-content">
-            <div class="prep-column">
-                <h3>YOUR RESOURCES</h3>
-                <div class="prep-stat"><span>GOLD</span><strong id="rest-gold">0</strong></div>
-                <div class="prep-stat"><span>CASTLE HP</span><strong id="rest-health">0</strong></div>
-                <div class="prep-stat"><span>TOWERS</span><strong id="rest-towers">0</strong></div>
-            </div>
-
-            <div class="prep-column">
-                <h3>REST AND RECOVER</h3>
-                <p class="prep-note">
-                    Restore 30 castle health. The cost is 40 gold.
-                </p>
-                <button id="rest-heal" class="large-action-button">RESTORE CASTLE · 40 G</button>
-
-                <p class="prep-note">
-                    Improve the damage of all your towers. The cost is 75 gold.
-                </p>
-                <button id="rest-upgrade" class="large-action-button">UPGRADE TOWERS · 75 G</button>
-            </div>
+        <div class="prep-column">
+          <h3>REST AND PREPARE</h3>
+          <p class="prep-note">Rest beside the fire. Recover 15 castle health once at each campsite, free of charge.</p>
+          <button id="campsite-free-rest" class="large-action-button">REST BY THE FIRE · FREE</button>
+          <p class="prep-note">Restore 30 castle health for 40 gold.</p>
+          <button id="campsite-heal" class="large-action-button">RESTORE CASTLE · 40 G</button>
+          <p class="prep-note">Improve every tower's damage by 5 for this run. Cost: 75 gold.</p>
+          <button id="campsite-upgrade" class="large-action-button">SHARPEN THE ARSENAL · 75 G</button>
         </div>
-
-        <div class="preparation-footer">
-            <div>
-                <h3>REGION CLEARED</h3>
-                <p><span id="rest-finish-copy">You survived all 15 waves across three regions. Your run is complete.</span></p>
-            </div>
-            <button id="finish-run">RETURN TO MENU</button>
-        </div>
+      </div>
+      <div class="preparation-footer campsite-footer">
+        <div><h3 id="campsite-next-title">THE JOURNEY AWAITS</h3><p id="campsite-next-copy">Continue when you're ready.</p></div>
+        <button id="campsite-continue">CONTINUE EXPEDITION</button>
+      </div>
     </section>
 
     <!-- VICTORY / DEFEAT -->
