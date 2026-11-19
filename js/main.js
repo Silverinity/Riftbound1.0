@@ -11,7 +11,8 @@
     screenShake: true,
     damageNumbers: true,
     towerRanges: false,
-    difficulty: "normal"
+    difficulty: "normal",
+    developerMode: false
   };
 
   function loadSettings() {
@@ -45,6 +46,7 @@
     byId("damage-numbers").checked = s.damageNumbers;
     byId("tower-ranges").checked = s.towerRanges;
     byId("difficulty").value = s.difficulty;
+    byId("developer-mode").checked = !!s.developerMode;
     updateVolumeLabels();
   }
 
@@ -62,7 +64,8 @@
       screenShake: byId("screen-shake").checked,
       damageNumbers: byId("damage-numbers").checked,
       towerRanges: byId("tower-ranges").checked,
-      difficulty: byId("difficulty").value
+      difficulty: byId("difficulty").value,
+      developerMode: byId("developer-mode").checked
     };
   }
 
@@ -110,12 +113,14 @@
   byId("save-settings").addEventListener("click", () => {
     window.riftboundSettings = readSettings();
     persistSettings();
+    if (typeof updateDeveloperModeUI === "function") updateDeveloperModeUI();
     closeSettings();
   });
   byId("reset-settings").addEventListener("click", () => {
     window.riftboundSettings = { ...DEFAULT_SETTINGS };
     displaySettings();
     persistSettings();
+    if (typeof updateDeveloperModeUI === "function") updateDeveloperModeUI();
   });
   settingsOverlay.addEventListener("click", event => {
     if (event.target === settingsOverlay) closeSettings();
