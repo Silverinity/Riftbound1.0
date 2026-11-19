@@ -191,13 +191,22 @@ function createWaveQueue(wave){
   }return queue;
 }
 function startWave(automatic=false){
-  if(!currentRun||currentRun.gameOver||currentRun.currentWave>=5||currentRun.waveActive)return;
-  currentRun.currentWave++;currentRun.waveActive=true;currentRun.waitingForWave=false;currentRun.waveStarted=true;
+  if(!currentRun||currentRun.gameOver||currentRun.currentWave>=5)return;
+  if(currentRun.waveActive&&!automatic)return;
+  currentRun.currentWave++;
+  currentRun.waveActive=true;
+  currentRun.waitingForWave=false;
+  currentRun.waveStarted=true;
   currentRun.spawnBatches.push({wave:currentRun.currentWave,queue:createWaveQueue(currentRun.currentWave),timer:0});
-  currentRun.waveIntervalTimer=0;
+  currentRun.waveIntervalTimer=currentRun.currentWave<5?10:0;
   const total=((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave;
-  if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&currentRun.currentWave===5){setWaveStatus("AREA BOSS");showBattleMessage("THE ANCIENT TREANT HAS AWAKENED!");}
-  else{setWaveStatus("WAVE "+total+" / 30 IN PROGRESS");showBattleMessage("WAVE "+total+" HAS BEGUN");}
+  if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&currentRun.currentWave===5){
+    setWaveStatus("AREA BOSS");
+    showBattleMessage("THE ANCIENT TREANT HAS AWAKENED!");
+  }else{
+    setWaveStatus("WAVE "+total+" / 30 IN PROGRESS");
+    showBattleMessage("WAVE "+total+" HAS BEGUN");
+  }
   updateGameDisplay();
 }
 function spawnEnemy(type,waveNumber){
@@ -241,17 +250,17 @@ function updateProjectiles(dt){
 }
 function checkWaveCompletion(){
   if(!currentRun.waveActive||currentRun.spawnBatches.length||currentRun.enemies.length)return;
-  currentRun.waveActive=false;
   currentRun.projectiles=[];
-  currentRun.waveIntervalTimer=0;
-  updateGameDisplay();
   if(currentRun.currentWave>=5){
+    currentRun.waveActive=false;
+    currentRun.waveIntervalTimer=0;
+    updateGameDisplay();
     showCardSelection();
     return;
   }
   const total=((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave;
-  setWaveStatus("WAVE "+total+" CLEARED · READY FOR NEXT");
-  showBattleMessage("WAVE CLEARED. PRESS START WAVE WHEN YOU ARE READY.");
+  setWaveStatus("WAVE "+total+" CLEARED · NEXT WAVE IN "+Math.ceil(currentRun.waveIntervalTimer)+"s");
+  showBattleMessage("WAVE CLEARED. THE NEXT GROUP IS APPROACHING.");
 }
 function endGame(){
   if(currentRun.gameOver)return;currentRun.gameOver=true;currentRun.waveActive=false;stopGameLoop();setWaveStatus("DEFEAT");showBattleMessage("THE CASTLE HAS FALLEN");
@@ -295,12 +304,27 @@ function chooseCard(id){
 }
 function continueFromProgress(){document.getElementById("progress-overlay").hidden=true;setWaveStatus("READY WHEN YOU ARE");showBattleMessage("PREPARE YOUR DEFENSE, THEN PRESS START WAVE");startGameLoop();}
 function gameLoop(timestamp){
-  if(!gameRunning||!currentRun)return;const rawDt=Math.min(Math.max((timestamp-lastFrameTime)/1000,0),.033);const dt=rawDt*(currentRun.devGameSpeed||1);lastFrameTime=timestamp;
+  if(!gameRunning||!currentRun)return;
+  const rawDt=Math.min(Math.max((timestamp-lastFrameTime)/1000,0),.033);
+  const dt=rawDt*(currentRun.devGameSpeed||1);
+  lastFrameTime=timestamp;
   if(currentRun.waveActive){
-    updateEnemies(dt);updateTowers(dt);updateProjectiles(dt);
+    updateEnemies(dt);
+    updateTowers(dt);
+    updateProjectiles(dt);
+    if(currentRun.currentWave<5){
+      currentRun.waveIntervalTimer-=dt;
+      if(currentRun.waveIntervalTimer<=0){
+        startWave(true);
+      }else if(currentRun.spawnBatches.length||currentRun.enemies.length){
+        const total=((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave;
+        setWaveStatus("WAVE "+total+" ACTIVE · NEXT WAVE IN "+Math.ceil(currentRun.waveIntervalTimer)+"s");
+      }
+    }
     checkWaveCompletion();
   }
-  drawBattlefield();if(gameRunning)animationFrame=requestAnimationFrame(gameLoop);
+  drawBattlefield();
+  if(gameRunning)animationFrame=requestAnimationFrame(gameLoop);
 }
 function startGameLoop(){stopGameLoop();gameRunning=true;lastFrameTime=performance.now();animationFrame=requestAnimationFrame(gameLoop);}
 function stopGameLoop(){gameRunning=false;if(animationFrame!==null){cancelAnimationFrame(animationFrame);animationFrame=null;}}
