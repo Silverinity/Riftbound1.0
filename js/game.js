@@ -18,6 +18,11 @@ const pathPoints = [
   {x:75,y:270},{x:230,y:270},{x:230,y:130},{x:440,y:130},
   {x:440,y:405},{x:690,y:405},{x:690,y:270},{x:850,y:270}
 ];
+const treePositions = [
+  [70,70],[145,90],[90,170],[330,55],[390,65],[520,70],[610,90],[780,75],[900,80],
+  [100,390],[150,465],[320,470],[540,490],[800,450],[900,400],[560,230],[820,170],
+  [350,330],[110,330],[760,340],[920,180]
+];
 const areas = [
   {name:"Verdant Woods",subtitle:"The Last Fortress",boss:"",enemyScale:1},
   {name:"Ashen Wastes",subtitle:"The Scorched Crossing",boss:"",enemyScale:1.3},
@@ -45,7 +50,7 @@ const cardPool = [
 function createNewRun(){
   return {
     gold:100,castleHealth:100,maxCastleHealth:100,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
-    towers:[{type:"archer",x:330,y:75,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
+    towers:[{type:"archer",x:330,y:200,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
     devInvincible:false,devGameSpeed:1,campsiteRestUsed:false
@@ -122,7 +127,7 @@ function drawPath(){
 }
 function drawTrees(){
   const p=environmentPalette();
-  [[70,70],[145,90],[90,170],[330,55],[390,65],[520,70],[610,90],[780,75],[900,80],[100,390],[150,465],[320,470],[540,490],[800,450],[900,400],[560,230],[820,170],[350,330],[110,330],[760,340],[920,180]].forEach(([x,y])=>{
+  treePositions.forEach(([x,y])=>{
     ctx.fillStyle=p.treeDark;ctx.fillRect(x-15,y-12,38,34);ctx.fillStyle=p.trunk;ctx.fillRect(x-5,y+5,10,15);
     ctx.fillStyle=p.tree;ctx.fillRect(x-18,y-25,36,35);ctx.fillStyle=p.treeLight;ctx.fillRect(x-12,y-30,25,25);ctx.fillStyle=p.tree;ctx.fillRect(x-5,y-25,12,12);
   });
@@ -305,6 +310,7 @@ function isOnPath(x,y){
 function canBuild(x,y,checkGold=true){
   if(!Number.isFinite(x)||!Number.isFinite(y))return false;
   if(x<22||x>938||y<22||y>518||isOnPath(x,y)||Math.hypot(x-75,y-270)<62||(x>830&&y>200&&y<340))return false;
+  if(treePositions.some(([tx,ty])=>Math.abs(x-tx)<34&&y>ty-46&&y<ty+26))return false;
   if(currentRun.towers.some(t=>Math.hypot(x-t.x,y-t.y)<37))return false;
   return !checkGold||currentRun.gold>=towerTypes[selectedTower].cost;
 }
