@@ -4,6 +4,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import pg from "pg";
+const { Pool } = pg;
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -16,7 +18,8 @@ const {
   DISCORD_GUILD_ID,
   DISCORD_BETA_ROLE_ID,
   FRONTEND_ORIGIN,
-  SESSION_SECRET
+  SESSION_SECRET,
+  DATABASE_URL
 } = process.env;
 
 const required = {
@@ -26,7 +29,8 @@ const required = {
   DISCORD_GUILD_ID,
   DISCORD_BETA_ROLE_ID,
   FRONTEND_ORIGIN,
-  SESSION_SECRET
+  SESSION_SECRET,
+  DATABASE_URL
 };
 
 const missing = Object.entries(required)
@@ -53,9 +57,9 @@ app.use(helmet());
 app.use(cors({
   origin: FRONTEND_ORIGIN,
   credentials: true,
-  methods: ["GET", "POST"]
+  methods: ["GET", "POST", "PUT", "DELETE"]
 }));
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "128kb" }));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -289,11 +293,129 @@ app.post("/auth/logout", (_req, res) => {
   res.json({ ok: true });
 });
 
+
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: IS_PRODUCTION ? { rejectUnauthorized: false } : undefined,
+  max: 5,
+  connectionTimeoutMillis: 10000
+});
+
+async function verifiedSaveUser(req) {
+  const raw = getCookie(req, SESSION_COOKIE);
+  const session = raw ? decryptSession(raw) : null;
+  if (!session?.accessToken || !session?.userId || Date.now() >= session.expiresAt) {
+    return { ok: false, status: 401, error: "not-authenticated" };
+  }
+  try {
+    if (!(await verifyBetaRole(session.accessToken))) {
+      return { ok: false, status: 403, error: "beta-access-required" };
+    }
+    return { ok: true, userId: session.userId };
+  } catch (error) {
+    const status = error.status === 401 || error.status === 404 ? 401 : 503;
+    return { ok: false, status, error: status === 401 ? "discord-session-expired" : "verification-unavailable" };
+  }
+}
+
+function cleanSave(body) {
+  if (!body || typeof body !== "object" || !body.save || typeof body.save !== "object") return null;
+  const save = body.save;
+  const run = save.run;
+  if (save.version !== 1 || !run || typeof run !== "object" || JSON.stringify(save).length > 100000) return null;
+  const numeric = ["gold", "castleHealth", "maxCastleHealth", "area", "campsite", "stage", "currentWave", "totalWaves", "towerDamageBonus"];
+  if (!numeric.every(k => Number.isFinite(run[k]))) return null;
+  if (run.gold < 0 || run.castleHealth < 0 || run.maxCastleHealth < 1 || run.area < 1 || run.area > 3 ||
+      run.campsite < 1 || run.campsite > 2 || run.stage < 1 || run.stage > 3 || run.currentWave < 0 || run.currentWave > 5) return null;
+  const towerTypes = new Set(["archer", "arcane", "cannon"]);
+  if (!Array.isArray(run.towers) || run.towers.length < 1 || run.towers.length > 100) return null;
+  for (const t of run.towers) {
+    if (!t || !towerTypes.has(t.type) || !Number.isFinite(t.x) || !Number.isFinite(t.y) ||
+        !Number.isInteger(t.level) || t.level < 1 || t.level > 4 || !t.upgrades ||
+        !["damage", "range", "speed"].every(k => Number.isInteger(t.upgrades[k]) && t.upgrades[k] >= 0 && t.upgrades[k] <= 3)) return null;
+  }
+  const cards = new Set(["arrows", "arcane", "siege", "greed", "walls"]);
+  if (!Array.isArray(run.cards) || run.cards.length > 100 || !run.cards.every(c => cards.has(c))) return null;
+  const settingKeys = ["masterVolume", "musicVolume", "sfxVolume", "screenShake", "damageNumbers", "towerRanges", "difficulty", "developerMode"];
+  const settings = {};
+  if (save.settings && typeof save.settings === "object") {
+    for (const key of settingKeys) {
+      if (Object.hasOwn(save.settings, key)) settings[key] = save.settings[key];
+    }
+  }
+  return {
+    version: 1,
+    run: {
+      gold: run.gold, castleHealth: run.castleHealth, maxCastleHealth: run.maxCastleHealth,
+      area: run.area, campsite: run.campsite, stage: run.stage, currentWave: run.currentWave,
+      totalWaves: run.totalWaves,
+      towers: run.towers.map(t => ({ type: t.type, x: t.x, y: t.y, level: t.level,
+        upgrades: { damage: t.upgrades.damage, range: t.upgrades.range, speed: t.upgrades.speed } })),
+      towerDamageBonus: run.towerDamageBonus, cards: run.cards,
+      campsiteRestUsed: Boolean(run.campsiteRestUsed),
+      checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle"
+    },
+    settings
+  };
+}
+
+app.get("/api/save", async (req, res) => {
+  const auth = await verifiedSaveUser(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  try {
+    const result = await pool.query("SELECT save_data, updated_at FROM player_saves WHERE discord_user_id = $1", [auth.userId]);
+    if (!result.rowCount) return res.json({ hasSave: false });
+    return res.json({ hasSave: true, save: result.rows[0].save_data, updatedAt: result.rows[0].updated_at });
+  } catch (error) {
+    console.error("Could not load player save:", error.message);
+    return res.status(503).json({ error: "save-service-unavailable" });
+  }
+});
+
+app.put("/api/save", async (req, res) => {
+  const auth = await verifiedSaveUser(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  const save = cleanSave(req.body);
+  if (!save) return res.status(400).json({ error: "invalid-save-data" });
+  try {
+    const result = await pool.query(
+      "INSERT INTO player_saves (discord_user_id, save_data, updated_at) VALUES ($1, $2::jsonb, NOW()) ON CONFLICT (discord_user_id) DO UPDATE SET save_data = EXCLUDED.save_data, updated_at = NOW() RETURNING updated_at",
+      [auth.userId, JSON.stringify(save)]
+    );
+    return res.json({ ok: true, updatedAt: result.rows[0].updated_at });
+  } catch (error) {
+    console.error("Could not store player save:", error.message);
+    return res.status(503).json({ error: "save-service-unavailable" });
+  }
+});
+
+app.delete("/api/save", async (req, res) => {
+  const auth = await verifiedSaveUser(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  try {
+    await pool.query("DELETE FROM player_saves WHERE discord_user_id = $1", [auth.userId]);
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("Could not delete player save:", error.message);
+    return res.status(503).json({ error: "save-service-unavailable" });
+  }
+});
+
 app.use((error, _req, res, _next) => {
   console.error("Unhandled server error:", error.message);
   res.status(500).json({ error: "internal-server-error" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Riftbound auth server listening on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    await pool.query("CREATE TABLE IF NOT EXISTS player_saves (discord_user_id TEXT PRIMARY KEY, save_data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
+    app.listen(PORT, () => {
+      console.log(`Riftbound auth server listening on port ${PORT}`);
+      console.log("Player save database is ready.");
+    });
+  } catch (error) {
+    console.error("Could not connect to the player save database:", error.message);
+    process.exit(1);
+  }
+}
+startServer();
