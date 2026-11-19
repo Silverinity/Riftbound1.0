@@ -117,3 +117,5 @@
     cursor: not-allowed;
     box-shadow: none;
 }
+
+#continue-run[hidden] { display: none; }
