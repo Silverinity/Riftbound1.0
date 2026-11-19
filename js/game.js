@@ -62,7 +62,10 @@ function updateAreaLabels(){
   document.querySelector(".battle-region h1").textContent=a.subtitle.toUpperCase();
   document.querySelector(".region-heading .prep-eyebrow").textContent="AREA 0"+currentRun.area;
   document.querySelector(".region-heading h2").textContent=a.name.toUpperCase();
-  document.querySelector(".region-details span").textContent="30 WAVES · 2 CAMPSITES";
+  const details=document.querySelectorAll(".region-details span");
+  if(details[0])details[0].textContent="30 WAVES · 2 CAMPSITES";
+  if(details[1])details[1].textContent=currentRun.area===3?"ANCIENT TREANT BOSS":"BOSS THREAT UNKNOWN";
+  if(details[2])details[2].textContent=currentRun.area===1?"UNKNOWN THREATS":currentRun.area===2?"THREATS INTENSIFY":"FINAL REALM · EXTREME THREATS";
 }
 function initBattlefield(){
   if(!currentRun)startNewRun();
@@ -340,7 +343,7 @@ canvas.addEventListener("pointerdown",e=>{if(!currentRun||currentRun.gameOver||g
 canvas.addEventListener("contextmenu",e=>{e.preventDefault();selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();});
 function gameScreenIsHidden(){const s=document.getElementById("game-screen");return !s||s.hidden;}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&& !gameScreenIsHidden()){selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();}});
-document.getElementById("start-wave").addEventListener("click",startWave);
+document.getElementById("start-wave").addEventListener("click",()=>startWave(false));
 document.getElementById("progress-continue").addEventListener("click",continueFromProgress);
 
 function updateRestScreen(){
