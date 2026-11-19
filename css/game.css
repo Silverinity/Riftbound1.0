@@ -725,3 +725,28 @@ button:disabled {
     #start-wave { width:100%; }
     .progress-grid { grid-template-columns:1fr; }
 }
+
+/* Safe campsite intermission */
+.campsite-screen{background:radial-gradient(ellipse at 50% 20%,#302044 0%,#171022 42%,#0B0812 82%);}
+.campsite-scene{position:relative;isolation:isolate;overflow:hidden;height:270px;margin-top:28px;border:1px solid #62447F;background:linear-gradient(180deg,#171329 0%,#28213B 58%,#3B3042 100%);}
+.camp-moon{position:absolute;right:13%;top:34px;width:42px;height:42px;border-radius:50%;background:#D8C0FF;box-shadow:0 0 28px rgba(216,192,255,.45);}
+.camp-stars{position:absolute;top:25px;left:12%;color:#D8C0FF;letter-spacing:12px;font-size:18px;opacity:.8;}
+.camp-ground{position:absolute;z-index:-1;left:-5%;right:-5%;bottom:-65px;height:150px;border-radius:50% 50% 0 0;background:#1C2A25;border-top:3px solid #52634D;}
+.camp-tent{position:absolute;bottom:65px;width:150px;height:100px;background:#382A49;clip-path:polygon(50% 0,100% 100%,0 100%);filter:drop-shadow(0 8px 8px #09070D);}
+.camp-tent:after{content:"";position:absolute;left:46%;bottom:0;width:12%;height:52%;background:#171022;clip-path:polygon(50% 0,100% 100%,0 100%);}
+.tent-left{left:13%;transform:scale(.82);}.tent-right{right:13%;transform:scale(.68);bottom:59px;background:#493653;}
+.campfire{position:absolute;z-index:2;left:50%;bottom:67px;width:66px;height:60px;transform:translateX(-50%);}
+.campfire i,.campfire b{position:absolute;left:50%;bottom:5px;display:block;width:22px;height:36px;transform:translateX(-50%);border-radius:70% 10% 65% 45%;background:#F0A45D;box-shadow:0 0 22px rgba(240,164,93,.6);}
+.campfire b{width:12px;height:23px;bottom:5px;background:#F6D28A;}
+.campfire:before,.campfire:after{content:"";position:absolute;left:10px;bottom:0;width:48px;height:7px;background:#5A3C31;transform:rotate(18deg);border:1px solid #8B6248;}
+.campfire:after{transform:rotate(-18deg);}
+.camp-scene-caption{position:absolute;bottom:17px;left:0;right:0;text-align:center;color:#D8C0FF;font-size:9px;letter-spacing:3px;}
+.campsite-intro{text-align:center;max-width:720px;margin:28px auto 0;}
+.campsite-intro h2{color:#D8C0FF;font-size:clamp(22px,4vw,34px);letter-spacing:3px;margin:8px 0 12px;}
+.campsite-intro>p:last-child{color:#A99CB4;line-height:1.7;font-size:13px;}
+.campsite-options{margin-top:24px;}.campsite-options .prep-column{background:rgba(23,16,34,.88);}
+.campsite-footer button{padding:16px 26px;background:#62447F;border:1px solid #B99AE8;color:#fff;letter-spacing:2px;cursor:pointer;}
+.campsite-footer button:hover{background:#8155B8;box-shadow:0 0 18px rgba(185,154,232,.2);}
+.campsite-screen .large-action-button{width:100%;text-align:left;}
+.campsite-screen .large-action-button:disabled{opacity:.4;cursor:not-allowed;}
+@media(max-width:560px){.campsite-scene{height:220px;}.camp-tent{transform:scale(.65);transform-origin:bottom left;left:5%;}.tent-right{right:2%;transform:scale(.55);transform-origin:bottom right;}.camp-moon{right:9%;width:32px;height:32px;}.camp-scene-caption{font-size:7px;letter-spacing:1.5px;}}
