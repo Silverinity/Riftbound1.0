@@ -386,7 +386,7 @@ function showCampsiteScreen(completedWaves){
   document.getElementById("campsite-screen").hidden=false;
   document.getElementById("result-overlay").hidden=true;
   document.getElementById("campsite-checkpoint").textContent=completedWaves+" WAVES SURVIVED · AREA "+String(currentRun.area).padStart(2,"0");
-  document.getElementById("campsite-title").textContent="CAMPSITE "+currentRun.campsite+" · "+areaData().name.toUpperCase();
+  document.getElementById("campsite-title").textContent="REST STOP "+String(Math.ceil(completedWaves/15)).padStart(2,"0")+" · "+areaData().name.toUpperCase();
   document.getElementById("campsite-description").textContent="The fighting has stopped. Your companions have made camp in a sheltered clearing. No enemies can enter. Rest, tend to the fortress, and prepare for the next stretch.";
   document.getElementById("campsite-next-title").textContent="NEXT: AREA "+String(currentRun.area).padStart(2,"0")+" · CAMPSITE "+currentRun.campsite+" · STAGE "+currentRun.stage;
   document.getElementById("campsite-next-copy").textContent="Your next 15-wave stretch is waiting. Continue whenever you're ready.";
