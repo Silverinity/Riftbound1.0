@@ -38,6 +38,42 @@
   const settingsOverlay = byId("settings-overlay");
   const API_BASE = (window.RIFTBOUND_API_BASE || "http://localhost:3000").replace(/\/$/, "");
   let betaAuthenticated = false;
+  let cloudSaveAvailable = false;
+
+  async function loadCloudSave() {
+    try {
+      const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
+      if (!response.ok) throw new Error("Cloud save could not be loaded.");
+      const data = await response.json();
+      cloudSaveAvailable = !!data.hasSave;
+      byId("continue-run").hidden = !cloudSaveAvailable;
+      if (cloudSaveAvailable) byId("auth-status").textContent = "BETA ACCESS VERIFIED · CLOUD SAVE FOUND";
+      return data;
+    } catch (error) {
+      cloudSaveAvailable = false;
+      byId("continue-run").hidden = true;
+      console.warn("Could not load Riftbound cloud save:", error);
+      return null;
+    }
+  }
+
+  window.riftboundCloudSave = async run => {
+    if (!betaAuthenticated) return;
+    try {
+      const response = await fetch(API_BASE + "/api/save", {
+        method: "PUT", credentials: "include",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ save: { version: 1, run, settings: window.riftboundSettings } })
+      });
+      if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
+      cloudSaveAvailable = true;
+      byId("continue-run").hidden = false;
+      byId("auth-status").textContent = "BETA ACCESS VERIFIED · PROGRESS SAVED";
+    } catch (error) {
+      console.error("Could not save Riftbound progress:", error);
+      byId("auth-status").textContent = "CLOUD SAVE FAILED · CHECK BACKEND DATABASE";
+    }
+  };
 
   async function checkBetaSession() {
     const status = byId("auth-status");
@@ -67,6 +103,13 @@
         userLabel.hidden = false;
         logout.hidden = false;
         newRun.disabled = false;
+        const cloud = await loadCloudSave();
+        if (cloud?.save?.settings) {
+          window.riftboundSettings = { ...DEFAULT_SETTINGS, ...cloud.save.settings };
+          persistSettings();
+          displaySettings();
+          if (typeof updateDeveloperModeUI === "function") updateDeveloperModeUI();
+        }
         return;
       }
 
@@ -82,8 +125,10 @@
         status.textContent = "SIGN IN WITH DISCORD TO ACCESS THE CLOSED BETA";
       }
       login.hidden = false;
+      byId("continue-run").hidden = true;
     } catch (error) {
       betaAuthenticated = false;
+      byId("continue-run").hidden = true;
       status.textContent = "AUTH SERVER UNAVAILABLE · START THE RIFTBOUND BACKEND";
       login.hidden = true;
       console.error("Could not check Riftbound beta access:", error);
@@ -113,6 +158,7 @@
     byId("auth-user").hidden = true;
     byId("discord-logout").hidden = true;
     byId("discord-login").hidden = false;
+    byId("continue-run").hidden = true;
   });
 
   function displaySettings() {
@@ -219,11 +265,19 @@
     }
   });
 
-  byId("new-run").addEventListener("click", () => {
+  byId("continue-run").addEventListener("click", async () => {
+    if (!betaAuthenticated) return;
+    const cloud = await loadCloudSave();
+    if (cloud?.save && window.restoreRiftboundRun(cloud.save)) return;
+    byId("auth-status").textContent = "NO VALID CLOUD SAVE WAS FOUND";
+  });
+
+  byId("new-run").addEventListener("click", async () => {
     if (!betaAuthenticated) {
       byId("auth-status").textContent = "PLEASE SIGN IN WITH AN APPROVED BETA TESTER ACCOUNT";
       return;
     }
+    if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your existing cloud save. Continue?")) return;
     startNewRun();
     openPreparation();
   });
