@@ -86,8 +86,8 @@
     mainMenu.style.display = "none";
     preparationScreen.hidden = true;
     gameScreen.hidden = true;
-    restScreen.hidden = true;
-    campsiteScreen.hidden = true;
+    if (restScreen) restScreen.hidden = true;
+    if (campsiteScreen) campsiteScreen.hidden = true;
   }
 
   function returnToMenu() {
