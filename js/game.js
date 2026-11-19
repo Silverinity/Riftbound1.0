@@ -186,11 +186,10 @@ function createWaveQueue(wave){
   }return queue;
 }
 function startWave(automatic=false){
-  if(!currentRun||currentRun.gameOver||currentRun.currentWave>=5)return;
-  if(currentRun.waveActive&&!automatic)return;
+  if(!currentRun||currentRun.gameOver||currentRun.currentWave>=5||currentRun.waveActive)return;
   currentRun.currentWave++;currentRun.waveActive=true;currentRun.waitingForWave=false;currentRun.waveStarted=true;
   currentRun.spawnBatches.push({wave:currentRun.currentWave,queue:createWaveQueue(currentRun.currentWave),timer:0});
-  currentRun.waveIntervalTimer=currentRun.currentWave<5?10:0;
+  currentRun.waveIntervalTimer=0;
   const total=((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave;
   if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&currentRun.currentWave===5){setWaveStatus("AREA BOSS");showBattleMessage("THE ANCIENT TREANT HAS AWAKENED!");}
   else{setWaveStatus("WAVE "+total+" / 30 IN PROGRESS");showBattleMessage("WAVE "+total+" HAS BEGUN");}
@@ -236,9 +235,18 @@ function updateProjectiles(dt){
   });currentRun.enemies=currentRun.enemies.filter(e=>e.health>0);
 }
 function checkWaveCompletion(){
-  if(!currentRun.waveActive||currentRun.currentWave<5||currentRun.spawnBatches.length||currentRun.enemies.length)return;
-  currentRun.waveActive=false;currentRun.projectiles=[];currentRun.waveIntervalTimer=0;updateGameDisplay();
-  showCardSelection();
+  if(!currentRun.waveActive||currentRun.spawnBatches.length||currentRun.enemies.length)return;
+  currentRun.waveActive=false;
+  currentRun.projectiles=[];
+  currentRun.waveIntervalTimer=0;
+  updateGameDisplay();
+  if(currentRun.currentWave>=5){
+    showCardSelection();
+    return;
+  }
+  const total=((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave;
+  setWaveStatus("WAVE "+total+" CLEARED · READY FOR NEXT");
+  showBattleMessage("WAVE CLEARED. PRESS START WAVE WHEN YOU ARE READY.");
 }
 function endGame(){
   if(currentRun.gameOver)return;currentRun.gameOver=true;currentRun.waveActive=false;stopGameLoop();setWaveStatus("DEFEAT");showBattleMessage("THE CASTLE HAS FALLEN");
@@ -285,11 +293,6 @@ function gameLoop(timestamp){
   if(!gameRunning||!currentRun)return;const rawDt=Math.min(Math.max((timestamp-lastFrameTime)/1000,0),.033);const dt=rawDt*(currentRun.devGameSpeed||1);lastFrameTime=timestamp;
   if(currentRun.waveActive){
     updateEnemies(dt);updateTowers(dt);updateProjectiles(dt);
-    if(currentRun.currentWave<5){
-      currentRun.waveIntervalTimer-=dt;
-      if(currentRun.waveIntervalTimer<=0)startWave(true);
-      else {const seconds=Math.ceil(currentRun.waveIntervalTimer);setWaveStatus("NEXT WAVE IN "+seconds+"s · "+currentRun.currentWave+"/5 STARTED");}
-    } else {setWaveStatus("ALL 5 WAVES RELEASED · CLEAR THE REMAINING ENEMIES");}
     checkWaveCompletion();
   }
   drawBattlefield();if(gameRunning)animationFrame=requestAnimationFrame(gameLoop);
@@ -394,6 +397,7 @@ function showCampsiteScreen(completedWaves){
 function continueFromCampsite(){
   document.getElementById("campsite-screen").hidden=true;
   document.getElementById("game-screen").hidden=false;
+  updateGameDisplay();
   setWaveStatus("READY WHEN YOU ARE");
   showBattleMessage("YOU ARE RESTED. PREPARE YOUR DEFENSE, THEN START THE NEXT WAVE.");
   startGameLoop();
