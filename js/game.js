@@ -53,6 +53,7 @@ function createNewRun(){
 function startNewRun(){
   stopGameLoop();currentRun=createNewRun();selectedTower=null;selectedTowerEntity=null;
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
+  updateAreaLabels();
   updateGameDisplay();
 }
 function areaData(){return areas[currentRun.area-1]||areas[0];}
