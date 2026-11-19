@@ -48,7 +48,7 @@ function createNewRun(){
     towers:[{type:"archer",x:330,y:75,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
-    devInvincible:false,devGameSpeed:1
+    devInvincible:false,devGameSpeed:1,campsiteRestUsed:false
   };
 }
 function startNewRun(){
@@ -259,6 +259,7 @@ function showCardSelection(){
 }
 function chooseCard(id){
   if(!currentRun||!pendingCards.some(c=>c.id===id))return;
+  const completedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+5;
   currentRun.cards.push(id);
   if(id==="walls"){currentRun.maxCastleHealth+=20;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+20);}
   document.getElementById("card-overlay").hidden=true;
@@ -267,8 +268,10 @@ function chooseCard(id){
   else if(currentRun.area<3){currentRun.area++;currentRun.campsite=1;currentRun.stage=1;}
   else{currentRun.runFinished=true;showRestScreen();return;}
   currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];currentRun.waveActive=false;currentRun.waitingForWave=false;currentRun.waveStarted=false;currentRun.waveIntervalTimer=0;
-  selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
+  selectedTowerEntity=null;selectedTower=null;currentRun.campsiteRestUsed=false;
+  document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
   updateAreaLabels();updateGameDisplay();
+  if(completedWaves%15===0){showCampsiteScreen(completedWaves);return;}
   const next=document.getElementById("progress-overlay");
   document.getElementById("progress-area").textContent="AREA 0"+currentRun.area+" · "+areaData().name.toUpperCase();
   document.getElementById("progress-campsite").textContent="CAMPSITE "+currentRun.campsite+" OF 2";
@@ -347,7 +350,55 @@ function gameScreenIsHidden(){const s=document.getElementById("game-screen");ret
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&& !gameScreenIsHidden()){selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();}});
 document.getElementById("start-wave").addEventListener("click",()=>startWave(false));
 document.getElementById("progress-continue").addEventListener("click",continueFromProgress);
+document.getElementById("campsite-free-rest").addEventListener("click",restByCampfire);
+document.getElementById("campsite-heal").addEventListener("click",healAtCampsite);
+document.getElementById("campsite-upgrade").addEventListener("click",upgradeAtCampsite);
+document.getElementById("campsite-continue").addEventListener("click",continueFromCampsite);
 
+function updateCampsiteScreen(){
+  if(!currentRun)return;
+  document.getElementById("campsite-gold").textContent=currentRun.gold;
+  document.getElementById("campsite-health").textContent=currentRun.castleHealth+" / "+currentRun.maxCastleHealth;
+  document.getElementById("campsite-towers").textContent=currentRun.towers.length;
+  document.getElementById("campsite-cards").textContent=currentRun.cards.length;
+  document.getElementById("campsite-free-rest").disabled=currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth;
+  document.getElementById("campsite-heal").disabled=currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth;
+  document.getElementById("campsite-upgrade").disabled=currentRun.gold<75;
+}
+function restByCampfire(){
+  if(!currentRun||currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
+  currentRun.campsiteRestUsed=true;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+15);updateCampsiteScreen();
+}
+function healAtCampsite(){
+  if(!currentRun||currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
+  currentRun.gold-=40;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();
+}
+function upgradeAtCampsite(){
+  if(!currentRun||currentRun.gold<75)return;
+  currentRun.gold-=75;currentRun.towerDamageBonus+=5;updateCampsiteScreen();
+}
+function showCampsiteScreen(completedWaves){
+  stopGameLoop();
+  document.getElementById("main-menu").style.display="none";
+  document.getElementById("preparation-screen").hidden=true;
+  document.getElementById("game-screen").hidden=true;
+  document.getElementById("rest-screen").hidden=true;
+  document.getElementById("campsite-screen").hidden=false;
+  document.getElementById("result-overlay").hidden=true;
+  document.getElementById("campsite-checkpoint").textContent=completedWaves+" WAVES SURVIVED · AREA "+String(currentRun.area).padStart(2,"0");
+  document.getElementById("campsite-title").textContent="CAMPSITE "+currentRun.campsite+" · "+areaData().name.toUpperCase();
+  document.getElementById("campsite-description").textContent="The fighting has stopped. Your companions have made camp in a sheltered clearing. No enemies can enter. Rest, tend to the fortress, and prepare for the next stretch.";
+  document.getElementById("campsite-next-title").textContent="NEXT: AREA "+String(currentRun.area).padStart(2,"0")+" · CAMPSITE "+currentRun.campsite+" · STAGE "+currentRun.stage;
+  document.getElementById("campsite-next-copy").textContent="Your next 15-wave stretch is waiting. Continue whenever you're ready.";
+  updateCampsiteScreen();
+}
+function continueFromCampsite(){
+  document.getElementById("campsite-screen").hidden=true;
+  document.getElementById("game-screen").hidden=false;
+  setWaveStatus("READY WHEN YOU ARE");
+  showBattleMessage("YOU ARE RESTED. PREPARE YOUR DEFENSE, THEN START THE NEXT WAVE.");
+  startGameLoop();
+}
 function updateRestScreen(){
   if(!currentRun)return;document.getElementById("rest-gold").textContent=currentRun.gold;
   document.getElementById("rest-health").textContent=currentRun.castleHealth+" / "+currentRun.maxCastleHealth;
@@ -359,14 +410,14 @@ function healAtRestSite(){if(currentRun.gold<40||currentRun.castleHealth>=curren
 function upgradeAtRestSite(){if(currentRun.gold<75)return;currentRun.gold-=75;currentRun.towerDamageBonus+=5;updateRestScreen();}
 function showRestScreen(){
   stopGameLoop();document.getElementById("main-menu").style.display="none";document.getElementById("preparation-screen").hidden=true;
-  document.getElementById("game-screen").hidden=true;document.getElementById("rest-screen").hidden=false;document.getElementById("result-overlay").hidden=true;
+  document.getElementById("game-screen").hidden=true;document.getElementById("campsite-screen").hidden=true;document.getElementById("rest-screen").hidden=false;document.getElementById("result-overlay").hidden=true;
   document.getElementById("rest-area-label").textContent="AFTER THREE AREAS · THE OLD WAYSTONE";
   document.getElementById("rest-finish-copy").textContent="You survived 90 waves across three areas. Your run is complete.";
   updateRestScreen();
 }
 function hideAllScreens(){
   document.getElementById("main-menu").style.display="none";document.getElementById("preparation-screen").hidden=true;
-  document.getElementById("game-screen").hidden=true;document.getElementById("rest-screen").hidden=true;
+  document.getElementById("game-screen").hidden=true;document.getElementById("campsite-screen").hidden=true;document.getElementById("rest-screen").hidden=true;
 }
 function showMainMenu(){stopGameLoop();hideAllScreens();document.getElementById("main-menu").style.display="flex";document.getElementById("result-overlay").hidden=true;document.getElementById("card-overlay").hidden=true;document.getElementById("settings-overlay").hidden=true;}
 function showPreparationScreen(){stopGameLoop();hideAllScreens();document.getElementById("preparation-screen").hidden=false;document.getElementById("result-overlay").hidden=true;}
