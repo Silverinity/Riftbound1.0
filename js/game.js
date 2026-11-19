@@ -47,7 +47,8 @@ function createNewRun(){
     gold:100,castleHealth:100,maxCastleHealth:100,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
     towers:[{type:"archer",x:330,y:75,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
-    towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false
+    towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
+    devInvincible:false,devGameSpeed:1
   };
 }
 function startNewRun(){
@@ -212,7 +213,7 @@ function updateEnemies(dt){
   currentRun.spawnBatches=currentRun.spawnBatches.filter(batch=>batch.queue.length>0);
   currentRun.enemies.forEach(e=>{e.progress+=enemyTypes[e.type].speed*dt/totalPathLength;const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;});
   currentRun.enemies=currentRun.enemies.filter(e=>{
-    if(e.progress>=1){currentRun.castleHealth=Math.max(0,currentRun.castleHealth-e.damage);updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
+    if(e.progress>=1){if(!currentRun.devInvincible)currentRun.castleHealth=Math.max(0,currentRun.castleHealth-e.damage);updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
   });
 }
 function updateTowers(dt){
@@ -278,7 +279,7 @@ function chooseCard(id){
 }
 function continueFromProgress(){document.getElementById("progress-overlay").hidden=true;setWaveStatus("READY WHEN YOU ARE");showBattleMessage("PREPARE YOUR DEFENSE, THEN PRESS START WAVE");startGameLoop();}
 function gameLoop(timestamp){
-  if(!gameRunning||!currentRun)return;const dt=Math.min(Math.max((timestamp-lastFrameTime)/1000,0),.033);lastFrameTime=timestamp;
+  if(!gameRunning||!currentRun)return;const rawDt=Math.min(Math.max((timestamp-lastFrameTime)/1000,0),.033);const dt=rawDt*(currentRun.devGameSpeed||1);lastFrameTime=timestamp;
   if(currentRun.waveActive){
     updateEnemies(dt);updateTowers(dt);updateProjectiles(dt);
     if(currentRun.currentWave<5){
