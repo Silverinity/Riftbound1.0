@@ -58,11 +58,45 @@ function createNewRun(){
 }
 function startNewRun(){
   stopGameLoop();currentRun=createNewRun();selectedTower=null;selectedTowerEntity=null;
+  persistRunCheckpoint("battle");
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
   updateAreaLabels();
   updateGameDisplay();
 }
 function areaData(){return areas[currentRun.area-1]||areas[0];}
+
+function persistRunCheckpoint(checkpoint="battle"){
+  if(!currentRun||typeof window.riftboundCloudSave!=="function")return;
+  const run={
+    gold:currentRun.gold,castleHealth:currentRun.castleHealth,maxCastleHealth:currentRun.maxCastleHealth,
+    area:currentRun.area,campsite:currentRun.campsite,stage:currentRun.stage,currentWave:currentRun.currentWave,
+    totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,
+      upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
+    towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
+    campsiteRestUsed:!!currentRun.campsiteRestUsed,checkpoint
+  };
+  window.riftboundCloudSave(run);
+}
+
+window.restoreRiftboundRun=function(saved){
+  if(!saved||!saved.run)return false;
+  const data=saved.run;
+  stopGameLoop();
+  currentRun={...createNewRun(),...data,enemies:[],projectiles:[],spawnBatches:[],waveActive:false,
+    gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
+  selectedTower=null;selectedTowerEntity=null;
+  document.getElementById("main-menu").style.display="none";
+  document.getElementById("preparation-screen").hidden=true;
+  document.getElementById("game-screen").hidden=data.checkpoint==="campsite";
+  document.getElementById("campsite-screen").hidden=data.checkpoint!=="campsite";
+  updateAreaLabels();updateGameDisplay();
+  if(data.checkpoint==="campsite"){
+    showCampsiteScreen(((currentRun.area-1)*30)+((currentRun.campsite-1)*15));
+  }else{
+    initBattlefield();
+  }
+  return true;
+};
 function updateAreaLabels(){
   const a=areaData();
   document.querySelector(".battle-region span").textContent="AREA 0"+currentRun.area+" · "+a.name.toUpperCase();
@@ -293,6 +327,7 @@ function chooseCard(id){
   selectedTowerEntity=null;selectedTower=null;currentRun.campsiteRestUsed=false;
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
   updateAreaLabels();updateGameDisplay();
+  persistRunCheckpoint(completedWaves%15===0?"campsite":"battle");
   if(completedWaves%15===0){showCampsiteScreen(completedWaves);return;}
   const next=document.getElementById("progress-overlay");
   document.getElementById("progress-area").textContent="AREA 0"+currentRun.area+" · "+areaData().name.toUpperCase();
@@ -400,15 +435,15 @@ function updateCampsiteScreen(){
 }
 function restByCampfire(){
   if(!currentRun||currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
-  currentRun.campsiteRestUsed=true;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+15);updateCampsiteScreen();
+  currentRun.campsiteRestUsed=true;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+15);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function healAtCampsite(){
   if(!currentRun||currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
-  currentRun.gold-=40;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();
+  currentRun.gold-=40;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function upgradeAtCampsite(){
   if(!currentRun||currentRun.gold<75)return;
-  currentRun.gold-=75;currentRun.towerDamageBonus+=5;updateCampsiteScreen();
+  currentRun.gold-=75;currentRun.towerDamageBonus+=5;updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function showCampsiteScreen(completedWaves){
   stopGameLoop();
@@ -428,6 +463,7 @@ function continueFromCampsite(){
   document.getElementById("campsite-screen").hidden=true;
   document.getElementById("game-screen").hidden=false;
   updateGameDisplay();
+  persistRunCheckpoint("battle");
   setWaveStatus("READY WHEN YOU ARE");
   showBattleMessage("YOU ARE RESTED. PREPARE YOUR DEFENSE, THEN START THE NEXT WAVE.");
   startGameLoop();
