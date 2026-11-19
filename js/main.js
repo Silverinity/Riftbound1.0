@@ -36,7 +36,7 @@
   const campsiteScreen = byId("campsite-screen");
   const resultOverlay = byId("result-overlay");
   const settingsOverlay = byId("settings-overlay");
-  const API_BASE = (window.RIFTBOUND_API_BASE || "http://localhost:3000").replace(/\\/$/, "");
+  const API_BASE = (window.RIFTBOUND_API_BASE || "http://localhost:3000").replace(/\/$/, "");
   let betaAuthenticated = false;
 
   async function checkBetaSession() {
