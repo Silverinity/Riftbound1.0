@@ -122,7 +122,8 @@ function clearAuthCookies(res) {
 }
 
 function frontendRedirect(res, status) {
-  return res.redirect(`${FRONTEND_ORIGIN}/?discord=${encodeURIComponent(status)}`);
+  const frontendPath = IS_PRODUCTION ? "/Riftbound1.0/" : "/";
+  return res.redirect(`${FRONTEND_ORIGIN}${frontendPath}?discord=${encodeURIComponent(status)}`);
 }
 
 async function discordRequest(path, accessToken) {
