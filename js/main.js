@@ -86,6 +86,10 @@
     preparationScreen.hidden = true;
     gameScreen.hidden = true;
     if (campsiteScreen) campsiteScreen.hidden = true;
+    byId("card-overlay").hidden = true;
+    byId("progress-overlay").hidden = true;
+    resultOverlay.hidden = true;
+    settingsOverlay.hidden = true;
   }
 
   function returnToMenu() {
