@@ -21,8 +21,15 @@
             <h1>RIFTBOUND</h1>
             <p class="description">DEFEND THE LAST FORTRESS</p>
 
+            <section class="beta-access" aria-label="Beta access">
+                <p id="auth-status" role="status">CHECKING BETA ACCESS...</p>
+                <p id="auth-user" hidden></p>
+                <button id="discord-login" type="button" hidden>LOGIN WITH DISCORD</button>
+                <button id="discord-logout" type="button" hidden>LOG OUT</button>
+            </section>
+
             <div class="menu-buttons">
-                <button id="new-run">NEW RUN</button>
+                <button id="new-run" disabled>NEW RUN</button>
                 <button id="upgrades">UPGRADES</button>
                 <button id="collection">COLLECTION</button>
                 <button id="settings">SETTINGS</button>
