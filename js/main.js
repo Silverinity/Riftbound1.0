@@ -34,6 +34,7 @@
   const preparationScreen = byId("preparation-screen");
   const gameScreen = byId("game-screen");
   const restScreen = byId("rest-screen");
+  const campsiteScreen = byId("campsite-screen");
   const resultOverlay = byId("result-overlay");
   const settingsOverlay = byId("settings-overlay");
 
@@ -86,6 +87,7 @@
     preparationScreen.hidden = true;
     gameScreen.hidden = true;
     restScreen.hidden = true;
+    campsiteScreen.hidden = true;
   }
 
   function returnToMenu() {
