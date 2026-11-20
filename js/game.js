@@ -906,22 +906,12 @@ function canBuild(x,y,checkGold=true){
 }
 function canvasPoint(e){
   const rect=canvas.getBoundingClientRect();
-  // Convert from viewport coordinates to the canvas's actual drawing area.
-  // Scaling the border offsets too keeps pointer input aligned when the canvas
-  // is resized, height-constrained, or transformed by responsive layout/zoom.
-  const layoutWidth=canvas.offsetWidth;
-  const layoutHeight=canvas.offsetHeight;
-  if(!rect.width||!rect.height||!layoutWidth||!layoutHeight)return{x:0,y:0};
-  const scaleX=rect.width/layoutWidth;
-  const scaleY=rect.height/layoutHeight;
-  const left=rect.left+canvas.clientLeft*scaleX;
-  const top=rect.top+canvas.clientTop*scaleY;
-  const width=canvas.clientWidth*scaleX;
-  const height=canvas.clientHeight*scaleY;
-  if(!width||!height)return{x:0,y:0};
+  // The canvas has no CSS border: its outline is purely decorative and does
+  // not change the drawing area. Map the full visible rectangle to its bitmap.
+  if(!rect.width||!rect.height)return{x:0,y:0};
   return {
-    x:Math.max(0,Math.min(canvas.width,(e.clientX-left)*(canvas.width/width))),
-    y:Math.max(0,Math.min(canvas.height,(e.clientY-top)*(canvas.height/height)))
+    x:Math.max(0,Math.min(canvas.width,(e.clientX-rect.left)*(canvas.width/rect.width))),
+    y:Math.max(0,Math.min(canvas.height,(e.clientY-rect.top)*(canvas.height/rect.height)))
   };
 }
 function handleBattlefieldClick(e){
