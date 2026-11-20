@@ -856,7 +856,8 @@ function updateEnemies(dt){
       const burnStep=Math.min(dt,e.burnTimer);
       e.burnTimer-=burnStep;
       const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
-      const burnDamage=(e.burnDamage||3)*(1+(trait.burnDamage||0)+(currentRun.skillBonuses?.burnDamageBonus||0))*burnStep;
+      const bossBurn=e.isBoss?1+(currentRun.skillBonuses?.bossDamage||0)+(trait.bossDamage||0):1;
+      const burnDamage=(e.burnDamage||3)*(1+(trait.burnDamage||0)+(currentRun.skillBonuses?.burnDamageBonus||0))*bossBurn*burnStep;
       const actualBurn=Math.min(Math.max(0,e.health),burnDamage);
       currentRun.stats.damageDealt+=actualBurn;
       e.health-=burnDamage;
@@ -969,10 +970,11 @@ function updateTowers(dt){
 }
 function damageEnemy(e,dmg,applyPassive=true){
   if(!e||e.rewarded)return;
+  const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  if(!applyPassive&&dmg>0&&e.isBoss)dmg*=1+(bonuses.bossDamage||0)+(trait.bossDamage||0);
   e.health-=dmg;
   const dealt=Math.max(0,Math.min(Math.max(0,e.health+dmg),dmg));
   currentRun.stats.damageDealt+=dealt;
-  const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
   if(applyPassive&&dmg>0&&Math.random()<(getRunCommanderId()==="pyromancer"?.25:0)+(bonuses.burnChance||0)) {
     e.burnTimer=Math.max(e.burnTimer||0,3+(trait.burnDuration||0)+(bonuses.burnDuration||0));
     e.burnDamage=3+(bonuses.burnDamage||0);
@@ -1142,7 +1144,7 @@ function updateProjectiles(dt){
     if(p.isArcaneOrb)p.animationTime=(p.animationTime||0)+dt;
     const e=p.target;if(!currentRun.enemies.includes(e)||e.health<=0)return false;
     const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d>0)p.angle=Math.atan2(dy,dx);if(d<=p.speed*dt+8){damageEnemy(e,p.damage);
-      if(p.towerType==="cannon"){const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48+(trait.cannonSplash||0))damageEnemy(other,p.damage*.5);});}
+      if(p.towerType==="cannon"){const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48+(trait.cannonSplash||0))damageEnemy(other,p.damage*.5*getEnemyDamageMultiplier(other));});}
       return false;
     }p.x+=dx/d*p.speed*dt;p.y+=dy/d*p.speed*dt;return true;
   });currentRun.enemies=currentRun.enemies.filter(e=>e.health>0);
