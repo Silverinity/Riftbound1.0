@@ -196,6 +196,7 @@ const cardPool = [
 ];
 
 function getRunCommanderId(){return currentRun?.commanderId||window.riftboundCommanderId||"warden";}
+window.isRiftboundRunActive=()=>!!currentRun&&!currentRun.finalized&&!currentRun.runFinished;
 function getRunTraitEffects(){return typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects(currentRun?.traitId):{};}
 const commanderAbilities={
   warden:{name:"IRON BASTION",cooldown:45,description:"Raise a fortress ward for 12 seconds: halve incoming castle damage and make towers fire 25% faster.",requiresEnemies:false},
@@ -233,7 +234,7 @@ window.startRiftboundNewRun=startNewRun;
 function areaData(){return areas[currentRun.area-1]||areas[0];}
 
 function persistRunCheckpoint(checkpoint="battle"){
-  if(!currentRun||typeof window.riftboundCloudSave!=="function")return false;
+  if(!currentRun||checkpoint!=="campsite"||typeof window.riftboundCloudSave!=="function")return false;
   const run={
     gold:currentRun.gold,castleHealth:currentRun.castleHealth,maxCastleHealth:currentRun.maxCastleHealth,
     area:currentRun.area,campsite:currentRun.campsite,stage:currentRun.stage,currentWave:currentRun.currentWave,
@@ -1234,7 +1235,6 @@ function finalizeRun(victory){
   document.getElementById("result-stats").innerHTML=rows.map(([label,value])=>'<div class="result-stat-row"><span>'+label+'</span><strong>'+value+'</strong></div>').join("");
   document.getElementById("result-stats").hidden=true;
   document.getElementById("result-stats-toggle").textContent="VIEW RUN STATISTICS";
-  persistRunCheckpoint("results");
 }
 function endGame(){
   if(currentRun.gameOver)return;currentRun.gameOver=true;currentRun.waveActive=false;stopGameLoop();setWaveStatus("DEFEAT");showBattleMessage("THE CASTLE HAS FALLEN");
@@ -1301,6 +1301,28 @@ function showDestinationSelection(completedWaves){
   document.getElementById("progress-wave").textContent="A boss lair is a dangerous optional route. Defeating its guardian grants extra gold and class XP.";
   document.getElementById("progress-overlay").hidden=false;
   stopGameLoop();
+}
+function arriveAtCampfire(completedWaves){
+  pendingDestinationProgress=nextProgressionAfterStage();
+  const areaIndex=pendingDestinationProgress.area-1;
+  const normalRoutes=destinationPools[areaIndex].filter(node=>node.kind!=="BOSS");
+  const node=normalRoutes[Math.floor(Math.random()*normalRoutes.length)]||normalRoutes[0];
+  const previousArea=currentRun.area;
+  currentRun.area=pendingDestinationProgress.area;
+  currentRun.campsite=pendingDestinationProgress.campsite;
+  currentRun.stage=pendingDestinationProgress.stage;
+  if(node)currentRun.encounter={id:node.id,name:node.name,kind:node.kind,bossId:null};
+  if(currentRun.area!==previousArea)relocateTowersForCurrentArea();
+  currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];
+  currentRun.waveActive=false;currentRun.waitingForWave=false;currentRun.waveStarted=false;
+  currentRun.waveIntervalTimer=0;currentRun._lastCountedWave=0;
+  currentRun.pendingCardSelection=false;currentRun.pendingRoute=false;
+  currentRun.pendingCompletedWaves=completedWaves;currentRun.campsiteRestUsed=false;
+  selectedTowerEntity=null;selectedTower=null;
+  document.querySelectorAll(".tower-button").forEach(button=>button.classList.remove("selected"));
+  updateAreaLabels();updateGameDisplay();
+  persistRunCheckpoint("campsite");
+  showCampsiteScreen(completedWaves);
 }
 function chooseDestination(id,completedWaves){
   const node=pendingDestinationChoices.find(choice=>choice.id===id);
@@ -1525,7 +1547,6 @@ function continueFromCampsite(){
   document.getElementById("campsite-screen").hidden=true;
   document.getElementById("game-screen").hidden=false;
   updateGameDisplay();
-  persistRunCheckpoint("battle");
   setWaveStatus("READY WHEN YOU ARE");
   showBattleMessage("YOU ARE RESTED. PREPARE YOUR DEFENSE, THEN START THE NEXT WAVE.");
   startGameLoop();
