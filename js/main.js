@@ -286,7 +286,8 @@
       byId("auth-status").textContent = "PLEASE SIGN IN WITH AN APPROVED BETA TESTER ACCOUNT";
       return;
     }
-    if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your existing cloud save. Continue?")) return;
+    // PLAY on the title screen only opens the Command Sanctum.
+    // Replacing an existing expedition is confirmed at BEGIN EXPEDITION instead.
     openHub();
   });
   byId("hub-back").addEventListener("click", returnToMenu);
@@ -294,6 +295,7 @@
     button.addEventListener("click", () => showHubView(button.dataset.hubView));
   });
   byId("hub-play").addEventListener("click", () => {
+    if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your existing run. Continue?")) return;
     try {
       if (typeof window.startRiftboundNewRun !== "function") {
         throw new Error("The game engine did not expose the new-run function.");
@@ -314,8 +316,11 @@
     button.addEventListener("click", () => selectTower(button.dataset.tower));
   });
   byId("leave-battle").addEventListener("click", () => {
-    if (window.confirm("Leave this battle and return to the main menu? Your current run will be lost.")) {
-      returnToMenu();
+    if (window.confirm("Leave the battlefield and return to the Command Sanctum? Your progress will be saved.")) {
+      if (typeof window.persistRiftboundCheckpoint === "function") {
+        window.persistRiftboundCheckpoint("battle");
+      }
+      openHub();
     }
   });
   byId("result-continue").addEventListener("click", returnToMenu);
