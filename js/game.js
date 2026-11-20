@@ -68,12 +68,16 @@ const treesByArea = [
 function getAreaIndex(){return Math.max(0,Math.min(2,(currentRun?.area||1)-1));}
 function getPathPoints(){
   const points=pathsByArea[getAreaIndex()];
-  // Keep each route's original sequence of bends, but make the route more compact
-  // and lower on the battlefield. The portal and castle endpoints stay anchored.
+  // Keep the portal and castle endpoints fixed while gently shortening each
+  // route toward the centre of the battlefield.
   return points.map((point,index)=>{
     if(index===0||index===points.length-1)return point;
     const loweredY=Math.min(490,point.y+55);
-    return {x:point.x,y:Math.round(270+(loweredY-270)*.78)};
+    const compactY=270+(loweredY-270)*.78;
+    return {
+      x:Math.round(480+(point.x-480)*.90),
+      y:Math.round(270+(compactY-270)*.90)
+    };
   });
 }
 function getTreePositions(){return treesByArea[getAreaIndex()];}
@@ -283,16 +287,16 @@ function drawPath(){
   const palette=environmentPalette(),points=getPathPoints();
   ctx.save();ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();
   points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  // Narrow, layered road surface with a crisp pixel-art border.
-  ctx.strokeStyle="rgba(0,0,0,.34)";ctx.lineWidth=40;ctx.stroke();
-  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=35;ctx.stroke();
-  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=30;ctx.stroke();
-  ctx.strokeStyle=palette.path;ctx.lineWidth=26;ctx.stroke();
-  ctx.strokeStyle=currentRun.area===2?"rgba(35,25,23,.48)":currentRun.area===3?"rgba(206,228,243,.28)":"rgba(42,34,25,.38)";
-  ctx.lineWidth=1.5;ctx.setLineDash([2,7]);ctx.stroke();ctx.setLineDash([]);
-  // Broken edge highlights and inset stones add definition without widening the road.
-  ctx.strokeStyle=currentRun.area===2?"rgba(255,174,104,.42)":currentRun.area===3?"rgba(205,235,255,.58)":"rgba(218,190,132,.48)";
-  ctx.lineWidth=1.5;ctx.setLineDash([4,18]);ctx.stroke();ctx.setLineDash([]);
+  // Slim, restrained road layers leave substantially more of the map visible.
+  ctx.strokeStyle="rgba(0,0,0,.30)";ctx.lineWidth=28;ctx.stroke();
+  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=24;ctx.stroke();
+  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=20;ctx.stroke();
+  ctx.strokeStyle=palette.path;ctx.lineWidth=16;ctx.stroke();
+  ctx.strokeStyle=currentRun.area===2?"rgba(35,25,23,.42)":currentRun.area===3?"rgba(206,228,243,.22)":"rgba(42,34,25,.32)";
+  ctx.lineWidth=1;ctx.setLineDash([2,9]);ctx.stroke();ctx.setLineDash([]);
+  // Fine, intermittent highlights define the road without adding bulky borders.
+  ctx.strokeStyle=currentRun.area===2?"rgba(255,174,104,.34)":currentRun.area===3?"rgba(205,235,255,.46)":"rgba(218,190,132,.38)";
+  ctx.lineWidth=1;ctx.setLineDash([3,22]);ctx.stroke();ctx.setLineDash([]);
   for(let i=0;i<points.length-1;i++){
     const a=points[i],b=points[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.floor(len/22);
     for(let j=1;j<steps;j++){
@@ -833,7 +837,7 @@ function gameLoop(timestamp){
 function startGameLoop(){stopGameLoop();gameRunning=true;lastFrameTime=performance.now();animationFrame=requestAnimationFrame(gameLoop);}
 function stopGameLoop(){gameRunning=false;if(animationFrame!==null){cancelAnimationFrame(animationFrame);animationFrame=null;}}
 function isOnPath(x,y){
-  const clearance=29,points=getPathPoints();
+  const clearance=20,points=getPathPoints();
   for(let i=0;i<points.length-1;i++){
     const a=points[i],b=points[i+1],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;
     let t=((x-a.x)*dx+(y-a.y)*dy)/l;t=Math.max(0,Math.min(1,t));
