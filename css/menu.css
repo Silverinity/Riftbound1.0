@@ -119,3 +119,13 @@
 }
 
 #continue-run[hidden] { display: none; }
+
+
+@media (max-width: 560px) {
+  .main-menu { min-height: 100svh; }
+  .menu-content { padding: 22px 14px; }
+  .menu-content h1 { letter-spacing: clamp(4px, 2vw, 9px); }
+  .menu-buttons { width: min(100%, 330px); margin-top: 30px; }
+  .menu-buttons button { min-height: 48px; }
+  .beta-access button { min-height: 48px; }
+}
