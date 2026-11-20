@@ -208,6 +208,14 @@ function drawEnemies(){
   currentRun.enemies.forEach(e=>{
     const t=enemyTypes[e.type],size=t.size;ctx.fillStyle="rgba(0,0,0,.3)";ctx.fillRect(e.x-size,e.y+size/2,size*2,5);
     ctx.fillStyle=t.color;ctx.fillRect(e.x-size/2,e.y-size/2,size,size);ctx.fillStyle="#241932";ctx.fillRect(e.x-4,e.y-3,3,3);ctx.fillRect(e.x+2,e.y-3,3,3);
+    if(e.burnTimer>0){
+      const flame=performance.now()/75;
+      for(let f=0;f<3;f++){
+        const fx=e.x+(f-1)*7,fy=e.y-size/2-5-Math.abs(Math.sin(flame+f))*8;
+        ctx.fillStyle=f%2?"#FF9B42":"#FFE08A";
+        ctx.beginPath();ctx.moveTo(fx-4,fy+9);ctx.quadraticCurveTo(fx-7,fy,fx,fy-7-Math.sin(flame+f)*3);ctx.quadraticCurveTo(fx+7,fy,fx+4,fy+9);ctx.closePath();ctx.fill();
+      }
+    }
     if(currentRun.markedEnemy===e&&currentRun.markedTimer>0){
       const pulse=1+Math.sin(performance.now()/90)*.12;
       ctx.strokeStyle="#F0D58A";ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,(size+10)*pulse,0,Math.PI*2);ctx.stroke();
@@ -247,6 +255,11 @@ function drawSpectralAllies(){
 function drawCommanderEffects(){
   if(!currentRun)return;
   const now=performance.now();
+  if(currentRun.bastionTimer>0){
+    const shieldAlpha=.24+.12*Math.sin(now/160);
+    ctx.save();ctx.strokeStyle="rgba(130,205,255,"+shieldAlpha+")";ctx.lineWidth=4;ctx.shadowColor="#75B8E8";ctx.shadowBlur=20;
+    ctx.beginPath();ctx.arc(895,270,58+Math.sin(now/190)*3,0,Math.PI*2);ctx.stroke();ctx.restore();
+  }
   currentRun.abilityEffects=(currentRun.abilityEffects||[]).filter(effect=>{
     const progress=1-effect.life/effect.duration;
     const alpha=Math.max(0,1-progress);
@@ -358,6 +371,7 @@ function updateEnemies(dt){
       const burnStep=Math.min(dt,e.burnTimer);
       e.burnTimer-=burnStep;
       e.health-=(e.burnDamage||3)*burnStep;
+      if(e.burnTimer<=0)e.burnDamage=3;
       if(e.health<=0&&!e.rewarded)damageEnemy(e,0,false);
     }
     if(e.slowTimer>0)e.slowTimer=Math.max(0,e.slowTimer-dt);
