@@ -233,7 +233,7 @@ window.startRiftboundNewRun=startNewRun;
 function areaData(){return areas[currentRun.area-1]||areas[0];}
 
 function persistRunCheckpoint(checkpoint="battle"){
-  if(!currentRun||typeof window.riftboundCloudSave!=="function")return;
+  if(!currentRun||typeof window.riftboundCloudSave!=="function")return false;
   const run={
     gold:currentRun.gold,castleHealth:currentRun.castleHealth,maxCastleHealth:currentRun.maxCastleHealth,
     area:currentRun.area,campsite:currentRun.campsite,stage:currentRun.stage,currentWave:currentRun.currentWave,
@@ -248,6 +248,7 @@ function persistRunCheckpoint(checkpoint="battle"){
     waveInProgress:!!(currentRun.waveActive&&(currentRun.spawnBatches.length||currentRun.enemies.length)),checkpoint
   };
   window.riftboundCloudSave(run);
+  return true;
 }
 window.persistRiftboundCheckpoint = persistRunCheckpoint;
 
