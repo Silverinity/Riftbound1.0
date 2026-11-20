@@ -1372,8 +1372,13 @@ function sellSelectedTower(){
   updateGameDisplay();persistRunCheckpoint("battle");
   showBattleMessage("TOWER DISMANTLED · "+refund+" GOLD REFUNDED");
 }
+function getTowerUpgradeCost(t){
+  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun?.skillBonuses?.costReduction||0));
+  return Math.max(1,Math.ceil((towerTypes[t.type].upgradeCost+(t.level-1)*35)*(1-reduction)));
+}
 function upgradeSelectedTower(stat){
-  const t=selectedTowerEntity;if(!t||!currentRun)return;const cost=towerTypes[t.type].upgradeCost+(t.level-1)*35;
+  const t=selectedTowerEntity;if(!t||!currentRun)return;const cost=getTowerUpgradeCost(t);
   if(t.level>=4){showBattleMessage("THIS TOWER IS FULLY UPGRADED");return;}
   if(currentRun.gold<cost){showBattleMessage("NOT ENOUGH GOLD FOR THIS UPGRADE");return;}
   currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;t.investedGold=getTowerInvestment(t)+cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
@@ -1381,7 +1386,7 @@ function upgradeSelectedTower(stat){
 function updateTowerPanel(){
   const panel=document.getElementById("tower-info-panel");if(!panel)return;
   if(!selectedTowerEntity){panel.innerHTML='<div class="tower-panel-empty"><span class="panel-symbol">✧</span><strong> TOWER DETAILS</strong><p>Select a placed tower to view its statistics and upgrades. Select a tower below to build.</p></div>';return;}
-  const t=selectedTowerEntity,s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*35,disabled=t.level>=4||currentRun.gold<cost;
+  const t=selectedTowerEntity,s=getTowerStats(t),cost=getTowerUpgradeCost(t),disabled=t.level>=4||currentRun.gold<cost;
   panel.innerHTML='<div class="tower-panel-heading"><span class="panel-symbol">'+(t.type==="archer"?"♜":t.type==="arcane"?"✧":"◆")+'</span><div><small>LEVEL '+t.level+'</small><strong>'+towerTypes[t.type].name+'</strong></div></div>'+
     '<div class="tower-stat"><span>Damage</span><strong>'+Math.round(s.damage)+'</strong></div>'+
     '<div class="tower-stat"><span>Cooldown</span><strong>'+s.cooldown.toFixed(2)+'s</strong></div>'+
