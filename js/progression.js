@@ -89,7 +89,8 @@
   function save(){
     profile=normalizeProfile(profile);
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch(e){console.warn("Could not save class progression:",e);}
-    if(typeof window.persistRiftboundCheckpoint==="function")window.persistRiftboundCheckpoint("battle");
+    const savedRun=typeof window.persistRiftboundCheckpoint==="function"?window.persistRiftboundCheckpoint("battle"):false;
+    if(savedRun===false&&typeof window.riftboundCloudSaveProfile==="function")window.riftboundCloudSaveProfile();
     renderSkillTree();renderTraits();
   }
   function classData(id=window.riftboundCommanderId||"warden"){return profile.classes[CLASS_IDS.includes(id)?id:"warden"];}
