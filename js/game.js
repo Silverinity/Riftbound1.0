@@ -227,6 +227,7 @@ window.restoreRiftboundRun=function(saved){
   selectedTower=null;selectedTowerEntity=null;
   relocateTowersForCurrentArea();
   document.getElementById("main-menu").style.display="none";
+  document.getElementById("hub-screen").hidden=true;
   document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=data.checkpoint==="campsite";
   document.getElementById("campsite-screen").hidden=data.checkpoint!=="campsite";
