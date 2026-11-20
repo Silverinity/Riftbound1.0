@@ -111,7 +111,7 @@ function updateAreaLabels(){
 function initBattlefield(){
   if(!currentRun)startNewRun();
   stopGameLoop();selectedTowerEntity=null;updateAreaLabels();updateGameDisplay();drawBattlefield();
-  setWaveStatus("READY WHEN YOU ARE");showBattleMessage("BUILD YOUR DEFENSE, THEN PRESS START WAVE WHEN READY");
+  setWaveStatus("READY WHEN YOU ARE");showBattleMessage(window.matchMedia("(pointer: coarse)").matches ? "TAP A TOWER TO SELECT IT, THEN TAP AN OPEN AREA TO BUILD" : "BUILD YOUR DEFENSE, THEN PRESS START WAVE WHEN READY");
   currentRun.waitingForWave=false;currentRun.nextWaveTimer=0;currentRun.waveIntervalTimer=0;startGameLoop();
 }
 function updateGameDisplay(){
@@ -242,6 +242,7 @@ function startWave(automatic=false){
     showBattleMessage("WAVE "+total+" HAS BEGUN");
   }
   updateGameDisplay();
+  persistRunCheckpoint("battle");
 }
 function spawnEnemy(type,waveNumber){
   const d=enemyTypes[type],difficulty=getSettings().difficulty||"normal";let mult=areaData().enemyScale*(1+waveNumber*.06);
@@ -382,7 +383,7 @@ function handleBattlefieldClick(e){
   const type=towerTypes[selectedTower];if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
   if(!canBuild(p.x,p.y)){showBattleMessage("THAT LOCATION IS BLOCKED — TRY ANOTHER OPEN AREA");return;}
   currentRun.gold-=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}});
-  updateGameDisplay();showBattleMessage(type.name.toUpperCase()+" BUILT");
+  updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(type.name.toUpperCase()+" BUILT");
 }
 function selectTower(type){
   if(!towerTypes[type])return;selectedTower=type;selectedTowerEntity=null;
@@ -393,7 +394,7 @@ function upgradeSelectedTower(stat){
   const t=selectedTowerEntity;if(!t||!currentRun)return;const s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*45;
   if(t.level>=4){showBattleMessage("THIS TOWER IS FULLY UPGRADED");return;}
   if(currentRun.gold<cost){showBattleMessage("NOT ENOUGH GOLD FOR THIS UPGRADE");return;}
-  currentRun.gold-=cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
+  currentRun.gold-=cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
 }
 function updateTowerPanel(){
   const panel=document.getElementById("tower-info-panel");if(!panel)return;
@@ -412,7 +413,7 @@ function updateTowerPanel(){
 }
 canvas.addEventListener("pointermove",e=>{if(!gameScreenIsHidden())pointerWorld=canvasPoint(e);});
 canvas.addEventListener("pointerleave",()=>pointerWorld=null);
-canvas.addEventListener("pointerdown",e=>{if(!currentRun||currentRun.gameOver||gameScreenIsHidden())return;e.preventDefault();handleBattlefieldClick(e);});
+canvas.addEventListener("pointerdown",e=>{if(!currentRun||currentRun.gameOver||gameScreenIsHidden())return;e.preventDefault();if(e.pointerType!=="mouse"&&canvas.setPointerCapture){try{canvas.setPointerCapture(e.pointerId);}catch(_error){}}handleBattlefieldClick(e);});
 canvas.addEventListener("contextmenu",e=>{e.preventDefault();selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();});
 function gameScreenIsHidden(){const s=document.getElementById("game-screen");return !s||s.hidden;}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&& !gameScreenIsHidden()){selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();}});
