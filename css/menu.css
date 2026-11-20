@@ -315,3 +315,6 @@
   border-color:#62447F;
 }
 .version { color:#82748F; }
+
+/* The lower-right hub motto uses the Sanctum's purple accent. */
+.hub-bottom-note span:last-child{color:#B99AE8}
