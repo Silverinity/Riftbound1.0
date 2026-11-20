@@ -323,64 +323,8 @@ function cleanSave(body) {
   if (!body || typeof body !== "object" || !body.save || typeof body.save !== "object") return null;
   const save = body.save;
   if (save.version !== 1 || JSON.stringify(save).length > 100000) return null;
-  const run = save.run;
-  let cleanRun = null;
-  if (run !== null && run !== undefined) {
-    const numeric = ["gold", "castleHealth", "maxCastleHealth", "area", "campsite", "stage", "currentWave", "totalWaves", "towerDamageBonus"];
-    if (typeof run !== "object" || !numeric.every(k => Number.isFinite(run[k]))) return null;
-    if (run.gold < 0 || run.castleHealth < 0 || run.maxCastleHealth < 1 || run.area < 1 || run.area > 3 ||
-        run.campsite < 1 || run.campsite > 2 || run.stage < 1 || run.stage > 3 || run.currentWave < 0 || run.currentWave > 5) return null;
-    const towerTypes = new Set(["archer", "arcane", "cannon"]);
-    if (!Array.isArray(run.towers) || run.towers.length < 1 || run.towers.length > 100) return null;
-    for (const t of run.towers) {
-      if (!t || !towerTypes.has(t.type) || !Number.isFinite(t.x) || !Number.isFinite(t.y) ||
-          !Number.isInteger(t.level) || t.level < 1 || t.level > 4 || !t.upgrades ||
-          !["damage", "range", "speed"].every(k => Number.isInteger(t.upgrades[k]) && t.upgrades[k] >= 0 && t.upgrades[k] <= 3)) return null;
-    }
-    const cards = new Set(["arrows", "arcane", "siege", "greed", "walls"]);
-    if (!Array.isArray(run.cards) || run.cards.length > 100 || !run.cards.every(card => cards.has(card))) return null;
-    const stats = {};
-    for (const key of ["damageDealt", "damageTaken", "goldSpent", "enemiesKilled", "wavesCompleted", "bossesDefeated"]) {
-      stats[key] = Number.isFinite(run.stats?.[key]) ? Math.max(0, Math.floor(run.stats[key])) : 0;
-    }
-    const routeIds = new Set(["bear-cave","wolf-den","goblin-camp","hollow-bear","rift-alpha","cinder-quarry","ash-wastes","scavenger-crossing","ash-colossus","goblin-warlord","frozen-hollow","wraithwood","shattered-keep","frost-wyrm","riftbound-knight"]);
-    const commanderIds = new Set(["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"]);
-    const validTraitIds = new Set(["bulwarks-oath","hawks-eye","coin-scent","frost-sigil","ember-heart","soul-conduit","siege-savant","rift-tactician","golden-forge","worldbreaker"]);
-    const bonusKeys = ["fortressHp","cooldown","damage","range","damageReduction","towerSpeed","arcaneDamage","slowPower","abilityDamage","eliteDamage","eliteGold","goldBonus","costReduction","startingGold","archerDamage","cannonDamage","burnDamage","burnChance","areaDamage","summonChance","summonDamage","summonDuration","bossDamage","slowDuration","stageHeal","flatHealth","healthyDamage","lowHealthSpeed","bossReduction","arcaneRange","markedDamage","stageGold","abilityGold","bossGold","bossGoldFlat","burnDamageBonus","burnDuration","burnSlow","extraWraith","summonDamageBonus","summonBossDamage","slowedDamage","freshDamage","lowDamage","cannonSplash","abilityEcho","wraithSlow"];
-    const cleanBonuses = {};
-    if (run.skillBonuses && typeof run.skillBonuses === "object") {
-      for (const key of bonusKeys) if (Number.isFinite(run.skillBonuses[key])) cleanBonuses[key] = Math.max(0, Math.min(1000, run.skillBonuses[key]));
-      for (const key of ["everyFifthSoul","burnSpread"]) if (typeof run.skillBonuses[key] === "boolean") cleanBonuses[key] = run.skillBonuses[key];
-    }
-    const bossIds = new Set(["hollow-bear","rift-alpha","ash-colossus","goblin-warlord","frost-wyrm","riftbound-knight"]);
-    const encounterIsBoss = run.encounter && bossIds.has(run.encounter.bossId) && run.encounter.id === run.encounter.bossId;
-    const encounter = run.encounter && routeIds.has(run.encounter.id) ? {
-      id: run.encounter.id,
-      name: typeof run.encounter.name === "string" ? run.encounter.name.slice(0, 70) : "Unknown destination",
-      kind: encounterIsBoss ? "BOSS" : "ENCOUNTER",
-      bossId: encounterIsBoss ? run.encounter.bossId : null
-    } : null;
-    cleanRun = {
-      gold: run.gold, castleHealth: run.castleHealth, maxCastleHealth: run.maxCastleHealth,
-      area: run.area, campsite: run.campsite, stage: run.stage, currentWave: run.currentWave,
-      totalWaves: run.totalWaves,
-      towers: run.towers.map(t => ({ type: t.type, x: t.x, y: t.y, level: t.level,
-        investedGold: Number.isFinite(t.investedGold) ? Math.max(0, t.investedGold) : 0,
-        upgrades: { damage: t.upgrades.damage, range: t.upgrades.range, speed: t.upgrades.speed } })),
-      towerDamageBonus: run.towerDamageBonus, cards: run.cards,
-      commanderId: commanderIds.has(run.commanderId) ? run.commanderId : "warden",
-      traitId: validTraitIds.has(run.traitId) ? run.traitId : "bulwarks-oath",
-      skillBonuses: cleanBonuses,
-      abilityCooldown: Number.isFinite(run.abilityCooldown) ? Math.max(0, run.abilityCooldown) : 0,
-      campsiteRestUsed: Boolean(run.campsiteRestUsed), checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle",
-      completed: Boolean(run.completed),
-      pendingCardSelection: Boolean(run.pendingCardSelection), pendingRoute: Boolean(run.pendingRoute),
-      pendingCompletedWaves: Number.isFinite(run.pendingCompletedWaves) ? Math.max(0, Math.min(90, Math.floor(run.pendingCompletedWaves))) : 0,
-      waveInProgress: run.waveInProgress === undefined ? Number(run.currentWave) > 0 : Boolean(run.waveInProgress),
-      stats, encounter,
-      defeatedBosses: Array.isArray(run.defeatedBosses) ? run.defeatedBosses.filter(x => bossIds.has(x)).slice(0, 6) : []
-    };
-  }
+  // Unfinished expeditions are intentionally never stored or restored.
+  const cleanRun = null;
   const settingKeys = ["masterVolume", "musicVolume", "sfxVolume", "screenShake", "damageNumbers", "towerRanges", "developerMode"];
   const settings = {};
   if (save.settings && typeof save.settings === "object") {
@@ -417,14 +361,15 @@ app.get("/api/save", async (req, res) => {
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   try {
     const result = await pool.query("SELECT save_data, updated_at FROM player_saves WHERE discord_user_id = $1", [auth.userId]);
-    if (!result.rowCount) return res.json({ hasSave: false });
-    return res.json({ hasSave: !!result.rows[0].save_data?.run && !result.rows[0].save_data.run.completed && result.rows[0].save_data.run.checkpoint === "campsite", save: result.rows[0].save_data, progression: result.rows[0].save_data?.progression || null, updatedAt: result.rows[0].updated_at });
+    if (!result.rowCount) return res.json({ hasSave: false, save: { version: 1, run: null, settings: {}, progression: null } });
+    const stored = result.rows[0].save_data || {};
+    const save = { version: 1, run: null, settings: stored.settings || {}, progression: stored.progression || null };
+    return res.json({ hasSave: false, save, progression: save.progression, updatedAt: result.rows[0].updated_at });
   } catch (error) {
-    console.error("Could not load player save:", error.message);
+    console.error("Could not load player profile:", error.message);
     return res.status(503).json({ error: "save-service-unavailable" });
   }
 });
-
 app.put("/api/save", async (req, res) => {
   const auth = await verifiedSaveUser(req);
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
