@@ -87,7 +87,7 @@
   }
   $("dev-jump-progress").addEventListener("click",()=>{if(!active())return;jumpProgress(Number($("dev-area").value),Number($("dev-campsite").value),Number($("dev-stage").value));say("Moved to the selected area, campsite and stage.");});
   $("dev-all-cards").addEventListener("click",()=>{if(!active())return;["arrows","arcane","siege","greed","walls"].forEach(id=>{currentRun.cards.push(id);if(id==="walls"){currentRun.maxCastleHealth+=20;currentRun.castleHealth+=20;}});currentRun.castleHealth=Math.min(currentRun.castleHealth,currentRun.maxCastleHealth);refresh();say("Added one stack of every card, including the wall bonus.");});
-  $("dev-trigger-boss").addEventListener("click",()=>{if(!active())return;jumpProgress(3,2,3);currentRun.currentWave=4;startWave(false);startGameLoop();say("Started the final boss wave.");});
+  $("dev-trigger-boss").addEventListener("click",()=>{if(!active())return;jumpProgress(3,2,3);currentRun.encounter={id:"frost-wyrm",name:"The Frost Wyrm",kind:"BOSS",bossId:"frost-wyrm"};currentRun.currentWave=4;startWave(false);startGameLoop();say("Started a Frost Wyrm boss test.");});
 
   $("dev-pause").addEventListener("click",()=>{if(!active())return;stopGameLoop();say("Game loop paused. Use Resume Game to continue.");});
   $("dev-resume").addEventListener("click",()=>{if(!active())return;if($("card-overlay").hidden&&$("progress-overlay").hidden&&$("result-overlay").hidden)startGameLoop();say("Game loop resumed.");});
