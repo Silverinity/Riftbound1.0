@@ -338,7 +338,8 @@
     button.addEventListener("click", () => showHubView(button.dataset.hubView));
   });
   byId("hub-play").addEventListener("click", async () => {
-    if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your last campfire checkpoint. Continue?")) return;
+    const activeRun=!!window.isRiftboundRunActive?.();
+    if ((cloudSaveAvailable||activeRun) && !window.confirm("Starting a new expedition will abandon your current expedition and replace your last campfire checkpoint. Continue?")) return;
     try {
       if (cloudSaveAvailable) await window.riftboundCloudSave?.(null);
       if (typeof window.startRiftboundNewRun !== "function") {
