@@ -53,11 +53,6 @@
   }
   window.getRiftboundSkillBonuses=getBonuses;
   window.getRiftboundSkillProgress=()=>({points:progression.points,commanders:JSON.parse(JSON.stringify(progression.commanders))});
-  window.awardRiftboundSkillPoint=function(){
-    progression.points+=1;saveProgression();if(window.renderRiftboundSkillTree)window.renderRiftboundSkillTree();else renderSkillTree();
-    return progression.points;
-  };
-
   function publishSelection(){
     const selected=commanderById(selectedId);
     window.riftboundCommanderId=selected.id;
