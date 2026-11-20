@@ -364,6 +364,9 @@ function cleanSave(body) {
       abilityCooldown: Number.isFinite(run.abilityCooldown) ? Math.max(0, run.abilityCooldown) : 0,
       campsiteRestUsed: Boolean(run.campsiteRestUsed), checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle",
       completed: Boolean(run.completed),
+      pendingCardSelection: Boolean(run.pendingCardSelection), pendingRoute: Boolean(run.pendingRoute),
+      pendingCompletedWaves: Number.isFinite(run.pendingCompletedWaves) ? Math.max(0, Math.min(90, Math.floor(run.pendingCompletedWaves))) : 0,
+      waveInProgress: Boolean(run.waveInProgress),
       stats, encounter,
       defeatedBosses: Array.isArray(run.defeatedBosses) ? run.defeatedBosses.filter(x => bossIds.has(x)).slice(0, 6) : []
     };
