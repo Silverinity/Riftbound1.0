@@ -66,7 +66,7 @@
         body: JSON.stringify({ save: { version: 1, run: run || null, settings: window.riftboundSettings, progression: typeof window.getRiftboundProgressionExport === "function" ? window.getRiftboundProgressionExport() : null } })
       });
       if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
-      cloudSaveAvailable = !!run && !run.completed;
+      cloudSaveAvailable = !!run && !run.completed && run.checkpoint === "campsite";
       byId("continue-run").hidden = !cloudSaveAvailable;
       byId("auth-status").textContent = run ? "BETA ACCESS VERIFIED · PROGRESS SAVED" : "BETA ACCESS VERIFIED · PROFILE SAVED";
     } catch (error) {
@@ -240,6 +240,8 @@
   }
 
   function showHubView(view) {
+    if(view==="commanders")window.renderRiftboundCommanders?.();
+    if(view==="traits")window.renderRiftboundTraits?.();
     document.querySelectorAll(".hub-view").forEach(section => {
       section.hidden = section.id !== "hub-" + view + "-view";
     });
