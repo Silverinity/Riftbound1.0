@@ -1,0 +1,28 @@
+{
+  "frame_width": 96,
+  "frame_height": 112,
+  "idle": {
+    "frames": 8,
+    "fps": 8,
+    "loop": true,
+    "file": "cannon_idle_sheet.png"
+  },
+  "attack": {
+    "frames": 8,
+    "fps": 12,
+    "loop": false,
+    "release_frame": 2,
+    "projectile_origin_px": [
+      65,
+      28
+    ],
+    "file": "cannon_attack_sheet.png"
+  },
+  "projectile_ball": {
+    "frame_size": [
+      10,
+      10
+    ],
+    "file": "cannon_ball_projectile.png"
+  }
+}
