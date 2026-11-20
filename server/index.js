@@ -355,6 +355,7 @@ function cleanSave(body) {
       skillBonuses: run.skillBonuses && typeof run.skillBonuses === "object" ? run.skillBonuses : {},
       abilityCooldown: Number.isFinite(run.abilityCooldown) ? Math.max(0, run.abilityCooldown) : 0,
       campsiteRestUsed: Boolean(run.campsiteRestUsed), checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle",
+      completed: Boolean(run.completed),
       stats, encounter: run.encounter && typeof run.encounter === "object" ? run.encounter : null,
       defeatedBosses: Array.isArray(run.defeatedBosses) ? run.defeatedBosses.filter(x => typeof x === "string").slice(0, 20) : []
     };
@@ -396,7 +397,7 @@ app.get("/api/save", async (req, res) => {
   try {
     const result = await pool.query("SELECT save_data, updated_at FROM player_saves WHERE discord_user_id = $1", [auth.userId]);
     if (!result.rowCount) return res.json({ hasSave: false });
-    return res.json({ hasSave: !!result.rows[0].save_data?.run, save: result.rows[0].save_data, progression: result.rows[0].save_data?.progression || null, updatedAt: result.rows[0].updated_at });
+    return res.json({ hasSave: !!result.rows[0].save_data?.run && !result.rows[0].save_data.run.completed, save: result.rows[0].save_data, progression: result.rows[0].save_data?.progression || null, updatedAt: result.rows[0].updated_at });
   } catch (error) {
     console.error("Could not load player save:", error.message);
     return res.status(503).json({ error: "save-service-unavailable" });
