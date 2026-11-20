@@ -93,7 +93,7 @@
   function classData(id=window.riftboundCommanderId||"warden"){return profile.classes[CLASS_IDS.includes(id)?id:"warden"];}
   function xpForNext(level){return Math.round(120+level*45+level*level*2);}
   function getTrait(id=profile.equippedTrait){return traitList.find(t=>t.id===id)||traitList[0];}
-  function getTraitEffects(){return {...getTrait().effects};}
+  function getTraitEffects(id=profile.equippedTrait){return {...getTrait(id).effects};}
   window.getRiftboundTraitEffects=getTraitEffects;
   window.getRiftboundTrait=function(){return {...getTrait()};};
   window.getRiftboundClassProfile=function(id){const c=classData(id);return JSON.parse(JSON.stringify(c));};
