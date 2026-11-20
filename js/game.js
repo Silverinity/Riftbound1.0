@@ -14,6 +14,19 @@ function getSettings(){ return window.riftboundSettings || { towerRanges:false }
 const canvas = document.getElementById("battlefield");
 const ctx = canvas.getContext("2d");
 
+// Area 1 illustrated background. The game route and all gameplay objects remain separate.
+const areaBackgrounds = {
+  1: "assets/maps/verdant-reach/background.png"
+};
+const backgroundImages = {};
+Object.entries(areaBackgrounds).forEach(([area, source]) => {
+  const image = new Image();
+  image.onload = () => { if (currentRun && currentRun.area === Number(area)) drawBattlefield(); };
+  image.onerror = () => console.warn("Riftbound map background could not be loaded:", source);
+  image.src = source;
+  backgroundImages[area] = image;
+});
+
 // Pixel-art tower sprites. Missing files safely fall back to the original canvas drawings.
 const towerSpritePaths = {
   archer: "assets/towers/archer.png",
@@ -199,7 +212,30 @@ function environmentPalette(){
   return {ground:"#263B2B",textureA:"#304632",textureB:"#203326",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#17251B",tree:"#315438",treeLight:"#426443",trunk:"#64472F"};
 }
 function drawBattlefield(){
-  const palette=environmentPalette();ctx.fillStyle=palette.ground;ctx.fillRect(0,0,960,540);drawGroundTexture();drawTerrainDetails();drawMapLandmarks();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawSpectralAllies();drawCommanderEffects();drawPlacementPreview();
+  const palette=environmentPalette();
+  const background=backgroundImages[currentRun.area];
+  const hasIllustratedBackground=!!(background&&background.complete&&background.naturalWidth>0);
+  if(hasIllustratedBackground){
+    // Canvas dimensions are 960x540 (16:9), matching the map artwork.
+    ctx.drawImage(background,0,0,960,540);
+  }else{
+    ctx.fillStyle=palette.ground;
+    ctx.fillRect(0,0,960,540);
+    drawGroundTexture();
+    drawTerrainDetails();
+    drawMapLandmarks();
+    drawTrees();
+  }
+  // Keep the route and all interactive game elements above the background artwork.
+  drawPath();
+  drawPortal();
+  drawCastle();
+  drawTowers();
+  drawEnemies();
+  drawProjectiles();
+  drawSpectralAllies();
+  drawCommanderEffects();
+  drawPlacementPreview();
 }
 function drawGroundTexture(){
   const p=environmentPalette();
