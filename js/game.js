@@ -363,30 +363,54 @@ function drawTerrainDetails(){
 }
 function drawPath(){
   const palette=environmentPalette(),points=getPathPoints();
-  ctx.save();ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();
+  ctx.save();
+  ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();
   points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  // Slim, restrained road layers leave substantially more of the map visible.
+  // Keep the existing narrow road silhouette; add texture within and beside it.
   ctx.strokeStyle="rgba(0,0,0,.30)";ctx.lineWidth=28;ctx.stroke();
   ctx.strokeStyle=palette.pathDark;ctx.lineWidth=24;ctx.stroke();
   ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=20;ctx.stroke();
   ctx.strokeStyle=palette.path;ctx.lineWidth=16;ctx.stroke();
-  ctx.strokeStyle="rgba(42,34,25,.32)";
-  ctx.lineWidth=1;ctx.setLineDash([2,9]);ctx.stroke();ctx.setLineDash([]);
-  // Fine, intermittent highlights define the road without adding bulky borders.
-  ctx.strokeStyle="rgba(218,190,132,.38)";
-  ctx.lineWidth=1;ctx.setLineDash([3,22]);ctx.stroke();ctx.setLineDash([]);
+
+  // Shallow wheel ruts and worn seams give the road a more natural surface.
+  ctx.strokeStyle="rgba(37,28,24,.34)";ctx.lineWidth=1.2;
+  ctx.setLineDash([7,13]);ctx.lineDashOffset=0;ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle="rgba(222,196,145,.30)";ctx.lineWidth=1;
+  ctx.setLineDash([3,24]);ctx.stroke();ctx.setLineDash([]);
+
   for(let i=0;i<points.length-1;i++){
-    const a=points[i],b=points[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.floor(len/22);
+    const a=points[i],b=points[i+1],dx=b.x-a.x,dy=b.y-a.y;
+    const len=Math.hypot(dx,dy),nx=-dy/len,ny=dx/len,steps=Math.floor(len/15);
     for(let j=1;j<steps;j++){
-      const t=j/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
-      const seed=(i*97+j*31+currentRun.area*53)%11;
-      if(seed<4){
-        ctx.fillStyle="rgba(42,35,28,.36)";
-        ctx.fillRect(Math.round(x)-2,Math.round(y)-1,3,2);
-      }else if(seed===8){
-        ctx.fillStyle="rgba(222,202,153,.4)";
-        ctx.fillRect(Math.round(x),Math.round(y),2,1);
+      const t=j/steps,x=a.x+dx*t,y=a.y+dy*t;
+      const seed=(i*97+j*31+currentRun.area*53)%17;
+      // Small irregular cobbles, worn earth flecks and edge gravel.
+      if(seed===1||seed===7||seed===12){
+        const side=seed===7?-1:1,offset=side*(7+(seed%3)*2);
+        const px=x+nx*offset,py=y+ny*offset;
+        ctx.fillStyle=seed===7?"rgba(35,27,23,.48)":"rgba(190,158,111,.36)";
+        ctx.beginPath();ctx.ellipse(px,py,2.2,1.25,(i+j)*.37,0,Math.PI*2);ctx.fill();
+      }else if(seed===3||seed===10){
+        const offset=((seed%2)?-1:1)*((seed%4)+1);
+        ctx.fillStyle="rgba(39,30,25,.30)";
+        ctx.fillRect(Math.round(x+nx*offset),Math.round(y+ny*offset),2,1);
+      }else if(seed===15){
+        ctx.fillStyle="rgba(224,204,163,.32)";
+        ctx.fillRect(Math.round(x)-1,Math.round(y),2,1);
       }
+    }
+  }
+  // Scattered shoulder stones sit just outside the road edge, never widening it.
+  for(let i=0;i<points.length-1;i++){
+    const a=points[i],b=points[i+1],dx=b.x-a.x,dy=b.y-a.y;
+    const len=Math.hypot(dx,dy),nx=-dy/len,ny=dx/len,steps=Math.floor(len/38);
+    for(let j=1;j<steps;j++){
+      const seed=(i*41+j*19+currentRun.area*13)%9;
+      if(seed!==2&&seed!==6)continue;
+      const t=j/steps,side=seed===2?-1:1;
+      const x=a.x+dx*t+nx*side*13,y=a.y+dy*t+ny*side*13;
+      ctx.fillStyle=seed===2?"rgba(30,27,25,.55)":"rgba(155,130,98,.42)";
+      ctx.beginPath();ctx.moveTo(x-3,y);ctx.lineTo(x-1,y-2);ctx.lineTo(x+3,y-1);ctx.lineTo(x+2,y+2);ctx.lineTo(x-2,y+2);ctx.closePath();ctx.fill();
     }
   }
   ctx.restore();
@@ -452,9 +476,54 @@ function drawPortal(){
   ctx.fillStyle="#21102F";ctx.beginPath();ctx.ellipse(75,270,18,31,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#B99AE8";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(75,270,15,27,0,0,Math.PI*2);ctx.stroke();
 }
 function drawCastle(){
-  ctx.fillStyle="#17251B";ctx.fillRect(855,225,85,100);ctx.fillStyle="#655A70";ctx.fillRect(860,235,70,70);ctx.fillStyle="#98899E";ctx.fillRect(870,245,50,50);
-  ctx.fillStyle="#4A3B55";ctx.fillRect(852,220,22,35);ctx.fillRect(916,220,22,35);ctx.fillRect(852,285,22,35);ctx.fillRect(916,285,22,35);
-  ctx.fillStyle="#B99AE8";ctx.fillRect(852,216,22,6);ctx.fillRect(916,216,22,6);ctx.fillStyle="#241932";ctx.fillRect(885,275,22,30);
+  // Ground shadow and stone foundation.
+  ctx.save();
+  ctx.fillStyle="rgba(5,5,9,.42)";
+  ctx.beginPath();ctx.ellipse(896,316,54,13,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#20202B";ctx.fillRect(850,296,91,29);
+  ctx.fillStyle="#51485F";ctx.fillRect(855,230,82,76);
+  ctx.fillStyle="#766982";ctx.fillRect(862,237,68,62);
+  ctx.fillStyle="#91829A";ctx.fillRect(870,245,52,49);
+
+  // Tower blocks and battlements.
+  ctx.fillStyle="#3B3049";
+  ctx.fillRect(852,220,23,84);ctx.fillRect(916,220,22,84);
+  ctx.fillRect(850,216,7,13);ctx.fillRect(861,216,7,13);ctx.fillRect(872,216,5,13);
+  ctx.fillRect(914,216,7,13);ctx.fillRect(925,216,7,13);ctx.fillRect(935,216,4,13);
+  ctx.fillStyle="#B99AE8";
+  ctx.fillRect(852,214,23,4);ctx.fillRect(916,214,22,4);
+  ctx.fillStyle="#88799B";
+  ctx.fillRect(856,230,15,3);ctx.fillRect(919,230,15,3);
+  ctx.fillRect(860,238,8,54);ctx.fillRect(920,238,7,54);
+
+  // Individual masonry courses and chipped stone highlights.
+  ctx.strokeStyle="rgba(25,18,34,.58)";ctx.lineWidth=1;
+  for(let y=252;y<301;y+=12){
+    ctx.beginPath();ctx.moveTo(862,y);ctx.lineTo(930,y);ctx.stroke();
+    const seam=(y%3)*5+879;
+    ctx.beginPath();ctx.moveTo(seam,y-12);ctx.lineTo(seam,y);ctx.stroke();
+  }
+  ctx.fillStyle="rgba(214,195,225,.34)";
+  ctx.fillRect(861,246,7,2);ctx.fillRect(922,250,5,2);ctx.fillRect(875,258,4,2);
+  ctx.fillRect(906,282,5,2);ctx.fillRect(858,280,4,2);
+
+  // Narrow arrow slits and the central arched gate.
+  ctx.fillStyle="#21182B";
+  ctx.fillRect(860,237,5,13);ctx.fillRect(924,237,5,13);
+  ctx.fillRect(883,270,27,35);
+  ctx.fillStyle="#A88CBF";
+  ctx.fillRect(886,272,21,3);ctx.fillRect(883,275,3,28);ctx.fillRect(907,275,3,28);
+  ctx.fillStyle="#17121E";
+  ctx.fillRect(888,281,17,24);
+  ctx.fillStyle="#D2B5E8";ctx.fillRect(900,286,2,2);
+
+  // Small purple ward stones set into the parapet.
+  ctx.fillStyle="rgba(185,154,232,.72)";
+  ctx.fillRect(862,220,3,5);ctx.fillRect(926,220,3,5);
+  ctx.fillStyle="rgba(185,154,232,.22)";
+  ctx.fillRect(858,224,11,2);ctx.fillRect(922,224,11,2);
+  ctx.restore();
+
   const hpRatio=Math.max(0,Math.min(1,currentRun.castleHealth/currentRun.maxCastleHealth));
   const barX=846,barY=198,barW=104,barH=12;
   ctx.fillStyle="rgba(8,6,12,.94)";ctx.fillRect(barX-3,barY-3,barW+6,barH+6);
