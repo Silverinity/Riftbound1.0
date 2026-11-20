@@ -634,7 +634,32 @@ function drawEnemies(){
   if(!currentRun)return;
   currentRun.enemies.forEach(e=>{
     const t=enemyTypes[e.type],size=t.size;ctx.fillStyle="rgba(0,0,0,.3)";ctx.fillRect(e.x-size,e.y+size/2,size*2,5);
-    ctx.fillStyle=t.color;ctx.fillRect(e.x-size/2,e.y-size/2,size,size);ctx.fillStyle="#241932";ctx.fillRect(e.x-4,e.y-3,3,3);ctx.fillRect(e.x+2,e.y-3,3,3);
+    ctx.fillStyle=t.color;ctx.strokeStyle="rgba(20,12,28,.9)";ctx.lineWidth=3;
+    if(e.isBoss){
+      ctx.beginPath();
+      if(e.type==="hollow-bear"){
+        ctx.ellipse(e.x,e.y,size*.72,size*.82,0,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(e.x-size*.52,e.y-size*.55,size*.3,0,Math.PI*2);ctx.arc(e.x+size*.52,e.y-size*.55,size*.3,0,Math.PI*2);ctx.fill();
+      }else if(e.type==="rift-alpha"){
+        ctx.moveTo(e.x,e.y-size);ctx.lineTo(e.x+size*.78,e.y-size*.15);ctx.lineTo(e.x+size*.5,e.y+size*.72);ctx.lineTo(e.x-size*.5,e.y+size*.72);ctx.lineTo(e.x-size*.78,e.y-size*.15);ctx.closePath();ctx.fill();
+        ctx.fillRect(e.x-size*.8,e.y-size*1.05,size*.35,size*.5);ctx.fillRect(e.x+size*.45,e.y-size*1.05,size*.35,size*.5);
+      }else if(e.type==="ash-colossus"){
+        ctx.fillRect(e.x-size*.7,e.y-size*.65,size*1.4,size*1.35);
+        ctx.beginPath();ctx.moveTo(e.x-size*.55,e.y-size*.55);ctx.lineTo(e.x-size*.25,e.y-size*1.2);ctx.lineTo(e.x,e.y-size*.55);ctx.lineTo(e.x+size*.28,e.y-size*1.25);ctx.lineTo(e.x+size*.58,e.y-size*.55);ctx.closePath();ctx.fill();
+      }else if(e.type==="goblin-warlord"){
+        ctx.fillRect(e.x-size*.62,e.y-size*.55,size*1.24,size*1.25);
+        ctx.beginPath();ctx.moveTo(e.x-size*.55,e.y-size*.5);ctx.lineTo(e.x-size*.48,e.y-size*1.05);ctx.lineTo(e.x-size*.12,e.y-size*.75);ctx.lineTo(e.x,e.y-size*1.18);ctx.lineTo(e.x+size*.16,e.y-size*.75);ctx.lineTo(e.x+size*.52,e.y-size*1.05);ctx.lineTo(e.x+size*.58,e.y-size*.5);ctx.closePath();ctx.fill();
+      }else if(e.type==="frost-wyrm"){
+        ctx.ellipse(e.x,e.y,size*.95,size*.48,-.18,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.moveTo(e.x+size*.35,e.y-size*.15);ctx.lineTo(e.x+size*1.05,e.y-size*.8);ctx.lineTo(e.x+size*.78,e.y+size*.15);ctx.closePath();ctx.fill();
+        ctx.beginPath();ctx.moveTo(e.x+size*.7,e.y-size*.45);ctx.lineTo(e.x+size*.55,e.y-size*1.05);ctx.lineTo(e.x+size*.95,e.y-size*.6);ctx.closePath();ctx.fill();
+      }else if(e.type==="riftbound-knight"){
+        ctx.moveTo(e.x,e.y-size);ctx.lineTo(e.x+size*.72,e.y-size*.2);ctx.lineTo(e.x+size*.55,e.y+size*.75);ctx.lineTo(e.x,e.y+size);ctx.lineTo(e.x-size*.55,e.y+size*.75);ctx.lineTo(e.x-size*.72,e.y-size*.2);ctx.closePath();ctx.fill();
+        ctx.fillRect(e.x+size*.55,e.y-size*.1,size*.38,size*.85);
+      }else{ctx.arc(e.x,e.y,size*.8,0,Math.PI*2);ctx.fill();}
+      ctx.stroke();
+    }else{ctx.fillRect(e.x-size/2,e.y-size/2,size,size);}
+    ctx.fillStyle="#241932";ctx.fillRect(e.x-4,e.y-3,3,3);ctx.fillRect(e.x+2,e.y-3,3,3);
     if(e.burnTimer>0){
       const flame=performance.now()/75;
       for(let f=0;f<3;f++){
