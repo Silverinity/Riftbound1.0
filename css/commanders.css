@@ -141,3 +141,22 @@
   .commander-grid { grid-template-columns: 1fr; }
   .commander-playstyle { min-height: 0; }
 }
+
+/* In-run commander passive indicator */
+.commander-combat-hud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  width: min(100% - 24px, 960px);
+  margin: 10px auto 0;
+  padding: 9px 14px;
+  color: #A99DB4;
+  background: rgba(23, 16, 34, .88);
+  border: 1px solid #49315F;
+  font-size: 10px;
+  letter-spacing: .8px;
+}
+.commander-combat-hud strong { color: #D9C5F5; letter-spacing: 1.3px; }
+.commander-combat-hud span { line-height: 1.5; }
