@@ -14,9 +14,11 @@ function getSettings(){ return window.riftboundSettings || { towerRanges:false }
 const canvas = document.getElementById("battlefield");
 const ctx = canvas.getContext("2d");
 
-// Area 1 illustrated background. The game route and all gameplay objects remain separate.
+// Illustrated backgrounds for all three areas. Routes and gameplay objects remain separate.
 const areaBackgrounds = {
-  1: "assets/maps/verdant-reach/background.png"
+  1: "assets/maps/verdant-reach/background.png",
+  2: "assets/maps/ashen-wastes/background.png",
+  3: "assets/maps/frostbound-expanse/background.png"
 };
 const backgroundImages = {};
 Object.entries(areaBackgrounds).forEach(([area, source]) => {
