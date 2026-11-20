@@ -9,7 +9,7 @@ let spawnTimer = 0;
 let pointerWorld = null;
 let placementValid = false;
 let pendingCards = [];
-function getSettings(){ return window.riftboundSettings || { towerRanges:false, difficulty:"normal" }; }
+function getSettings(){ return window.riftboundSettings || { towerRanges:false }; }
 
 const canvas = document.getElementById("battlefield");
 const ctx = canvas.getContext("2d");
@@ -148,9 +148,9 @@ function showBattleMessage(s){document.getElementById("battle-message").textCont
 function setWaveStatus(s){document.getElementById("wave-status").textContent=s;}
 function getTowerStats(t){
   const base=towerTypes[t.type],u=t.upgrades||{damage:0,range:0,speed:0};
-  let damage=base.damage+(u.damage||0)*5;
-  let range=base.range+(u.range||0)*15;
-  let cooldown=Math.max(.15,1/base.fireRate-(u.speed||0)*.1);
+  let damage=base.damage*(1+(u.damage||0)*.3);
+  let range=base.range+(u.range||0)*22;
+  let cooldown=Math.max(.18,1/base.fireRate-(u.speed||0)*.16);
   let fireRate=1/cooldown;
   if(t.type==="arcane"&&getRunCommanderId()==="arcanist")damage*=1.25;
   if(t.type==="archer")damage+=currentRun.cards.filter(c=>c==="arrows").length*5;
@@ -323,7 +323,8 @@ function getPathPosition(progress){
 }
 function createWaveQueue(wave){
   if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&wave===5)return ["treant"];
-  const count=5+wave*2+(currentRun.area-1)*3,queue=[];
+  const totalWave=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+wave;
+  const count=5+wave*2+(currentRun.area-1)*3+Math.floor((totalWave-1)/15),queue=[];
   for(let i=0;i<count;i++){
     if(currentRun.area>=2&&wave>=3&&i%4===0)queue.push("brute");
     else if(wave>=2&&i%5===2)queue.push("riftwing");
@@ -352,9 +353,14 @@ function startWave(automatic=false){
   persistRunCheckpoint("battle");
 }
 function spawnEnemy(type,waveNumber){
-  const d=enemyTypes[type],difficulty=getSettings().difficulty||"normal";let mult=areaData().enemyScale*(1+waveNumber*.06);
-  if(difficulty==="easy")mult*=.8;if(difficulty==="hard")mult*=1.25;
-  const health=d.health*mult;currentRun.enemies.push({type,x:pathPoints[0].x,y:pathPoints[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage});
+  const d=enemyTypes[type];
+  const totalWave=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+waveNumber;
+  const progression=totalWave-1;
+  const healthScale=areaData().enemyScale*(1+progression*.0085);
+  const damageScale=1+progression*.0055;
+  const speedScale=1+progression*.0012;
+  const health=d.health*healthScale;
+  currentRun.enemies.push({type,x:pathPoints[0].x,y:pathPoints[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale});
 }
 function updateEnemies(dt){
   currentRun.spawnBatches.forEach(batch=>{
@@ -376,7 +382,7 @@ function updateEnemies(dt){
     }
     if(e.slowTimer>0)e.slowTimer=Math.max(0,e.slowTimer-dt);
     const slowFactor=e.slowTimer>0?.55:1;
-    e.progress+=enemyTypes[e.type].speed*slowFactor*dt/totalPathLength;
+    e.progress+=(e.speed||enemyTypes[e.type].speed)*slowFactor*dt/totalPathLength;
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
@@ -669,7 +675,7 @@ function selectTower(type){
   updateTowerPanel();showBattleMessage(type.toUpperCase()+" SELECTED — CLICK AN OPEN AREA TO BUILD");
 }
 function upgradeSelectedTower(stat){
-  const t=selectedTowerEntity;if(!t||!currentRun)return;const s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*45;
+  const t=selectedTowerEntity;if(!t||!currentRun)return;const s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*35;
   if(t.level>=4){showBattleMessage("THIS TOWER IS FULLY UPGRADED");return;}
   if(currentRun.gold<cost){showBattleMessage("NOT ENOUGH GOLD FOR THIS UPGRADE");return;}
   currentRun.gold-=cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
@@ -677,15 +683,15 @@ function upgradeSelectedTower(stat){
 function updateTowerPanel(){
   const panel=document.getElementById("tower-info-panel");if(!panel)return;
   if(!selectedTowerEntity){panel.innerHTML='<div class="tower-panel-empty"><span class="panel-symbol">✧</span><strong> TOWER DETAILS</strong><p>Select a placed tower to view its statistics and upgrades. Select a tower below to build.</p></div>';return;}
-  const t=selectedTowerEntity,s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*45,disabled=t.level>=4||currentRun.gold<cost;
+  const t=selectedTowerEntity,s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*35,disabled=t.level>=4||currentRun.gold<cost;
   panel.innerHTML='<div class="tower-panel-heading"><span class="panel-symbol">'+(t.type==="archer"?"♜":t.type==="arcane"?"✧":"◆")+'</span><div><small>LEVEL '+t.level+'</small><strong>'+towerTypes[t.type].name+'</strong></div></div>'+
     '<div class="tower-stat"><span>Damage</span><strong>'+Math.round(s.damage)+'</strong></div>'+
     '<div class="tower-stat"><span>Cooldown</span><strong>'+s.cooldown.toFixed(2)+'s</strong></div>'+
     '<div class="tower-stat"><span>Range</span><strong>'+Math.round(s.range)+' px</strong></div>'+
     '<p class="panel-upgrade-title">UPGRADE · '+cost+' GOLD</p>'+
-    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="damage">Increase damage <span>+5 damage</span></button>'+
-    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="range">Increase range <span>+15 px</span></button>'+
-    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="speed">Faster attacks <span>-0.10s cooldown</span></button>'+
+    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="damage">Increase damage <span>+30% base damage</span></button>'+
+    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="range">Increase range <span>+22 px</span></button>'+
+    '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="speed">Faster attacks <span>-0.16s cooldown</span></button>'+
     '<p class="panel-hint">'+(t.level>=4?"MAX LEVEL REACHED":"Each upgrade increases the tower level. Maximum level: 4.")+'</p>';
   panel.querySelectorAll("[data-upgrade]").forEach(b=>b.addEventListener("click",()=>upgradeSelectedTower(b.dataset.upgrade)));
 }
@@ -717,7 +723,7 @@ function updateCampsiteScreen(){
   document.getElementById("campsite-cards").textContent=currentRun.cards.length;
   document.getElementById("campsite-free-rest").disabled=currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth;
   document.getElementById("campsite-heal").disabled=currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth;
-  document.getElementById("campsite-upgrade").disabled=currentRun.gold<75;
+  document.getElementById("campsite-upgrade").disabled=currentRun.gold<100;
 }
 function restByCampfire(){
   if(!currentRun||currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
@@ -729,7 +735,7 @@ function healAtCampsite(){
 }
 function upgradeAtCampsite(){
   if(!currentRun||currentRun.gold<75)return;
-  currentRun.gold-=75;currentRun.towerDamageBonus+=5;updateCampsiteScreen();persistRunCheckpoint("campsite");
+  currentRun.gold-=100;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function showCampsiteScreen(completedWaves){
   stopGameLoop();
