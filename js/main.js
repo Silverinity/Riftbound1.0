@@ -294,10 +294,21 @@
     button.addEventListener("click", () => showHubView(button.dataset.hubView));
   });
   byId("hub-play").addEventListener("click", () => {
-    startNewRun();
-    hideScreens();
-    gameScreen.hidden = false;
-    initBattlefield();
+    try {
+      if (typeof window.startRiftboundNewRun !== "function") {
+        throw new Error("The game engine did not expose the new-run function.");
+      }
+      window.startRiftboundNewRun();
+      hideScreens();
+      gameScreen.hidden = false;
+      initBattlefield();
+    } catch (error) {
+      console.error("Could not start a Riftbound expedition:", error);
+      gameScreen.hidden = true;
+      hubScreen.hidden = false;
+      showHubView("home");
+      byId("auth-status").textContent = "COULD NOT START THE EXPEDITION · CHECK THE CONSOLE";
+    }
   });
   document.querySelectorAll(".tower-button").forEach(button => {
     button.addEventListener("click", () => selectTower(button.dataset.tower));
