@@ -239,7 +239,7 @@ function persistRunCheckpoint(checkpoint="battle"){
     towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
     commanderId:currentRun.commanderId||"warden",skillBonuses:currentRun.skillBonuses||{},abilityCooldown:currentRun.abilityCooldown||0,
     campsiteRestUsed:!!currentRun.campsiteRestUsed,stats:currentRun.stats||{},encounter:currentRun.encounter||null,
-    defeatedBosses:currentRun.defeatedBosses||[],checkpoint
+    defeatedBosses:currentRun.defeatedBosses||[],completed:!!currentRun.finalized,checkpoint
   };
   window.riftboundCloudSave(run);
 }
@@ -849,7 +849,10 @@ function updateEnemies(dt){
       const burnStep=Math.min(dt,e.burnTimer);
       e.burnTimer-=burnStep;
       const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
-      e.health-=(e.burnDamage||3)*(1+(trait.burnDamage||0))*burnStep;
+      const burnDamage=(e.burnDamage||3)*(1+(trait.burnDamage||0))*burnStep;
+      const actualBurn=Math.min(Math.max(0,e.health),burnDamage);
+      currentRun.stats.damageDealt+=actualBurn;
+      e.health-=burnDamage;
       if(e.burnTimer<=0)e.burnDamage=3;
       if(e.health<=0&&!e.rewarded)damageEnemy(e,0,false);
     }
@@ -909,10 +912,8 @@ function updateTowers(dt){
           const dx=target.x-t.x,dy=target.y-t.y;
           const originX=t.x-38+arcaneAnimation.projectileOriginX*arcaneAnimation.scaleX;
           const originY=t.y-84+arcaneAnimation.projectileOriginY*arcaneAnimation.scaleY;
-          const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
-          const markedBonus=target===currentRun.markedEnemy&&currentRun.markedTimer>0?1.6:1;
           currentRun.projectiles.push({
-            x:originX,y:originY,target,damage:getTowerStats(t).damage*eliteBonus*markedBonus,
+            x:originX,y:originY,target,damage:getTowerStats(t).damage*getEnemyDamageMultiplier(target),
             color:"#A88BFF",speed:getTowerStats(t).projectileSpeed,towerType:"arcane",
             isArcaneOrb:true,animationTime:0,angle:Math.atan2(dy,dx)
           });
@@ -930,10 +931,8 @@ function updateTowers(dt){
           const target=anim.target;
           const originX=t.x-38+cannonAnimation.projectileOriginX*cannonAnimation.scaleX;
           const originY=t.y-84+cannonAnimation.projectileOriginY*cannonAnimation.scaleY;
-          const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
-          const markedBonus=target===currentRun.markedEnemy&&currentRun.markedTimer>0?1.6:1;
           currentRun.projectiles.push({
-            x:originX,y:originY,target,damage:getTowerStats(t).damage*eliteBonus*markedBonus,
+            x:originX,y:originY,target,damage:getTowerStats(t).damage*getEnemyDamageMultiplier(target),
             color:"#D0C6B7",speed:getTowerStats(t).projectileSpeed,towerType:"cannon",
             isCannonBall:true,angle:Math.atan2(target.y-originY,target.x-originX)
           });
