@@ -158,7 +158,11 @@ window.restoreRiftboundRun=function(saved){
   const savedCommander=data.commanderId||window.riftboundCommanderId||"warden";
   window.riftboundCommanderId=savedCommander;
   if(typeof window.setRiftboundCommanderSelection==="function")window.setRiftboundCommanderSelection(savedCommander);
-  currentRun={...createNewRun(),...data,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
+  const restoredTowers=(data.towers||[]).map((tower,index)=>({
+    ...tower,
+    investedGold:Number.isFinite(tower.investedGold)?tower.investedGold:(index===0?0:undefined)
+  }));
+  currentRun={...createNewRun(),...data,towers:restoredTowers,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
     gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
   selectedTower=null;selectedTowerEntity=null;
   relocateTowersForCurrentArea();
