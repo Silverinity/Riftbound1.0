@@ -66,7 +66,15 @@ const treesByArea = [
   [[65,70],[145,75],[300,65],[475,65],[650,65],[805,70],[920,80],[115,475],[285,480],[485,480],[650,475],[900,475],[115,180],[315,220],[500,230],[655,205],[805,230],[910,185]]
 ];
 function getAreaIndex(){return Math.max(0,Math.min(2,(currentRun?.area||1)-1));}
-function getPathPoints(){return pathsByArea[getAreaIndex()];}
+function getPathPoints(){
+  const points=pathsByArea[getAreaIndex()];
+  // Nudge the route's bends downward while keeping its portal and castle endpoints fixed.
+  return points.map((point,index)=>(
+    index===0||index===points.length-1
+      ? point
+      : {x:point.x,y:Math.min(470,point.y+18)}
+  ));
+}
 function getTreePositions(){return treesByArea[getAreaIndex()];}
 const areas = [
   {name:"Verdant Woods",subtitle:"The Last Fortress",boss:"",enemyScale:1},
@@ -274,10 +282,10 @@ function drawPath(){
   const palette=environmentPalette(),points=getPathPoints();
   ctx.save();ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();
   points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.strokeStyle="rgba(0,0,0,.34)";ctx.lineWidth=78;ctx.stroke();
-  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=74;ctx.stroke();
-  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=64;ctx.stroke();
-  ctx.strokeStyle=palette.path;ctx.lineWidth=56;ctx.stroke();
+  ctx.strokeStyle="rgba(0,0,0,.34)";ctx.lineWidth=62;ctx.stroke();
+  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=58;ctx.stroke();
+  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=50;ctx.stroke();
+  ctx.strokeStyle=palette.path;ctx.lineWidth=44;ctx.stroke();
   ctx.strokeStyle=currentRun.area===2?"rgba(35,25,23,.38)":currentRun.area===3?"rgba(206,228,243,.2)":"rgba(42,34,25,.28)";ctx.lineWidth=1.5;ctx.setLineDash([2,8]);ctx.stroke();ctx.setLineDash([]);
   ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=2;ctx.stroke();
   ctx.strokeStyle=currentRun.area===2?"rgba(255,174,104,.32)":currentRun.area===3?"rgba(205,235,255,.48)":"rgba(218,190,132,.38)";
@@ -817,7 +825,7 @@ function gameLoop(timestamp){
 function startGameLoop(){stopGameLoop();gameRunning=true;lastFrameTime=performance.now();animationFrame=requestAnimationFrame(gameLoop);}
 function stopGameLoop(){gameRunning=false;if(animationFrame!==null){cancelAnimationFrame(animationFrame);animationFrame=null;}}
 function isOnPath(x,y){
-  const clearance=50,points=getPathPoints();
+  const clearance=42,points=getPathPoints();
   for(let i=0;i<points.length-1;i++){
     const a=points[i],b=points[i+1],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;
     let t=((x-a.x)*dx+(y-a.y)*dy)/l;t=Math.max(0,Math.min(1,t));
