@@ -178,6 +178,7 @@ const enemyTypes = {
   riftling:{name:"Riftling",health:40,speed:45,reward:8,damage:8,color:"#B68AE8",size:12},
   brute:{name:"Iron Brute",health:150,speed:22,reward:18,damage:18,color:"#A17B78",size:17},
   riftwing:{name:"Riftwing",health:65,speed:75,reward:12,damage:10,color:"#78B9D1",size:11},
+  goblin:{name:"Goblin Raider",health:55,speed:55,reward:10,damage:9,color:"#91A85C",size:11},
   treant:{name:"Ancient Treant",health:2000,speed:15,reward:150,damage:35,color:"#83A66C",size:27,boss:true},
   "hollow-bear":{name:"Ursakar, the Hollow Bear",health:1150,speed:13,reward:180,damage:30,color:"#A77B56",size:29,boss:true},
   "rift-alpha":{name:"Fenrir, the Rift Alpha",health:920,speed:29,reward:175,damage:25,color:"#91A7C9",size:26,boss:true},
@@ -825,14 +826,25 @@ function createWaveQueue(wave){
   if(wave===5&&currentRun.encounter?.bossId)return [currentRun.encounter.bossId];
   const totalWave=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+wave;
   const count=5+wave*2+(currentRun.area-1)*3+Math.floor((totalWave-1)/8),queue=[];
+  const route=currentRun.encounter?.id||"bear-cave";
   for(let i=0;i<count;i++){
-    if(totalWave>=46&&i%3===0)queue.push("brute");
+    if(route==="bear-cave")queue.push(i%3===0?"brute":"riftling");
+    else if(route==="wolf-den")queue.push(i%3===0?"riftwing":"riftling");
+    else if(route==="goblin-camp")queue.push(i%3===0?"brute":"goblin");
+    else if(route==="cinder-quarry")queue.push(i%2===0?"brute":"riftling");
+    else if(route==="ash-wastes")queue.push(i%3===0?"brute":"riftwing");
+    else if(route==="scavenger-crossing")queue.push(i%3===0?"riftwing":"goblin");
+    else if(route==="frozen-hollow")queue.push(i%3===0?"riftwing":"riftling");
+    else if(route==="wraithwood")queue.push(i%4===0?"brute":"riftling");
+    else if(route==="shattered-keep")queue.push(i%2===0?"brute":"riftwing");
+    else if(totalWave>=46&&i%3===0)queue.push("brute");
     else if(totalWave>=25&&i%5===2)queue.push("riftwing");
     else if(currentRun.area>=2&&wave>=3&&i%4===0)queue.push("brute");
     else if(wave>=2&&i%5===2)queue.push("riftwing");
     else if(wave>=3&&i%4===0)queue.push("brute");
     else queue.push("riftling");
-  }return queue;
+  }
+  return queue;
 }
 function startWave(automatic=false){
   if(!currentRun||currentRun.gameOver||currentRun.currentWave>=5)return;
