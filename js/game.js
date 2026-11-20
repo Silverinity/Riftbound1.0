@@ -93,7 +93,7 @@ function createNewRun(){
   const startingHealth=commanderId==="warden"?120:100;
   return {
     commanderId,gold:100,castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
-    towers:[{type:"archer",x:330,y:200,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
+    towers:[{type:"archer",x:300,y:280,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
     devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],
@@ -133,6 +133,7 @@ window.restoreRiftboundRun=function(saved){
   currentRun={...createNewRun(),...data,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
     gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
   selectedTower=null;selectedTowerEntity=null;
+  relocateTowersForCurrentArea();
   document.getElementById("main-menu").style.display="none";
   document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=data.checkpoint==="campsite";
