@@ -129,8 +129,8 @@
     } catch (error) {
       betaAuthenticated = false;
       byId("continue-run").hidden = true;
-      status.textContent = "AUTH SERVER UNAVAILABLE · START THE RIFTBOUND BACKEND";
-      login.hidden = true;
+      status.textContent = "COULD NOT REACH AUTH SERVER · CHECK CONNECTION AND RETRY";
+      login.hidden = false;
       console.error("Could not check Riftbound beta access:", error);
     } finally {
       if (window.location.search) {
@@ -140,6 +140,7 @@
   }
 
   byId("discord-login").addEventListener("click", () => {
+    byId("auth-status").textContent = "CONNECTING TO DISCORD...";
     window.location.href = API_BASE + "/auth/discord";
   });
 
