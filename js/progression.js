@@ -91,7 +91,7 @@
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch(e){console.warn("Could not save class progression:",e);}
     const savedRun=typeof window.persistRiftboundCheckpoint==="function"?window.persistRiftboundCheckpoint("battle"):false;
     if(savedRun===false&&typeof window.riftboundCloudSaveProfile==="function")window.riftboundCloudSaveProfile();
-    renderSkillTree();renderTraits();
+    renderSkillTree();renderTraits();window.renderRiftboundCommanders?.();
   }
   function classData(id=window.riftboundCommanderId||"warden"){return profile.classes[CLASS_IDS.includes(id)?id:"warden"];}
   function xpForNext(level){return Math.round(120+level*45+level*level*2);}
@@ -123,6 +123,11 @@
     save();
     return {classId:id,xpGained:gain,level:c.level,levelsGained,skillPointsGained:points,xp:c.xp,xpToNext:xpForNext(c.level)};
   };
+  window.devRiftboundGrantClassXP=function(id,amount){return window.awardRiftboundClassXP(id,amount);};
+  window.devRiftboundGrantSkillPoints=function(id,amount){
+    if(!CLASS_IDS.includes(id))return false;
+    const c=classData(id);c.skillPoints=Math.min(100000,c.skillPoints+Math.max(0,Math.floor(Number(amount)||0)));save();return c.skillPoints;
+  };
   window.calculateRiftboundRunXP=function(stats,victory){
     const s=stats||{},waves=Math.max(0,s.wavesCompleted||0),kills=Math.max(0,s.enemiesKilled||0),bosses=Math.max(0,s.bossesDefeated||0),damage=Math.max(0,s.damageDealt||0);
     return Math.min(10000,Math.round(waves*18+kills*2+bosses*125+Math.floor(damage/1000)*4+(victory?220:0)));
@@ -144,9 +149,9 @@
   }
   function renderTraits(){
     const root=document.getElementById("trait-collection");if(!root)return;
-    const equipped=getTrait(),counts={COMMON:3,RARE:2,EPIC:2,LEGENDARY:2,MYTHIC:1};
-    root.innerHTML='<div class="trait-heading"><div><p class="prep-eyebrow">COMMANDER IDENTITY</p><h2>TRAIT COLLECTION</h2><p>Equip one trait to define your expedition playstyle. Every trait has a preferred commander. Changes apply to new expeditions; saved runs keep their original trait.</p></div><span>10 TRAITS · 5 RARITIES</span></div><div class="trait-equipped"><span class="trait-equipped-icon">'+equipped.icon+'</span><div><small>CURRENTLY EQUIPPED · '+equipped.rarity+'</small><strong>'+equipped.name+'</strong><p>'+equipped.description+'</p></div></div><div class="trait-grid">'+traitList.map(t=>'<article class="trait-card rarity-'+t.rarity.toLowerCase()+' '+(t.id===profile.equippedTrait?"trait-active":"")+'"><div class="trait-card-top"><span class="trait-index">#'+t.index+'</span><span class="trait-rarity">'+t.rarity+'</span></div><div class="trait-icon">'+t.icon+'</div><h3>'+t.name+'</h3><p>'+t.description+'</p><small>BEST WITH · '+t.synergy.toUpperCase()+'</small><button data-equip-trait="'+t.id+'" '+(t.id===profile.equippedTrait?"disabled":"")+'>'+(t.id===profile.equippedTrait?"EQUIPPED":"EQUIP TRAIT")+'</button></article>').join("")+'</div>';
-    root.querySelectorAll("[data-equip-trait]").forEach(b=>b.addEventListener("click",()=>{const t=traitList.find(x=>x.id===b.dataset.equipTrait);if(!t)return;profile.equippedTrait=t.id;save();}));
+    const equipped=getTrait(),locked=!!window.isRiftboundRunActive?.();
+    root.innerHTML='<div class="trait-heading"><div><p class="prep-eyebrow">COMMANDER IDENTITY</p><h2>TRAIT COLLECTION</h2><p>Equip one trait to define your expedition playstyle. Every trait has a preferred commander. Changes apply to new expeditions; saved runs keep their original trait.</p></div><span>10 TRAITS · 5 RARITIES</span></div>'+(locked?'<p class="commander-lock-note">Trait selection is locked during an expedition. Finish the run before changing your trait.</p>':'')+'<div class="trait-equipped"><span class="trait-equipped-icon">'+equipped.icon+'</span><div><small>CURRENTLY EQUIPPED · '+equipped.rarity+'</small><strong>'+equipped.name+'</strong><p>'+equipped.description+'</p></div></div><div class="trait-grid">'+traitList.map(t=>'<article class="trait-card rarity-'+t.rarity.toLowerCase()+' '+(t.id===profile.equippedTrait?"trait-active":"")+'"><div class="trait-card-top"><span class="trait-index">#'+t.index+'</span><span class="trait-rarity">'+t.rarity+'</span></div><div class="trait-icon">'+t.icon+'</div><h3>'+t.name+'</h3><p>'+t.description+'</p><small>BEST WITH · '+t.synergy.toUpperCase()+'</small><button data-equip-trait="'+t.id+'" '+(t.id===profile.equippedTrait||locked?"disabled":"")+'>'+(t.id===profile.equippedTrait?"EQUIPPED":locked?"LOCKED DURING RUN":"EQUIP TRAIT")+'</button></article>').join("")+'</div>';
+    root.querySelectorAll("[data-equip-trait]").forEach(b=>b.addEventListener("click",()=>{if(window.isRiftboundRunActive?.()){renderTraits();return;}const t=traitList.find(x=>x.id===b.dataset.equipTrait);if(!t)return;profile.equippedTrait=t.id;save();}));
   }
   window.renderRiftboundSkillTree=renderSkillTree;
   window.renderRiftboundTraits=renderTraits;
