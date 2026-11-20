@@ -58,11 +58,45 @@ function createNewRun(){
 }
 function startNewRun(){
   stopGameLoop();currentRun=createNewRun();selectedTower=null;selectedTowerEntity=null;
+  persistRunCheckpoint("battle");
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
   updateAreaLabels();
   updateGameDisplay();
 }
 function areaData(){return areas[currentRun.area-1]||areas[0];}
+
+function persistRunCheckpoint(checkpoint="battle"){
+  if(!currentRun||typeof window.riftboundCloudSave!=="function")return;
+  const run={
+    gold:currentRun.gold,castleHealth:currentRun.castleHealth,maxCastleHealth:currentRun.maxCastleHealth,
+    area:currentRun.area,campsite:currentRun.campsite,stage:currentRun.stage,currentWave:currentRun.currentWave,
+    totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,
+      upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
+    towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
+    campsiteRestUsed:!!currentRun.campsiteRestUsed,checkpoint
+  };
+  window.riftboundCloudSave(run);
+}
+
+window.restoreRiftboundRun=function(saved){
+  if(!saved||!saved.run)return false;
+  const data=saved.run;
+  stopGameLoop();
+  currentRun={...createNewRun(),...data,enemies:[],projectiles:[],spawnBatches:[],waveActive:false,
+    gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
+  selectedTower=null;selectedTowerEntity=null;
+  document.getElementById("main-menu").style.display="none";
+  document.getElementById("preparation-screen").hidden=true;
+  document.getElementById("game-screen").hidden=data.checkpoint==="campsite";
+  document.getElementById("campsite-screen").hidden=data.checkpoint!=="campsite";
+  updateAreaLabels();updateGameDisplay();
+  if(data.checkpoint==="campsite"){
+    showCampsiteScreen(((currentRun.area-1)*30)+((currentRun.campsite-1)*15));
+  }else{
+    initBattlefield();
+  }
+  return true;
+};
 function updateAreaLabels(){
   const a=areaData();
   document.querySelector(".battle-region span").textContent="AREA 0"+currentRun.area+" · "+a.name.toUpperCase();
@@ -77,7 +111,7 @@ function updateAreaLabels(){
 function initBattlefield(){
   if(!currentRun)startNewRun();
   stopGameLoop();selectedTowerEntity=null;updateAreaLabels();updateGameDisplay();drawBattlefield();
-  setWaveStatus("READY WHEN YOU ARE");showBattleMessage("BUILD YOUR DEFENSE, THEN PRESS START WAVE WHEN READY");
+  setWaveStatus("READY WHEN YOU ARE");showBattleMessage(window.matchMedia("(pointer: coarse)").matches ? "TAP A TOWER TO SELECT IT, THEN TAP AN OPEN AREA TO BUILD" : "BUILD YOUR DEFENSE, THEN PRESS START WAVE WHEN READY");
   currentRun.waitingForWave=false;currentRun.nextWaveTimer=0;currentRun.waveIntervalTimer=0;startGameLoop();
 }
 function updateGameDisplay(){
@@ -208,6 +242,7 @@ function startWave(automatic=false){
     showBattleMessage("WAVE "+total+" HAS BEGUN");
   }
   updateGameDisplay();
+  persistRunCheckpoint("battle");
 }
 function spawnEnemy(type,waveNumber){
   const d=enemyTypes[type],difficulty=getSettings().difficulty||"normal";let mult=areaData().enemyScale*(1+waveNumber*.06);
@@ -293,6 +328,7 @@ function chooseCard(id){
   selectedTowerEntity=null;selectedTower=null;currentRun.campsiteRestUsed=false;
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
   updateAreaLabels();updateGameDisplay();
+  persistRunCheckpoint(completedWaves%15===0?"campsite":"battle");
   if(completedWaves%15===0){showCampsiteScreen(completedWaves);return;}
   const next=document.getElementById("progress-overlay");
   document.getElementById("progress-area").textContent="AREA 0"+currentRun.area+" · "+areaData().name.toUpperCase();
@@ -338,7 +374,20 @@ function canBuild(x,y,checkGold=true){
   if(currentRun.towers.some(t=>Math.hypot(x-t.x,y-t.y)<37))return false;
   return !checkGold||currentRun.gold>=towerTypes[selectedTower].cost;
 }
-function canvasPoint(e){const r=canvas.getBoundingClientRect();const scaleX=canvas.width/r.width,scaleY=canvas.height/r.height;return{x:(e.clientX-r.left)*scaleX,y:(e.clientY-r.top)*scaleY};}
+function canvasPoint(e){
+  const rect=canvas.getBoundingClientRect();
+  // Pointer coordinates must be measured from the canvas drawing area,
+  // not its outer border. The CSS border otherwise creates a visible offset.
+  const contentLeft=rect.left+canvas.clientLeft;
+  const contentTop=rect.top+canvas.clientTop;
+  const contentWidth=canvas.clientWidth;
+  const contentHeight=canvas.clientHeight;
+  if(!contentWidth||!contentHeight)return{x:0,y:0};
+  return {
+    x:(e.clientX-contentLeft)*(canvas.width/contentWidth),
+    y:(e.clientY-contentTop)*(canvas.height/contentHeight)
+  };
+}
 function handleBattlefieldClick(e){
   const p=canvasPoint(e);
   const hit=[...currentRun.towers].reverse().find(t=>Math.abs(p.x-t.x)<=20&&Math.abs(p.y-t.y)<=20);
@@ -347,7 +396,7 @@ function handleBattlefieldClick(e){
   const type=towerTypes[selectedTower];if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
   if(!canBuild(p.x,p.y)){showBattleMessage("THAT LOCATION IS BLOCKED — TRY ANOTHER OPEN AREA");return;}
   currentRun.gold-=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}});
-  updateGameDisplay();showBattleMessage(type.name.toUpperCase()+" BUILT");
+  updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(type.name.toUpperCase()+" BUILT");
 }
 function selectTower(type){
   if(!towerTypes[type])return;selectedTower=type;selectedTowerEntity=null;
@@ -358,7 +407,7 @@ function upgradeSelectedTower(stat){
   const t=selectedTowerEntity;if(!t||!currentRun)return;const s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*45;
   if(t.level>=4){showBattleMessage("THIS TOWER IS FULLY UPGRADED");return;}
   if(currentRun.gold<cost){showBattleMessage("NOT ENOUGH GOLD FOR THIS UPGRADE");return;}
-  currentRun.gold-=cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
+  currentRun.gold-=cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
 }
 function updateTowerPanel(){
   const panel=document.getElementById("tower-info-panel");if(!panel)return;
@@ -377,7 +426,7 @@ function updateTowerPanel(){
 }
 canvas.addEventListener("pointermove",e=>{if(!gameScreenIsHidden())pointerWorld=canvasPoint(e);});
 canvas.addEventListener("pointerleave",()=>pointerWorld=null);
-canvas.addEventListener("pointerdown",e=>{if(!currentRun||currentRun.gameOver||gameScreenIsHidden())return;e.preventDefault();handleBattlefieldClick(e);});
+canvas.addEventListener("pointerdown",e=>{if(!currentRun||currentRun.gameOver||gameScreenIsHidden())return;e.preventDefault();if(e.pointerType!=="mouse"&&canvas.setPointerCapture){try{canvas.setPointerCapture(e.pointerId);}catch(_error){}}handleBattlefieldClick(e);});
 canvas.addEventListener("contextmenu",e=>{e.preventDefault();selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();});
 function gameScreenIsHidden(){const s=document.getElementById("game-screen");return !s||s.hidden;}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&& !gameScreenIsHidden()){selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();}});
@@ -400,15 +449,15 @@ function updateCampsiteScreen(){
 }
 function restByCampfire(){
   if(!currentRun||currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
-  currentRun.campsiteRestUsed=true;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+15);updateCampsiteScreen();
+  currentRun.campsiteRestUsed=true;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+15);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function healAtCampsite(){
   if(!currentRun||currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
-  currentRun.gold-=40;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();
+  currentRun.gold-=40;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function upgradeAtCampsite(){
   if(!currentRun||currentRun.gold<75)return;
-  currentRun.gold-=75;currentRun.towerDamageBonus+=5;updateCampsiteScreen();
+  currentRun.gold-=75;currentRun.towerDamageBonus+=5;updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function showCampsiteScreen(completedWaves){
   stopGameLoop();
@@ -428,6 +477,7 @@ function continueFromCampsite(){
   document.getElementById("campsite-screen").hidden=true;
   document.getElementById("game-screen").hidden=false;
   updateGameDisplay();
+  persistRunCheckpoint("battle");
   setWaveStatus("READY WHEN YOU ARE");
   showBattleMessage("YOU ARE RESTED. PREPARE YOUR DEFENSE, THEN START THE NEXT WAVE.");
   startGameLoop();

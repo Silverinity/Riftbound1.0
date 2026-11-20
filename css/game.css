@@ -750,3 +750,101 @@ button:disabled {
 .campsite-screen .large-action-button{width:100%;text-align:left;}
 .campsite-screen .large-action-button:disabled{opacity:.4;cursor:not-allowed;}
 @media(max-width:560px){.campsite-scene{height:220px;}.camp-tent{transform:scale(.65);transform-origin:bottom left;left:5%;}.tent-right{right:2%;transform:scale(.55);transform-origin:bottom right;}.camp-moon{right:9%;width:32px;height:32px;}.camp-scene-caption{font-size:7px;letter-spacing:1.5px;}}
+
+
+/* MOBILE COMPATIBILITY PASS */
+@supports (height: 100dvh) {
+  .game-screen, .main-menu, .preparation-screen { min-height: 100dvh; }
+}
+.preparation-screen, .campsite-screen { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+button, input, select { touch-action: manipulation; }
+button { min-height: 42px; }
+#battlefield { width: 100%; height: auto; aspect-ratio: 16 / 9; touch-action: none; -webkit-user-select: none; user-select: none; }
+.battlefield-area { align-items: start; }
+.tower-info-panel { min-height: 0; max-height: 230px; }
+.tower-panel-empty { min-height: 95px; }
+.tower-upgrade-button { min-height: 42px; }
+.tower-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tower-button { min-height: 76px; }
+.wave-controls { padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); }
+#start-wave { min-height: 46px; }
+.game-overlay { padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+.card-screen { width: 100%; }
+.reward-card { min-height: 0; }
+.preparation-footer button, .campsite-footer button { min-height: 48px; }
+.settings-panel { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.setting-group input[type="range"] { min-height: 32px; }
+.checkbox-setting input { width: 22px; height: 22px; }
+#dev-panel-toggle, #leave-battle { min-height: 42px; }
+
+@media (max-width: 900px) {
+  .battlefield-area { grid-template-columns: minmax(0, 1fr); }
+  .tower-info-panel { order: 2; }
+  #battlefield { order: 1; }
+}
+@media (max-width: 560px) {
+  .main-menu { min-height: 100svh; padding: 20px 12px; }
+  .menu-content { padding: 24px 14px; }
+  .menu-content h1 { font-size: clamp(42px, 13vw, 64px); letter-spacing: clamp(4px, 2vw, 9px); overflow-wrap: anywhere; }
+  .subtitle { letter-spacing: 2px; font-size: 9px; }
+  .description { font-size: 11px; letter-spacing: 1px; }
+  .menu-buttons { width: min(100%, 330px); margin-top: 30px; }
+  .menu-buttons button, .beta-access button { min-height: 48px; }
+  .beta-access { font-size: 10px; letter-spacing: 1px; }
+  .version { margin-top: 28px; }
+  .preparation-screen { padding: 18px 12px max(20px, env(safe-area-inset-bottom)); }
+  .preparation-header { align-items: flex-start; }
+  .preparation-header h1 { font-size: clamp(18px, 6vw, 24px); letter-spacing: 1.5px; }
+  .preparation-header #back-to-menu { min-width: 72px; }
+  .region-banner, .prep-column, .preparation-footer { padding: 17px; }
+  .region-heading h2 { font-size: clamp(23px, 7vw, 34px); letter-spacing: 2px; }
+  .region-description { font-size: 13px; }
+  .region-details { flex-direction: column; gap: 9px; font-size: 9px; }
+  .preparation-footer { align-items: stretch; }
+  #begin-defense { width: 100%; min-height: 50px; }
+  .starting-tower { align-items: flex-start; gap: 12px; padding: 12px; }
+  .battle-topbar { padding: 10px; gap: 8px; }
+  .battle-region span, .wave-counter span { font-size: 7px; letter-spacing: 1px; }
+  .battle-region h1 { font-size: 11px; letter-spacing: .5px; }
+  .wave-counter strong { font-size: 16px; }
+  #progress-summary { max-width: 145px; font-size: 7px; line-height: 1.4; }
+  .battlefield-area { padding: 5px; gap: 7px; }
+  .tower-info-panel { max-height: 205px; padding: 10px; }
+  .tower-panel-heading { margin-bottom: 8px; }
+  .tower-stat { padding: 6px 0; }
+  .panel-upgrade-title { margin: 9px 0 5px; }
+  .tower-upgrade-button { padding: 8px; font-size: 11px; }
+  .battle-bottom-bar { padding: 10px 8px max(10px, env(safe-area-inset-bottom)); gap: 10px; }
+  .resource-display { gap: 18px; }
+  .resource strong { font-size: 17px; }
+  .tower-button { min-height: 70px; }
+  .tower-button .tower-icon { font-size: 17px; }
+  .leave-battle-button { min-height: 42px; }
+  .battle-message { font-size: 8px; letter-spacing: 1px; padding: 8px 5px; }
+  .wave-controls { min-height: 0; gap: 8px; }
+  #wave-status { width: 100%; font-size: 8px; letter-spacing: 1px; }
+  #start-wave { width: 100%; }
+  .card-screen { padding: 18px 12px; }
+  .card-screen h2 { font-size: 20px; }
+  .card-options { grid-template-columns: 1fr; gap: 9px; }
+  .reward-card { padding: 13px; gap: 7px; }
+  .card-icon { font-size: 30px; }
+  .reward-card p { font-size: 11px; }
+  .campsite-scene { height: 190px; }
+  .campsite-options { gap: 12px; }
+  .campsite-footer button { width: 100%; }
+}
+@media (max-width: 380px) {
+  .resource-display { gap: 12px; }
+  .resource span { font-size: 8px; letter-spacing: 1px; }
+  .tower-button span:nth-child(2) { font-size: 7px; letter-spacing: 0; }
+  .tower-button strong { font-size: 9px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .battle-topbar { min-height: 54px; padding: 6px 12px; }
+  .battlefield-area { padding: 4px 8px; }
+  #battlefield { max-height: 48vh; width: auto; max-width: 100%; margin: 0 auto; }
+  .battle-bottom-bar { min-height: 78px; padding: 6px 12px; }
+  .tower-button { min-height: 58px; }
+  .wave-controls { min-height: 42px; }
+}

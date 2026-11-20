@@ -240,3 +240,15 @@
     border-color: #B99AE8;
     color: #fff;
 }
+
+/* MOBILE SETTINGS PASS */
+
+@media (max-width: 560px) {
+  .settings-overlay { align-items: flex-start; overflow-y: auto; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+  .settings-panel { max-height: none; min-height: min-content; padding: 18px 16px; }
+  .settings-header h2 { font-size: 23px; letter-spacing: 3px; }
+  .setting-group { padding: 15px 0; }
+  .setting-group h3 { margin-bottom: 12px; }
+  .settings-footer { gap: 8px; }
+  .settings-footer button { min-height: 46px; }
+}

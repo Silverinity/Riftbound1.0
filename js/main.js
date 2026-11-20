@@ -36,6 +36,131 @@
   const campsiteScreen = byId("campsite-screen");
   const resultOverlay = byId("result-overlay");
   const settingsOverlay = byId("settings-overlay");
+  const API_BASE = (window.RIFTBOUND_API_BASE || "http://localhost:3000").replace(/\/$/, "");
+  let betaAuthenticated = false;
+  let cloudSaveAvailable = false;
+
+  async function loadCloudSave() {
+    try {
+      const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
+      if (!response.ok) throw new Error("Cloud save could not be loaded.");
+      const data = await response.json();
+      cloudSaveAvailable = !!data.hasSave;
+      byId("continue-run").hidden = !cloudSaveAvailable;
+      if (cloudSaveAvailable) byId("auth-status").textContent = "BETA ACCESS VERIFIED · CLOUD SAVE FOUND";
+      return data;
+    } catch (error) {
+      cloudSaveAvailable = false;
+      byId("continue-run").hidden = true;
+      console.warn("Could not load Riftbound cloud save:", error);
+      return null;
+    }
+  }
+
+  window.riftboundCloudSave = async run => {
+    if (!betaAuthenticated) return;
+    try {
+      const response = await fetch(API_BASE + "/api/save", {
+        method: "PUT", credentials: "include",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ save: { version: 1, run, settings: window.riftboundSettings } })
+      });
+      if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
+      cloudSaveAvailable = true;
+      byId("continue-run").hidden = false;
+      byId("auth-status").textContent = "BETA ACCESS VERIFIED · PROGRESS SAVED";
+    } catch (error) {
+      console.error("Could not save Riftbound progress:", error);
+      byId("auth-status").textContent = "CLOUD SAVE FAILED · CHECK BACKEND DATABASE";
+    }
+  };
+
+  async function checkBetaSession() {
+    const status = byId("auth-status");
+    const login = byId("discord-login");
+    const logout = byId("discord-logout");
+    const userLabel = byId("auth-user");
+    const newRun = byId("new-run");
+
+    status.textContent = "CHECKING BETA ACCESS...";
+    login.hidden = true;
+    logout.hidden = true;
+    userLabel.hidden = true;
+    newRun.disabled = true;
+
+    try {
+      const response = await fetch(API_BASE + "/api/session", {
+        method: "GET",
+        credentials: "include",
+        headers: { "Accept": "application/json" }
+      });
+      const data = await response.json();
+
+      if (response.ok && data.authenticated) {
+        betaAuthenticated = true;
+        status.textContent = "BETA ACCESS VERIFIED";
+        userLabel.textContent = "SIGNED IN AS " + (data.user?.username || "DISCORD USER");
+        userLabel.hidden = false;
+        logout.hidden = false;
+        newRun.disabled = false;
+        const cloud = await loadCloudSave();
+        if (cloud?.save?.settings) {
+          window.riftboundSettings = { ...DEFAULT_SETTINGS, ...cloud.save.settings };
+          persistSettings();
+          displaySettings();
+          if (typeof updateDeveloperModeUI === "function") updateDeveloperModeUI();
+        }
+        return;
+      }
+
+      betaAuthenticated = false;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("discord") === "denied" || data.reason === "beta-access-required") {
+        status.textContent = "ACCESS DENIED · BETA TESTER ROLE REQUIRED";
+      } else if (params.get("discord") === "cancelled") {
+        status.textContent = "DISCORD LOGIN CANCELLED";
+      } else if (params.get("discord") === "login-error") {
+        status.textContent = "DISCORD LOGIN FAILED · PLEASE TRY AGAIN";
+      } else {
+        status.textContent = "SIGN IN WITH DISCORD TO ACCESS THE CLOSED BETA";
+      }
+      login.hidden = false;
+      byId("continue-run").hidden = true;
+    } catch (error) {
+      betaAuthenticated = false;
+      byId("continue-run").hidden = true;
+      status.textContent = "COULD NOT REACH AUTH SERVER · CHECK CONNECTION AND RETRY";
+      login.hidden = false;
+      console.error("Could not check Riftbound beta access:", error);
+    } finally {
+      if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }
+
+  byId("discord-login").addEventListener("click", () => {
+    byId("auth-status").textContent = "CONNECTING TO DISCORD...";
+    window.location.href = API_BASE + "/auth/discord";
+  });
+
+  byId("discord-logout").addEventListener("click", async () => {
+    try {
+      await fetch(API_BASE + "/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (error) {
+      console.warn("Could not contact the auth server during logout:", error);
+    }
+    betaAuthenticated = false;
+    byId("new-run").disabled = true;
+    byId("auth-status").textContent = "YOU HAVE BEEN LOGGED OUT";
+    byId("auth-user").hidden = true;
+    byId("discord-logout").hidden = true;
+    byId("discord-login").hidden = false;
+    byId("continue-run").hidden = true;
+  });
 
   function displaySettings() {
     const s = window.riftboundSettings;
@@ -141,7 +266,19 @@
     }
   });
 
-  byId("new-run").addEventListener("click", () => {
+  byId("continue-run").addEventListener("click", async () => {
+    if (!betaAuthenticated) return;
+    const cloud = await loadCloudSave();
+    if (cloud?.save && window.restoreRiftboundRun(cloud.save)) return;
+    byId("auth-status").textContent = "NO VALID CLOUD SAVE WAS FOUND";
+  });
+
+  byId("new-run").addEventListener("click", async () => {
+    if (!betaAuthenticated) {
+      byId("auth-status").textContent = "PLEASE SIGN IN WITH AN APPROVED BETA TESTER ACCOUNT";
+      return;
+    }
+    if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your existing cloud save. Continue?")) return;
     startNewRun();
     openPreparation();
   });
@@ -173,4 +310,5 @@
   });
 
   displaySettings();
+  checkBetaSession();
 })();

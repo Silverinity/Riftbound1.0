@@ -78,3 +78,54 @@
     font-size: 11px;
     letter-spacing: 3px;
 }
+
+
+/* DISCORD CLOSED-BETA ACCESS */
+.beta-access {
+    width: min(100%, 360px);
+    margin: 28px auto 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--glow);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+}
+
+.beta-access p {
+    line-height: 1.5;
+}
+
+.beta-access button {
+    min-width: 210px;
+    padding: 12px 18px;
+    border: 1px solid var(--glow);
+    background: rgba(48, 32, 68, 0.9);
+    color: var(--text);
+    letter-spacing: 2px;
+    cursor: pointer;
+}
+
+.beta-access button:hover:not(:disabled) {
+    background: var(--purple);
+    box-shadow: 0 0 16px rgba(129, 85, 184, 0.3);
+}
+
+.menu-buttons button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+#continue-run[hidden] { display: none; }
+
+
+@media (max-width: 560px) {
+  .main-menu { min-height: 100svh; }
+  .menu-content { padding: 22px 14px; }
+  .menu-content h1 { letter-spacing: clamp(4px, 2vw, 9px); }
+  .menu-buttons { width: min(100%, 330px); margin-top: 30px; }
+  .menu-buttons button { min-height: 48px; }
+  .beta-access button { min-height: 48px; }
+}
