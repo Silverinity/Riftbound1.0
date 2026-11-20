@@ -44,10 +44,10 @@
       const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
       if (!response.ok) throw new Error("Cloud save could not be loaded.");
       const data = await response.json();
-      cloudSaveAvailable = !!data.hasSave;
+      cloudSaveAvailable = !!data.save?.run && !data.save.run.completed && data.save.run.checkpoint === "campsite";
       if (data.progression && typeof window.loadRiftboundProgression === "function") window.loadRiftboundProgression(data.progression);
       byId("continue-run").hidden = !cloudSaveAvailable;
-      if (cloudSaveAvailable) byId("auth-status").textContent = "BETA ACCESS VERIFIED · CLOUD SAVE FOUND";
+      if (cloudSaveAvailable) byId("auth-status").textContent = "BETA ACCESS VERIFIED · CAMPFIRE CHECKPOINT FOUND";
       return data;
     } catch (error) {
       cloudSaveAvailable = false;
@@ -302,9 +302,9 @@
       const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
       if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
       const cloud = await response.json();
-      cloudSaveAvailable = !!cloud.hasSave;
-      if (!cloud.hasSave || !cloud.save?.run) {
-        byId("auth-status").textContent = "NO VALID CLOUD SAVE WAS FOUND";
+      cloudSaveAvailable = !!cloud.save?.run && !cloud.save.run.completed && cloud.save.run.checkpoint === "campsite";
+      if (!cloudSaveAvailable) {
+        byId("auth-status").textContent = "NO CAMPFIRE CHECKPOINT WAS FOUND";
         return;
       }
       if (typeof window.restoreRiftboundRun !== "function") {
@@ -335,9 +335,10 @@
   document.querySelectorAll("[data-hub-view]").forEach(button => {
     button.addEventListener("click", () => showHubView(button.dataset.hubView));
   });
-  byId("hub-play").addEventListener("click", () => {
-    if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your existing run. Continue?")) return;
+  byId("hub-play").addEventListener("click", async () => {
+    if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your last campfire checkpoint. Continue?")) return;
     try {
+      if (cloudSaveAvailable) await window.riftboundCloudSave?.(null);
       if (typeof window.startRiftboundNewRun !== "function") {
         throw new Error("The game engine did not expose the new-run function.");
       }
@@ -357,10 +358,7 @@
     button.addEventListener("click", () => selectTower(button.dataset.tower));
   });
   byId("leave-battle").addEventListener("click", () => {
-    if (window.confirm("Leave the battlefield and return to the Command Sanctum? Your progress will be saved.")) {
-      if (typeof window.persistRiftboundCheckpoint === "function") {
-        window.persistRiftboundCheckpoint("battle");
-      }
+    if (window.confirm("Return to the lobby? Only progress saved at your last campfire can be continued. Progress since then will be lost if you leave the game.")) {
       openHub();
     }
   });
