@@ -43,6 +43,24 @@ Object.entries(towerSpritePaths).forEach(([type, source]) => {
   towerSprites[type] = sprite;
 });
 
+// Archer animation sheets use the frame layout declared in assets/towers/archer/animation.json.
+// The JSON describes 96x112 frames, 8 frames per horizontal sheet.
+const archerAnimation = {
+  frameWidth: 96,
+  frameHeight: 112,
+  idle: { frames: 8, fps: 8, loop: true, image: new Image() },
+  attack: { frames: 8, fps: 12, loop: false, releaseFrame: 4, image: new Image() },
+  arrow: new Image(),
+  scaleX: 76 / 96,
+  scaleY: 88 / 112
+};
+archerAnimation.idle.image.src = "assets/towers/archer/archer_idle_sheet.png";
+archerAnimation.attack.image.src = "assets/towers/archer/archer_attack_sheet.png";
+archerAnimation.arrow.src = "assets/towers/archer/archer_arrow_projectile.png";
+[archerAnimation.idle.image, archerAnimation.attack.image, archerAnimation.arrow].forEach(image => {
+  image.onload = () => { if (currentRun) drawBattlefield(); };
+});
+
 // Each realm has its own route. All routes share the same portal and castle endpoints,
 // but their bends and tactical build spaces are deliberately different.
 const pathsByArea = [
@@ -401,8 +419,24 @@ function drawTowers(){
   currentRun.towers.forEach(t=>{
     const s=getTowerStats(t),selected=t===selectedTowerEntity;
     if(getSettings().towerRanges||selected){ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,Math.PI*2);ctx.fillStyle=selected?"rgba(185,154,232,.12)":"rgba(185,154,232,.06)";ctx.fill();ctx.strokeStyle=selected?"rgba(220,195,255,.75)":"rgba(185,154,232,.2)";ctx.lineWidth=selected?2:1;ctx.stroke();}
-    const sprite=towerSprites[t.type];
-    if(sprite&&sprite.complete&&sprite.naturalWidth>0){
+    const sprite=t.type==="archer"&&archerAnimation.idle.image.complete&&archerAnimation.idle.image.naturalWidth>0
+      ? archerAnimation.idle.image : towerSprites[t.type];
+    if(t.type==="archer"&&sprite&&sprite.complete&&sprite.naturalWidth>0){
+      const anim=t.archerAnimation;
+      let frame=0;
+      if(anim&&anim.mode==="attack"){
+        frame=Math.min(archerAnimation.attack.frames-1,Math.floor(anim.elapsed*archerAnimation.attack.fps));
+      }else{
+        frame=Math.floor(performance.now()/1000*archerAnimation.idle.fps)%archerAnimation.idle.frames;
+      }
+      const sheet=anim&&anim.mode==="attack"?archerAnimation.attack:archerAnimation.idle;
+      const frameWidth=archerAnimation.frameWidth,frameHeight=archerAnimation.frameHeight;
+      ctx.save();
+      ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(sprite===archerAnimation.idle.image&&anim&&anim.mode==="attack"?archerAnimation.attack.image:sprite,
+        frame*frameWidth,0,frameWidth,frameHeight,t.x-38,t.y-84,76,88);
+      ctx.restore();
+    }else if(sprite&&sprite.complete&&sprite.naturalWidth>0){
       ctx.save();
       ctx.imageSmoothingEnabled=false;
       ctx.drawImage(sprite,t.x-38,t.y-84,76,88);
@@ -446,7 +480,24 @@ function drawEnemies(){
   });ctx.textAlign="left";
 }
 function drawProjectiles(){
-  if(!currentRun)return;currentRun.projectiles.forEach(p=>{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();});
+  if(!currentRun)return;
+  currentRun.projectiles.forEach(p=>{
+    if(p.isArrow){
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle||0);
+      const arrow=archerAnimation.arrow;
+      if(arrow.complete&&arrow.naturalWidth>0){
+        ctx.imageSmoothingEnabled=false;
+        ctx.drawImage(arrow,-15,-4,30,8);
+      }else{
+        ctx.strokeStyle="#D8C18B";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-12,0);ctx.lineTo(11,0);ctx.stroke();
+        ctx.fillStyle="#E7E0D0";ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(6,-4);ctx.lineTo(6,4);ctx.closePath();ctx.fill();
+        ctx.strokeStyle="#8A6845";ctx.beginPath();ctx.moveTo(-10,0);ctx.lineTo(-14,-4);ctx.moveTo(-10,0);ctx.lineTo(-14,4);ctx.stroke();
+      }
+      ctx.restore();
+    }else{
+      ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();
+    }
+  });
 }
 function drawSpectralAllies(){
   if(!currentRun?.spectralAllies?.length)return;
@@ -611,6 +662,29 @@ function updateEnemies(dt){
 }
 function updateTowers(dt){
   currentRun.towers.forEach(t=>{
+    // Advance an active Archer attack and release its arrow on the authored frame.
+    if(t.type==="archer"&&t.archerAnimation?.mode==="attack"){
+      const anim=t.archerAnimation;
+      anim.elapsed+=dt;
+      const attackFrame=Math.floor(anim.elapsed*archerAnimation.attack.fps);
+      if(!anim.fired&&attackFrame>=archerAnimation.attack.releaseFrame){
+        anim.fired=true;
+        if(anim.target&&currentRun.enemies.includes(anim.target)){
+          const target=anim.target;
+          const dx=target.x-t.x,dy=target.y-t.y,length=Math.hypot(dx,dy)||1;
+          const originX=t.x-38+78*archerAnimation.scaleX;
+          const originY=t.y-84+43*archerAnimation.scaleY;
+          const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
+          const markedBonus=target===currentRun.markedEnemy&&currentRun.markedTimer>0?1.6:1;
+          currentRun.projectiles.push({
+            x:originX,y:originY,target,damage:getTowerStats(t).damage*eliteBonus*markedBonus,
+            color:"#D8C18B",speed:getTowerStats(t).projectileSpeed,towerType:"archer",
+            isArrow:true,angle:Math.atan2(dy,dx)
+          });
+        }
+      }
+      if(anim.elapsed>=archerAnimation.attack.frames/archerAnimation.attack.fps)t.archerAnimation=null;
+    }
     const s=getTowerStats(t);t.cooldown-=dt;if(t.cooldown>0)return;
     let target=null,best=-1;
     const marked=currentRun.markedTimer>0?currentRun.markedEnemy:null;
@@ -619,7 +693,11 @@ function updateTowers(dt){
     if(!target)return;
     const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
     const markedBonus=target===marked?1.6:1;
-    currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*eliteBonus*markedBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});
+    if(t.type==="archer"){
+      t.archerAnimation={mode:"attack",elapsed:0,fired:false,target};
+    }else{
+      currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*eliteBonus*markedBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});
+    }
     t.cooldown=s.cooldown*(currentRun.bastionTimer>0?.8:1);
   });
 }
@@ -775,7 +853,7 @@ function updateCommanderHud(){
 function updateProjectiles(dt){
   currentRun.projectiles=currentRun.projectiles.filter(p=>{
     const e=p.target;if(!currentRun.enemies.includes(e)||e.health<=0)return false;
-    const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d<=p.speed*dt+8){damageEnemy(e,p.damage);
+    const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d>0)p.angle=Math.atan2(dy,dx);if(d<=p.speed*dt+8){damageEnemy(e,p.damage);
       if(p.towerType==="cannon")currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48)damageEnemy(other,p.damage*.5);});
       return false;
     }p.x+=dx/d*p.speed*dt;p.y+=dy/d*p.speed*dt;return true;
