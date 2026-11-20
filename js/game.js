@@ -334,7 +334,7 @@ function getTowerStats(t){
   if(t.type==="arcane")range*=1+(bonuses.arcaneRange||0);
   const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
   if(t.type==="archer")damage*=1+(trait.archerDamage||0);
-  if(t.type==="cannon")damage*=1+(trait.cannonDamage||0);
+  if(t.type==="cannon")damage*=1+(trait.cannonDamage||0)+(bonuses.areaDamage||0);
   if(currentRun.castleHealth>currentRun.maxCastleHealth*.5)damage*=1+(bonuses.healthyDamage||0);
   if(currentRun.castleHealth<currentRun.maxCastleHealth*.35)fireRate*=1+(bonuses.lowHealthSpeed||0);
   fireRate*=1+(bonuses.towerSpeed||0);
@@ -849,13 +849,14 @@ function updateEnemies(dt){
       const burnStep=Math.min(dt,e.burnTimer);
       e.burnTimer-=burnStep;
       const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
-      const burnDamage=(e.burnDamage||3)*(1+(trait.burnDamage||0))*burnStep;
+      const burnDamage=(e.burnDamage||3)*(1+(trait.burnDamage||0)+(currentRun.skillBonuses?.burnDamageBonus||0))*burnStep;
       const actualBurn=Math.min(Math.max(0,e.health),burnDamage);
       currentRun.stats.damageDealt+=actualBurn;
       e.health-=burnDamage;
       if(e.burnTimer<=0)e.burnDamage=3;
       if(e.health<=0&&!e.rewarded)damageEnemy(e,0,false);
     }
+    if(e.burnTimer>0&&currentRun.skillBonuses?.burnSlow){e.slowTimer=Math.max(e.slowTimer||0,.2);e.slowFactor=1-currentRun.skillBonuses.burnSlow;}
     if(e.slowTimer>0)e.slowTimer=Math.max(0,e.slowTimer-dt);
     const slowPower=currentRun.skillBonuses?.slowPower||0;
     const slowFactor=e.slowTimer>0?Math.max(.25,(e.slowFactor||.55)-slowPower):1;
@@ -870,7 +871,7 @@ function getEnemyDamageMultiplier(target){
   if(!target)return 1;
   const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
   let multiplier=1;
-  if(getRunCommanderId()==="huntmaster"&&target.maxHealth>=150)multiplier*=1.2;
+  if(getRunCommanderId()==="huntmaster"&&target.maxHealth>=150)multiplier*=1.2*(1+(bonuses.eliteDamage||0));
   if(target===currentRun.markedEnemy&&currentRun.markedTimer>0)multiplier*=1.6+(bonuses.markedDamage||0);
   if(target.isBoss)multiplier*=1+(bonuses.bossDamage||0)+(trait.bossDamage||0);
   if(target.slowTimer>0)multiplier*=1+(bonuses.slowedDamage||0)+(trait.slowedDamage||0);
@@ -1436,11 +1437,11 @@ function restByCampfire(){
   currentRun.campsiteRestUsed=true;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+15);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function healAtCampsite(){
-  if(!currentRun||currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
+  if(!currentRun||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
   const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));const cost=Math.max(1,Math.ceil(40*(1-reduction)));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function upgradeAtCampsite(){
-  if(!currentRun||currentRun.gold<100)return;
+  if(!currentRun)return;
   const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));const cost=Math.max(1,Math.ceil(100*(1-reduction)));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function showCampsiteScreen(completedWaves){
