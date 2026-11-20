@@ -195,6 +195,7 @@ const cardPool = [
 ];
 
 function getRunCommanderId(){return currentRun?.commanderId||window.riftboundCommanderId||"warden";}
+function getRunTraitEffects(){return typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects(currentRun?.traitId):{};}
 window.grantRiftboundImmediateGold=function(amount){if(!currentRun||!Number.isFinite(amount)||amount<=0)return;currentRun.gold+=Math.floor(amount);updateGameDisplay();persistRunCheckpoint("battle");};
 const commanderAbilities={
   warden:{name:"IRON BASTION",cooldown:45,description:"Raise a fortress ward for 12 seconds: halve incoming castle damage and make towers fire 25% faster.",requiresEnemies:false},
@@ -206,11 +207,12 @@ const commanderAbilities={
 };
 function createNewRun(){
   const commanderId=window.riftboundCommanderId||"warden";
+  const traitId=typeof window.getRiftboundTrait==="function"?window.getRiftboundTrait().id:"bulwarks-oath";
   const skillBonuses=typeof window.getRiftboundSkillBonuses==="function"?window.getRiftboundSkillBonuses(commanderId):{};
   const baseHealth=(commanderId==="warden"?120:100)+(skillBonuses.flatHealth||0);
   const startingHealth=Math.round(baseHealth*(1+(skillBonuses.fortressHp||0)));
   return {
-    commanderId,skillBonuses,gold:100+(skillBonuses.startingGold||0),castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
+    commanderId,traitId,skillBonuses,gold:100+(skillBonuses.startingGold||0),castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
     towers:[{type:"archer",x:300,y:280,cooldown:0,level:1,investedGold:0,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
@@ -238,7 +240,7 @@ function persistRunCheckpoint(checkpoint="battle"){
     totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,investedGold:getTowerInvestment(t),
       upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
     towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
-    commanderId:currentRun.commanderId||"warden",skillBonuses:currentRun.skillBonuses||{},abilityCooldown:currentRun.abilityCooldown||0,
+    commanderId:currentRun.commanderId||"warden",traitId:currentRun.traitId||"bulwarks-oath",skillBonuses:currentRun.skillBonuses||{},abilityCooldown:currentRun.abilityCooldown||0,
     campsiteRestUsed:!!currentRun.campsiteRestUsed,stats:currentRun.stats||{},encounter:currentRun.encounter||null,
     defeatedBosses:currentRun.defeatedBosses||[],completed:!!currentRun.finalized,
     pendingCardSelection:!!currentRun.pendingCardSelection,pendingRoute:!!currentRun.pendingRoute,
@@ -262,7 +264,7 @@ window.restoreRiftboundRun=function(saved){
   }));
   currentRun={...createNewRun(),...data,towers:restoredTowers,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
     stats:{damageDealt:0,damageTaken:0,goldSpent:0,enemiesKilled:0,wavesCompleted:0,bossesDefeated:0,...(data.stats||{})},
-    encounter:data.encounter||{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},defeatedBosses:Array.isArray(data.defeatedBosses)?data.defeatedBosses:[],
+    encounter:data.encounter||{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},traitId:data.traitId||"bulwarks-oath",defeatedBosses:Array.isArray(data.defeatedBosses)?data.defeatedBosses:[],
     pendingCardSelection:!!data.pendingCardSelection,pendingRoute:!!data.pendingRoute,pendingCompletedWaves:Number(data.pendingCompletedWaves)||0,
     gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
   if(data.waveInProgress&&!currentRun.pendingCardSelection&&!currentRun.pendingRoute)currentRun.currentWave=Math.max(0,(Number(data.currentWave)||1)-1);
@@ -339,7 +341,7 @@ function getTowerStats(t){
   damage*=1+(bonuses.damage||0);
   range*=1+(bonuses.range||0);
   if(t.type==="arcane")range*=1+(bonuses.arcaneRange||0);
-  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   if(t.type==="archer")damage*=1+(trait.archerDamage||0);
   if(t.type==="cannon")damage*=1+(trait.cannonDamage||0)+(bonuses.areaDamage||0);
   if(currentRun.castleHealth>currentRun.maxCastleHealth*.5)damage*=1+(bonuses.healthyDamage||0);
@@ -861,7 +863,7 @@ function spawnEnemy(type,waveNumber){
   const damageScale=1+progression*.012+progression*progression*.00005;
   const speedScale=1+progression*.002;
   const health=d.health*healthScale*(d.boss?1.12:1);
-  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   const enemy={type,name:d.name,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale,isBoss:!!d.boss};
   if(trait.slowChance&&Math.random()<trait.slowChance){enemy.slowTimer=2;enemy.slowFactor=.75;}
   currentRun.enemies.push(enemy);
@@ -880,7 +882,7 @@ function updateEnemies(dt){
     if(e.burnTimer>0){
       const burnStep=Math.min(dt,e.burnTimer);
       e.burnTimer-=burnStep;
-      const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+      const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
       const bossBurn=e.isBoss?1+(currentRun.skillBonuses?.bossDamage||0)+(trait.bossDamage||0):1;
       const burnDamage=(e.burnDamage||3)*(1+(trait.burnDamage||0)+(currentRun.skillBonuses?.burnDamageBonus||0))*bossBurn*burnStep;
       const actualBurn=Math.min(Math.max(0,e.health),burnDamage);
@@ -902,7 +904,7 @@ function updateEnemies(dt){
 }
 function getEnemyDamageMultiplier(target){
   if(!target)return 1;
-  const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   let multiplier=1;
   if(getRunCommanderId()==="huntmaster"&&target.maxHealth>=150)multiplier*=1.2*(1+(bonuses.eliteDamage||0));
   if(target===currentRun.markedEnemy&&currentRun.markedTimer>0)multiplier*=1.6+(bonuses.markedDamage||0);
@@ -995,7 +997,7 @@ function updateTowers(dt){
 }
 function damageEnemy(e,dmg,applyPassive=true){
   if(!e||e.rewarded)return;
-  const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   if(!applyPassive&&dmg>0&&e.isBoss)dmg*=1+(bonuses.bossDamage||0)+(trait.bossDamage||0);
   e.health-=dmg;
   const dealt=Math.max(0,Math.min(Math.max(0,e.health+dmg),dmg));
@@ -1169,7 +1171,7 @@ function updateProjectiles(dt){
     if(p.isArcaneOrb)p.animationTime=(p.animationTime||0)+dt;
     const e=p.target;if(!currentRun.enemies.includes(e)||e.health<=0)return false;
     const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d>0)p.angle=Math.atan2(dy,dx);if(d<=p.speed*dt+8){damageEnemy(e,p.damage);
-      if(p.towerType==="cannon"){const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48+(trait.cannonSplash||0))damageEnemy(other,p.damage*.5*getEnemyDamageMultiplier(other));});}
+      if(p.towerType==="cannon"){const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48+(trait.cannonSplash||0))damageEnemy(other,p.damage*.5*getEnemyDamageMultiplier(other));});}
       return false;
     }p.x+=dx/d*p.speed*dt;p.y+=dy/d*p.speed*dt;return true;
   });currentRun.enemies=currentRun.enemies.filter(e=>e.health>0);
@@ -1415,7 +1417,7 @@ function sellSelectedTower(){
   showBattleMessage("TOWER DISMANTLED · "+refund+" GOLD REFUNDED");
 }
 function getTowerUpgradeCost(t){
-  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun?.skillBonuses?.costReduction||0));
   return Math.max(1,Math.ceil((towerTypes[t.type].upgradeCost+(t.level-1)*35)*(1-reduction)));
 }
@@ -1470,7 +1472,7 @@ function updateCampsiteScreen(){
   document.getElementById("campsite-towers").textContent=currentRun.towers.length;
   document.getElementById("campsite-cards").textContent=currentRun.cards.length;
   document.getElementById("campsite-free-rest").disabled=currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth;
-  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));
   const healCost=Math.max(1,Math.ceil(40*(1-reduction)));
   const upgradeCost=Math.max(1,Math.ceil(100*(1-reduction)));
@@ -1485,11 +1487,11 @@ function restByCampfire(){
 }
 function healAtCampsite(){
   if(!currentRun||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
-  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));const cost=Math.max(1,Math.ceil(40*(1-reduction)));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
+  const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));const cost=Math.max(1,Math.ceil(40*(1-reduction)));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function upgradeAtCampsite(){
   if(!currentRun)return;
-  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));const cost=Math.max(1,Math.ceil(100*(1-reduction)));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
+  const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));const cost=Math.max(1,Math.ceil(100*(1-reduction)));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function showCampsiteScreen(completedWaves){
   stopGameLoop();
