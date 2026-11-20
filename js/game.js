@@ -324,7 +324,7 @@ function updateEnemies(dt){
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
-    if(e.progress>=1){if(!currentRun.devInvincible)currentRun.castleHealth=Math.max(0,currentRun.castleHealth-e.damage);updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
+    if(e.progress>=1){if(!currentRun.devInvincible){const incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
   });
 }
 function updateTowers(dt){
