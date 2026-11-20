@@ -54,7 +54,7 @@
   window.getRiftboundSkillBonuses=getBonuses;
   window.getRiftboundSkillProgress=()=>({points:progression.points,commanders:JSON.parse(JSON.stringify(progression.commanders))});
   window.awardRiftboundSkillPoint=function(){
-    progression.points+=1;saveProgression();renderSkillTree();
+    progression.points+=1;saveProgression();if(window.renderRiftboundSkillTree)window.renderRiftboundSkillTree();else renderSkillTree();
     return progression.points;
   };
 
@@ -70,7 +70,7 @@
     });
     const summary=document.getElementById("hub-selected-commander");
     if(summary)summary.textContent=selected.name.toUpperCase()+" SELECTED";
-    renderSkillTree();
+    if(window.renderRiftboundSkillTree)window.renderRiftboundSkillTree();else renderSkillTree();
     try{localStorage.setItem(storageKey,selectedId);}
     catch(error){console.warn("Could not save selected commander:",error);}
   }
@@ -136,12 +136,12 @@
       progression.points-=1;
       if(!progression.commanders[selectedId])progression.commanders[selectedId]={};
       progression.commanders[selectedId][pathId]=current[pathId]+1;
-      saveProgression();renderSkillTree();
+      saveProgression();if(window.renderRiftboundSkillTree)window.renderRiftboundSkillTree();else renderSkillTree();
     }));
   }
 
   function init(){
-    renderCommanders();publishSelection();renderSkillTree();
+    renderCommanders();publishSelection();if(window.renderRiftboundSkillTree)window.renderRiftboundSkillTree();else renderSkillTree();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
   else init();
