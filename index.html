@@ -217,6 +217,13 @@
                     <div class="dev-button-row"><button id="dev-all-cards">GIVE ALL CARDS</button><button id="dev-trigger-boss">TEST FROST WYRM BOSS</button></div>
                 </section>
                 <section class="dev-section">
+                    <h3>CLASS PROGRESSION</h3>
+                    <div class="dev-input-row"><label for="dev-class">Class</label><select id="dev-class"><option value="warden">Warden</option><option value="arcanist">Arcanist</option><option value="huntmaster">Huntmaster</option><option value="treasurer">Treasurer</option><option value="pyromancer">Pyromancer</option><option value="necromancer">Necromancer</option></select></div>
+                    <div class="dev-input-row"><label for="dev-xp-amount">XP</label><input id="dev-xp-amount" type="number" min="0" max="100000" value="500"><button id="dev-add-class-xp">GRANT XP</button></div>
+                    <div class="dev-input-row"><label for="dev-points-amount">Skill points</label><input id="dev-points-amount" type="number" min="0" max="1000" value="2"><button id="dev-add-skill-points">GRANT POINTS</button></div>
+                    <div class="dev-button-row"><button id="dev-test-campfire">TEST NEXT CAMPFIRE</button></div>
+                </section>
+                <section class="dev-section">
                     <h3>TESTING</h3>
                     <div class="dev-button-row"><button id="dev-pause">PAUSE GAME</button><button id="dev-resume">RESUME GAME</button></div>
                     <div class="dev-input-row"><label for="dev-speed">Game speed</label><select id="dev-speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="3">3×</option></select><button id="dev-apply-speed">APPLY</button></div>
