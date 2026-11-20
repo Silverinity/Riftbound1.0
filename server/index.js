@@ -343,6 +343,14 @@ function cleanSave(body) {
     for (const key of ["damageDealt", "damageTaken", "goldSpent", "enemiesKilled", "wavesCompleted", "bossesDefeated"]) {
       stats[key] = Number.isFinite(run.stats?.[key]) ? Math.max(0, Math.floor(run.stats[key])) : 0;
     }
+    const routeIds = new Set(["bear-cave","wolf-den","goblin-camp","hollow-bear","rift-alpha","cinder-quarry","ash-wastes","scavenger-crossing","ash-colossus","goblin-warlord","frozen-hollow","wraithwood","shattered-keep","frost-wyrm","riftbound-knight"]);
+    const bossIds = new Set(["hollow-bear","rift-alpha","ash-colossus","goblin-warlord","frost-wyrm","riftbound-knight"]);
+    const encounter = run.encounter && routeIds.has(run.encounter.id) ? {
+      id: run.encounter.id,
+      name: typeof run.encounter.name === "string" ? run.encounter.name.slice(0, 70) : "Unknown destination",
+      kind: bossIds.has(run.encounter.bossId) ? "BOSS" : "ENCOUNTER",
+      bossId: bossIds.has(run.encounter.bossId) ? run.encounter.bossId : null
+    } : null;
     cleanRun = {
       gold: run.gold, castleHealth: run.castleHealth, maxCastleHealth: run.maxCastleHealth,
       area: run.area, campsite: run.campsite, stage: run.stage, currentWave: run.currentWave,
@@ -356,8 +364,8 @@ function cleanSave(body) {
       abilityCooldown: Number.isFinite(run.abilityCooldown) ? Math.max(0, run.abilityCooldown) : 0,
       campsiteRestUsed: Boolean(run.campsiteRestUsed), checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle",
       completed: Boolean(run.completed),
-      stats, encounter: run.encounter && typeof run.encounter === "object" ? run.encounter : null,
-      defeatedBosses: Array.isArray(run.defeatedBosses) ? run.defeatedBosses.filter(x => typeof x === "string").slice(0, 20) : []
+      stats, encounter,
+      defeatedBosses: Array.isArray(run.defeatedBosses) ? run.defeatedBosses.filter(x => bossIds.has(x)).slice(0, 6) : []
     };
   }
   const settingKeys = ["masterVolume", "musicVolume", "sfxVolume", "screenShake", "damageNumbers", "towerRanges", "developerMode"];
