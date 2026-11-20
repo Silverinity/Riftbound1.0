@@ -30,49 +30,44 @@
 
   const byId = id => document.getElementById(id);
   const mainMenu = byId("main-menu");
-  const preparationScreen = byId("preparation-screen");
+  const hubScreen = byId("hub-screen");
   const gameScreen = byId("game-screen");
   const campsiteScreen = byId("campsite-screen");
   const resultOverlay = byId("result-overlay");
   const settingsOverlay = byId("settings-overlay");
   const API_BASE = (window.RIFTBOUND_API_BASE || "http://localhost:3000").replace(/\/$/, "");
   let betaAuthenticated = false;
-  let cloudSaveAvailable = false;
-
   async function loadCloudSave() {
     try {
       const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
-      if (!response.ok) throw new Error("Cloud save could not be loaded.");
+      if (!response.ok) throw new Error("Player profile could not be loaded.");
       const data = await response.json();
-      cloudSaveAvailable = !!data.hasSave;
-      byId("continue-run").hidden = !cloudSaveAvailable;
-      if (cloudSaveAvailable) byId("auth-status").textContent = "BETA ACCESS VERIFIED · CLOUD SAVE FOUND";
+      if (data.progression && typeof window.loadRiftboundProgression === "function") window.loadRiftboundProgression(data.progression);
       return data;
     } catch (error) {
-      cloudSaveAvailable = false;
-      byId("continue-run").hidden = true;
-      console.warn("Could not load Riftbound cloud save:", error);
+      console.warn("Could not load Riftbound player profile:", error);
       return null;
     }
   }
 
-  window.riftboundCloudSave = async run => {
+  // Cloud saves contain permanent profile progression and settings only.
+  window.riftboundCloudSave = async () => {
     if (!betaAuthenticated) return;
     try {
       const response = await fetch(API_BASE + "/api/save", {
         method: "PUT", credentials: "include",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ save: { version: 1, run, settings: window.riftboundSettings } })
+        body: JSON.stringify({ save: { version: 1, run: null, settings: window.riftboundSettings, progression: typeof window.getRiftboundProgressionExport === "function" ? window.getRiftboundProgressionExport() : null } })
       });
       if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
-      cloudSaveAvailable = true;
-      byId("continue-run").hidden = false;
-      byId("auth-status").textContent = "BETA ACCESS VERIFIED · PROGRESS SAVED";
+      byId("auth-status").textContent = "BETA ACCESS VERIFIED · PROFILE SAVED";
     } catch (error) {
-      console.error("Could not save Riftbound progress:", error);
+      console.error("Could not save Riftbound profile:", error);
       byId("auth-status").textContent = "CLOUD SAVE FAILED · CHECK BACKEND DATABASE";
     }
   };
+
+  window.riftboundCloudSaveProfile = async () => window.riftboundCloudSave();
 
   async function checkBetaSession() {
     const status = byId("auth-status");
@@ -101,8 +96,8 @@
         userLabel.textContent = "SIGNED IN AS " + (data.user?.username || "DISCORD USER");
         userLabel.hidden = false;
         logout.hidden = false;
-        newRun.disabled = false;
         const cloud = await loadCloudSave();
+        newRun.disabled = false;
         if (cloud?.save?.settings) {
           window.riftboundSettings = { ...DEFAULT_SETTINGS, ...cloud.save.settings };
           persistSettings();
@@ -124,10 +119,8 @@
         status.textContent = "SIGN IN WITH DISCORD TO ACCESS THE CLOSED BETA";
       }
       login.hidden = false;
-      byId("continue-run").hidden = true;
     } catch (error) {
       betaAuthenticated = false;
-      byId("continue-run").hidden = true;
       status.textContent = "COULD NOT REACH AUTH SERVER · CHECK CONNECTION AND RETRY";
       login.hidden = false;
       console.error("Could not check Riftbound beta access:", error);
@@ -158,7 +151,6 @@
     byId("auth-user").hidden = true;
     byId("discord-logout").hidden = true;
     byId("discord-login").hidden = false;
-    byId("continue-run").hidden = true;
   });
 
   function displaySettings() {
@@ -205,7 +197,7 @@
 
   function hideScreens() {
     mainMenu.style.display = "none";
-    preparationScreen.hidden = true;
+    if (hubScreen) hubScreen.hidden = true;
     gameScreen.hidden = true;
     if (campsiteScreen) campsiteScreen.hidden = true;
     byId("card-overlay").hidden = true;
@@ -218,15 +210,28 @@
     if (typeof stopGameLoop === "function") stopGameLoop();
     hideScreens();
     mainMenu.style.display = "flex";
+    if (hubScreen) hubScreen.hidden = true;
     resultOverlay.hidden = true;
     settingsOverlay.hidden = true;
     byId("card-overlay").hidden = true;
   }
 
-  function openPreparation() {
+  function showHubView(view) {
+    if(view==="commanders")window.renderRiftboundCommanders?.();
+    if(view==="traits")window.renderRiftboundTraits?.();
+    document.querySelectorAll(".hub-view").forEach(section => {
+      section.hidden = section.id !== "hub-" + view + "-view";
+    });
+    document.querySelectorAll("[data-hub-view]").forEach(button => {
+      button.classList.toggle("active", button.dataset.hubView === view);
+    });
+  }
+
+  function openHub() {
     if (typeof stopGameLoop === "function") stopGameLoop();
     hideScreens();
-    preparationScreen.hidden = false;
+    hubScreen.hidden = false;
+    showHubView("home");
     resultOverlay.hidden = true;
     settingsOverlay.hidden = true;
   }
@@ -263,43 +268,51 @@
     }
   });
 
-  byId("continue-run").addEventListener("click", async () => {
-    if (!betaAuthenticated) return;
-    const cloud = await loadCloudSave();
-    if (cloud?.save && window.restoreRiftboundRun(cloud.save)) return;
-    byId("auth-status").textContent = "NO VALID CLOUD SAVE WAS FOUND";
-  });
-
-  byId("new-run").addEventListener("click", async () => {
+  byId("new-run").addEventListener("click", () => {
     if (!betaAuthenticated) {
       byId("auth-status").textContent = "PLEASE SIGN IN WITH AN APPROVED BETA TESTER ACCOUNT";
       return;
     }
-    if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your existing cloud save. Continue?")) return;
-    openPreparation();
+    // PLAY on the title screen only opens the Command Sanctum.
+    // Replacing an existing expedition is confirmed at BEGIN EXPEDITION instead.
+    openHub();
   });
-  byId("back-to-menu").addEventListener("click", returnToMenu);
-  byId("begin-defense").addEventListener("click", () => {
-    startNewRun();
-    hideScreens();
-    gameScreen.hidden = false;
-    initBattlefield();
+  byId("hub-back").addEventListener("click", returnToMenu);
+  document.querySelectorAll("[data-hub-view]").forEach(button => {
+    button.addEventListener("click", () => showHubView(button.dataset.hubView));
+  });
+  byId("hub-play").addEventListener("click", async () => {
+    const activeRun=!!window.isRiftboundRunActive?.();
+    if (activeRun && !window.confirm("Starting a new expedition will abandon your current expedition. Continue?")) return;
+    try {
+      if (typeof window.startRiftboundNewRun !== "function") {
+        throw new Error("The game engine did not expose the new-run function.");
+      }
+      window.startRiftboundNewRun();
+      hideScreens();
+      gameScreen.hidden = false;
+      initBattlefield();
+    } catch (error) {
+      console.error("Could not start a Riftbound expedition:", error);
+      gameScreen.hidden = true;
+      hubScreen.hidden = false;
+      showHubView("home");
+      byId("auth-status").textContent = "COULD NOT START THE EXPEDITION · CHECK THE CONSOLE";
+    }
   });
   document.querySelectorAll(".tower-button").forEach(button => {
     button.addEventListener("click", () => selectTower(button.dataset.tower));
   });
   byId("leave-battle").addEventListener("click", () => {
-    if (window.confirm("Leave this battle and return to the main menu? Your current run will be lost.")) {
-      returnToMenu();
+    if (window.confirm("Return to the lobby? Your current expedition will be abandoned and cannot be resumed.")) {
+      openHub();
     }
   });
-  byId("result-continue").addEventListener("click", returnToMenu);
-
-  byId("upgrades").addEventListener("click", () => {
-    window.alert("Permanent upgrades are planned for a future update. Tower upgrades during a run are available on the battlefield.");
-  });
-  byId("collection").addEventListener("click", () => {
-    window.alert("The collection and bestiary are planned for a future update. Your run cards are shown when you earn a reward.");
+  byId("result-continue").addEventListener("click", () => openHub());
+  byId("result-stats-toggle").addEventListener("click", () => {
+    const panel = byId("result-stats");
+    panel.hidden = !panel.hidden;
+    byId("result-stats-toggle").textContent = panel.hidden ? "VIEW RUN STATISTICS" : "HIDE RUN STATISTICS";
   });
 
   document.addEventListener("keydown", event => {

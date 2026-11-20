@@ -906,3 +906,6 @@ button { min-height: 42px; }
     .resource strong { font-size:24px; }
     .tower-sell-summary { font-size:9px; }
 }
+
+/* Purple status text at the lower edge of the battlefield. */
+.battle-message{color:#B99AE8;background:#100C19;border-top:1px solid rgba(98,68,127,.38)}

@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/game.css">
     <link rel="stylesheet" href="css/devpanel.css">
     <link rel="stylesheet" href="css/commanders.css">
+    <link rel="stylesheet" href="css/progression.css">
 </head>
 <body>
 
@@ -26,21 +27,74 @@
             <section class="beta-access" aria-label="Beta access">
                 <p id="auth-status" role="status">CHECKING BETA ACCESS...</p>
                 <p id="auth-user" hidden></p>
-                <button id="discord-login" type="button" hidden>LOGIN WITH DISCORD</button>
                 <button id="discord-logout" type="button" hidden>LOG OUT</button>
             </section>
 
             <div class="menu-buttons">
-                <button id="continue-run" hidden>CONTINUE EXPEDITION</button>
-                <button id="new-run" disabled>NEW RUN</button>
-                <button id="upgrades">UPGRADES</button>
-                <button id="collection">COLLECTION</button>
+                <button id="new-run" disabled>PLAY</button>
                 <button id="settings">SETTINGS</button>
+                <button id="discord-login" type="button" hidden>LOGIN WITH DISCORD</button>
             </div>
 
             <p class="version">EARLY DEVELOPMENT BUILD</p>
         </div>
     </main>
+
+    <!-- COMMAND HUB -->
+    <section id="hub-screen" class="hub-screen" hidden>
+        <header class="hub-topbar">
+            <div class="hub-brand"><span class="hub-brand-mark">R</span><div><strong>RIFTBOUND</strong><small>COMMAND SANCTUM</small></div></div>
+            <div class="hub-topbar-right"><span id="hub-selected-commander">THE WARDEN SELECTED</span><button id="hub-back" type="button">MAIN MENU</button></div>
+        </header>
+        <div class="hub-layout">
+            <aside class="hub-sidebar">
+                <p class="hub-side-label">EXPEDITION</p>
+                <button class="hub-nav-button active" data-hub-view="home" type="button"><span>01</span> OVERVIEW</button>
+                <button class="hub-nav-button" data-hub-view="commanders" type="button"><span>02</span> COMMANDERS</button>
+                <button class="hub-nav-button" data-hub-view="skills" type="button"><span>03</span> CLASS SKILL TREE</button>
+                <button class="hub-nav-button" data-hub-view="traits" type="button"><span>04</span> TRAITS</button>
+                <div class="hub-sidebar-bottom"><span class="hub-status-dot"></span><span>BETA BUILD · 0.1</span></div>
+            </aside>
+            <main class="hub-main">
+                <section id="hub-home-view" class="hub-view">
+                    <p class="hub-eyebrow">THE RIFT IS SPREADING · YOUR ORDERS AWAIT</p>
+                    <h1>THE COMMAND<br> SANCTUM</h1>
+                    <p class="hub-intro">Prepare your forces, shape your commander's strengths, and return to the battlefield.</p>
+                    <div class="hub-feature-grid">
+                        <article class="hub-feature hub-feature-play">
+                            <div class="hub-feature-kicker">YOUR NEXT EXPEDITION</div>
+                            <h2>ENTER THE FRONTIER</h2>
+                            <p>Defend the last fortress across three hostile regions. Every five waves brings a new reward.</p>
+                            <div class="hub-feature-actions"><button id="hub-play" type="button">BEGIN EXPEDITION</button></div>
+                        </article>
+                        <article class="hub-feature hub-feature-commander">
+                            <div class="hub-feature-icon">♜</div><div class="hub-feature-kicker">YOUR LEADER</div>
+                            <h2>COMMANDERS</h2><p>Choose one of six leaders, each with a unique passive and battlefield ability.</p>
+                            <button type="button" data-hub-view="commanders">VIEW COMMANDERS</button>
+                        </article>
+                        <article class="hub-feature hub-feature-skills">
+                            <div class="hub-feature-icon">✧</div><div class="hub-feature-kicker">PERMANENT PROGRESSION</div>
+                            <h2>SKILL TREE</h2><p>Shape your equipped commander with a unique branching class skill tree.</p>
+                            <button type="button" data-hub-view="skills">OPEN SKILL TREE</button>
+                        </article>
+                    </div>
+                    <div class="hub-bottom-note"><span>THE REALMS ARE BREAKING</span><span>ONLY THE PREPARED WILL ENDURE</span></div>
+                </section>
+                <section id="hub-commanders-view" class="hub-view" hidden>
+                    <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
+                    <div id="commander-selection"></div>
+                </section>
+                <section id="hub-skills-view" class="hub-view" hidden>
+                    <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
+                    <div id="commander-skill-tree"></div>
+                </section>
+                <section id="hub-traits-view" class="hub-view" hidden>
+                    <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
+                    <div id="trait-collection"></div>
+                </section>
+            </main>
+        </div>
+    </section>
 
     <!-- SETTINGS -->
     <div id="settings-overlay" class="settings-overlay" hidden>
@@ -92,66 +146,6 @@
             </div>
         </div>
     </div>
-
-    <!-- PREPARATION SCREEN -->
-    <section id="preparation-screen" class="preparation-screen" hidden>
-        <header class="preparation-header">
-            <div>
-                <p class="prep-eyebrow">YOUR NEXT EXPEDITION</p>
-                <h1>PREPARE FOR DEFENSE</h1>
-            </div>
-            <button id="back-to-menu">BACK</button>
-        </header>
-
-        <div class="region-banner">
-            <div class="region-heading">
-                <p class="prep-eyebrow">REGION 01</p>
-                <h2>VERDANT WOODS</h2>
-                <p class="region-description">
-                    An ancient forest consumed by unstable rifts.
-                    Something is stirring beneath the trees.
-                </p>
-            </div>
-
-            <div class="region-details">
-                <span>30 WAVES · 2 CAMPSITES</span>
-                <span>ANCIENT TREANT BOSS</span>
-                <span>UNKNOWN THREATS</span>
-            </div>
-        </div>
-
-        <div class="preparation-content">
-            <div class="prep-column">
-                <h3>STARTING RESOURCES</h3>
-                <div class="prep-stat"><span>GOLD</span><strong>100</strong></div>
-                <div class="prep-stat"><span>CASTLE HP</span><strong>100</strong></div>
-                <div class="prep-stat"><span>STARTING TOWERS</span><strong>1</strong></div>
-            </div>
-
-            <div class="prep-column">
-                <h3>STARTING TOWER</h3>
-                <div class="starting-tower">
-                    <div class="tower-symbol">♜</div>
-                    <div>
-                        <h4>ARCHER TOWER</h4>
-                        <p>A reliable defensive structure.</p>
-                        <span>10 DAMAGE · 120 RANGE</span>
-                    </div>
-                </div>
-                <p class="prep-note">
-                    Build additional towers using the gold you collect.
-                </p>
-            </div>
-        </div>
-
-        <div class="preparation-footer">
-            <div>
-                <h3>READY TO BEGIN?</h3>
-                <p>Survive 30 waves across two campsites, earning a card after every five waves.</p>
-            </div>
-            <button id="begin-defense">BEGIN DEFENSE</button>
-        </div>
-    </section>
 
     <!-- BATTLEFIELD -->
     <section id="game-screen" class="game-screen" hidden>
@@ -220,7 +214,14 @@
                     <h3>PROGRESSION</h3>
                     <div class="dev-input-row"><label for="dev-area">Area</label><select id="dev-area"><option value="1">1 · Verdant Woods</option><option value="2">2 · Ashen Wastes</option><option value="3">3 · Frostbound Kingdom</option></select></div>
                     <div class="dev-input-row"><label for="dev-campsite">Campsite</label><select id="dev-campsite"><option value="1">Campsite 1</option><option value="2">Campsite 2</option></select><label for="dev-stage">Stage</label><select id="dev-stage"><option value="1">Stage 1</option><option value="2">Stage 2</option><option value="3">Stage 3</option></select><button id="dev-jump-progress">GO</button></div>
-                    <div class="dev-button-row"><button id="dev-all-cards">GIVE ALL CARDS</button><button id="dev-trigger-boss">START FINAL BOSS</button></div>
+                    <div class="dev-button-row"><button id="dev-all-cards">GIVE ALL CARDS</button><button id="dev-trigger-boss">TEST FROST WYRM BOSS</button></div>
+                </section>
+                <section class="dev-section">
+                    <h3>CLASS PROGRESSION</h3>
+                    <div class="dev-input-row"><label for="dev-class">Class</label><select id="dev-class"><option value="warden">Warden</option><option value="arcanist">Arcanist</option><option value="huntmaster">Huntmaster</option><option value="treasurer">Treasurer</option><option value="pyromancer">Pyromancer</option><option value="necromancer">Necromancer</option></select></div>
+                    <div class="dev-input-row"><label for="dev-xp-amount">XP</label><input id="dev-xp-amount" type="number" min="0" max="100000" value="500"><button id="dev-add-class-xp">GRANT XP</button></div>
+                    <div class="dev-input-row"><label for="dev-points-amount">Skill points</label><input id="dev-points-amount" type="number" min="0" max="1000" value="2"><button id="dev-add-skill-points">GRANT POINTS</button></div>
+                    <div class="dev-button-row"><button id="dev-test-campfire">TEST NEXT CAMPFIRE</button></div>
                 </section>
                 <section class="dev-section">
                     <h3>TESTING</h3>
@@ -286,17 +287,13 @@
 
     <!-- STAGE / JOURNEY PROGRESS -->
     <div id="progress-overlay" class="game-overlay progress-overlay" hidden>
-        <div class="card-screen progress-screen">
-            <p class="prep-eyebrow">THE JOURNEY CONTINUES</p>
-            <h2>YOUR NEXT DESTINATION</h2>
+        <div class="card-screen progress-screen destination-screen">
+            <p class="prep-eyebrow">THE FRONTIER BRANCHES BEFORE YOU</p>
+            <h2>CHOOSE YOUR NEXT DESTINATION</h2>
             <p id="progress-area" class="progress-area">AREA 01 · VERDANT WOODS</p>
-            <div class="progress-grid">
-                <div><span>CAMPSITE</span><strong id="progress-campsite">CAMPSITE 1 OF 2</strong></div>
-                <div><span>STAGE</span><strong id="progress-stage">STAGE 2 OF 3</strong></div>
-            </div>
-            <p id="progress-next" class="progress-next">Next: Stage 2 of Campsite 1</p>
-            <p id="progress-wave" class="progress-wave">Waves completed in this area: 5 / 30</p>
-            <button id="progress-continue" type="button">CONTINUE JOURNEY</button>
+            <p class="destination-intro">Each path holds different dangers and rewards. Boss lairs offer greater spoils and class experience.</p>
+            <div id="destination-options" class="destination-options"></div>
+            <p id="progress-wave" class="progress-wave">Choose carefully. Your route shapes the expedition.</p>
         </div>
     </div>
 
@@ -316,7 +313,7 @@
       <div class="campsite-intro">
         <p class="prep-eyebrow">A MOMENT OF PEACE</p>
         <h2 id="campsite-title">THE PATH GROWS QUIET</h2>
-        <p id="campsite-description">Your companions have made camp. Enemies cannot reach this place. Recover, prepare, and set out when ready.</p>
+        <p id="campsite-description">Your companions have made camp. Enemies cannot reach this place. Rest, improve your defences, and continue when ready.</p>
       </div>
       <div class="preparation-content campsite-options">
         <div class="prep-column">
@@ -343,17 +340,22 @@
     </section>
 
     <!-- VICTORY / DEFEAT -->
-    <div id="result-overlay" class="game-overlay" hidden>
-        <div class="overlay-panel">
+    <div id="result-overlay" class="game-overlay result-overlay" hidden>
+        <div class="overlay-panel result-panel">
             <p class="prep-eyebrow" id="result-eyebrow">THE BATTLE IS OVER</p>
             <h2 id="result-title">VICTORY</h2>
             <p id="result-description">The fortress stands.</p>
-            <button id="result-continue">CONTINUE</button>
+            <div class="result-xp"><span>CLASS EXPERIENCE EARNED</span><strong id="result-xp">+0 XP</strong><small id="result-level-summary">CLASS LEVEL 1</small></div>
+            <div id="result-levelups" class="result-levelups" hidden></div>
+            <button id="result-stats-toggle" type="button">VIEW RUN STATISTICS</button>
+            <div id="result-stats" class="result-stats" hidden></div>
+            <button id="result-continue" type="button">RETURN TO LOBBY</button>
         </div>
     </div>
 
     <script>window.RIFTBOUND_API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:3000" : "https://riftbound-auth.onrender.com";</script>
     <script src="js/commanders.js"></script>
+    <script src="js/progression.js"></script>
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>
     <script src="js/devpanel.js"></script>

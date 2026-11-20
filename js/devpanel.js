@@ -87,10 +87,28 @@
   }
   $("dev-jump-progress").addEventListener("click",()=>{if(!active())return;jumpProgress(Number($("dev-area").value),Number($("dev-campsite").value),Number($("dev-stage").value));say("Moved to the selected area, campsite and stage.");});
   $("dev-all-cards").addEventListener("click",()=>{if(!active())return;["arrows","arcane","siege","greed","walls"].forEach(id=>{currentRun.cards.push(id);if(id==="walls"){currentRun.maxCastleHealth+=20;currentRun.castleHealth+=20;}});currentRun.castleHealth=Math.min(currentRun.castleHealth,currentRun.maxCastleHealth);refresh();say("Added one stack of every card, including the wall bonus.");});
-  $("dev-trigger-boss").addEventListener("click",()=>{if(!active())return;jumpProgress(3,2,3);currentRun.currentWave=4;startWave(false);startGameLoop();say("Started the final boss wave.");});
+  $("dev-trigger-boss").addEventListener("click",()=>{if(!active())return;jumpProgress(3,2,3);currentRun.encounter={id:"frost-wyrm",name:"The Frost Wyrm",kind:"BOSS",bossId:"frost-wyrm"};currentRun.currentWave=4;startWave(false);startGameLoop();say("Started a Frost Wyrm boss test.");});
 
   $("dev-pause").addEventListener("click",()=>{if(!active())return;stopGameLoop();say("Game loop paused. Use Resume Game to continue.");});
   $("dev-resume").addEventListener("click",()=>{if(!active())return;if($("card-overlay").hidden&&$("progress-overlay").hidden&&$("result-overlay").hidden)startGameLoop();say("Game loop resumed.");});
+  $("dev-add-class-xp").addEventListener("click",()=>{
+    if(!active())return;
+    const id=$("dev-class").value,n=amount("dev-xp-amount",500,100000);
+    const result=window.devRiftboundGrantClassXP?.(id,n);
+    if(!result){say("Could not grant class XP.");return;}
+    say("Granted "+n+" XP to "+id.toUpperCase()+" · LEVEL "+result.level+".");
+  });
+  $("dev-add-skill-points").addEventListener("click",()=>{
+    if(!active())return;
+    const id=$("dev-class").value,n=amount("dev-points-amount",2,1000);
+    const total=window.devRiftboundGrantSkillPoints?.(id,n);
+    say("Granted "+n+" skill points to "+id.toUpperCase()+" · TOTAL "+total+".");
+  });
+  $("dev-test-campfire").addEventListener("click",()=>{
+    if(!active())return;
+    if(window.devRiftboundForceCampfire?.()){say("Campfire checkpoint opened. Continue Run will now resume here.");}
+    else say("Could not open a campfire checkpoint.");
+  });
   $("dev-apply-speed").addEventListener("click",()=>{if(!active())return;currentRun.devGameSpeed=Math.max(.5,Math.min(3,Number($("dev-speed").value)||1));say("Game speed set to "+currentRun.devGameSpeed+"×.");});
 
   // Drag by the title bar; clamp the panel so its header remains reachable.
