@@ -1199,10 +1199,20 @@ function checkWaveCompletion(){
   if(currentRun.currentWave>=5){
     currentRun.waveActive=false;
     currentRun.waveIntervalTimer=0;
-    currentRun.pendingCardSelection=true;
-    currentRun.pendingCompletedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+5;
+    const completedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+5;
+    currentRun.pendingCompletedWaves=completedWaves;
     currentRun.currentWave=0;
     updateGameDisplay();
+    if(completedWaves>=90){
+      currentRun.runFinished=true;
+      showRunCompleteScreen();
+      return;
+    }
+    if(completedWaves%15===0){
+      arriveAtCampfire(completedWaves);
+      return;
+    }
+    currentRun.pendingCardSelection=true;
     persistRunCheckpoint("reward");
     showCardSelection();
     return;
