@@ -906,16 +906,22 @@ function canBuild(x,y,checkGold=true){
 }
 function canvasPoint(e){
   const rect=canvas.getBoundingClientRect();
-  // Pointer coordinates must be measured from the canvas drawing area,
-  // not its outer border. The CSS border otherwise creates a visible offset.
-  const contentLeft=rect.left+canvas.clientLeft;
-  const contentTop=rect.top+canvas.clientTop;
-  const contentWidth=canvas.clientWidth;
-  const contentHeight=canvas.clientHeight;
-  if(!contentWidth||!contentHeight)return{x:0,y:0};
+  // Convert from viewport coordinates to the canvas's actual drawing area.
+  // Scaling the border offsets too keeps pointer input aligned when the canvas
+  // is resized, height-constrained, or transformed by responsive layout/zoom.
+  const layoutWidth=canvas.offsetWidth;
+  const layoutHeight=canvas.offsetHeight;
+  if(!rect.width||!rect.height||!layoutWidth||!layoutHeight)return{x:0,y:0};
+  const scaleX=rect.width/layoutWidth;
+  const scaleY=rect.height/layoutHeight;
+  const left=rect.left+canvas.clientLeft*scaleX;
+  const top=rect.top+canvas.clientTop*scaleY;
+  const width=canvas.clientWidth*scaleX;
+  const height=canvas.clientHeight*scaleY;
+  if(!width||!height)return{x:0,y:0};
   return {
-    x:(e.clientX-contentLeft)*(canvas.width/contentWidth),
-    y:(e.clientY-contentTop)*(canvas.height/contentHeight)
+    x:Math.max(0,Math.min(canvas.width,(e.clientX-left)*(canvas.width/width))),
+    y:Math.max(0,Math.min(canvas.height,(e.clientY-top)*(canvas.height/height)))
   };
 }
 function handleBattlefieldClick(e){
