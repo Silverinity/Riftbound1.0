@@ -26,21 +26,69 @@
             <section class="beta-access" aria-label="Beta access">
                 <p id="auth-status" role="status">CHECKING BETA ACCESS...</p>
                 <p id="auth-user" hidden></p>
-                <button id="discord-login" type="button" hidden>LOGIN WITH DISCORD</button>
                 <button id="discord-logout" type="button" hidden>LOG OUT</button>
             </section>
 
             <div class="menu-buttons">
-                <button id="continue-run" hidden>CONTINUE EXPEDITION</button>
-                <button id="new-run" disabled>NEW RUN</button>
-                <button id="upgrades">UPGRADES</button>
-                <button id="collection">COLLECTION</button>
+                <button id="new-run" disabled>PLAY</button>
                 <button id="settings">SETTINGS</button>
+                <button id="discord-login" type="button" hidden>LOGIN WITH DISCORD</button>
             </div>
 
             <p class="version">EARLY DEVELOPMENT BUILD</p>
         </div>
     </main>
+
+    <!-- COMMAND HUB -->
+    <section id="hub-screen" class="hub-screen" hidden>
+        <header class="hub-topbar">
+            <div class="hub-brand"><span class="hub-brand-mark">R</span><div><strong>RIFTBOUND</strong><small>COMMAND SANCTUM</small></div></div>
+            <div class="hub-topbar-right"><span id="hub-selected-commander">THE WARDEN SELECTED</span><button id="hub-back" type="button">MAIN MENU</button></div>
+        </header>
+        <div class="hub-layout">
+            <aside class="hub-sidebar">
+                <p class="hub-side-label">EXPEDITION</p>
+                <button class="hub-nav-button active" data-hub-view="home" type="button"><span>01</span> OVERVIEW</button>
+                <button class="hub-nav-button" data-hub-view="commanders" type="button"><span>02</span> COMMANDERS</button>
+                <button class="hub-nav-button" data-hub-view="skills" type="button"><span>03</span> SKILL TREE</button>
+                <div class="hub-sidebar-bottom"><span class="hub-status-dot"></span><span>BETA BUILD · 0.1</span></div>
+            </aside>
+            <main class="hub-main">
+                <section id="hub-home-view" class="hub-view">
+                    <p class="hub-eyebrow">THE RIFT IS SPREADING · YOUR ORDERS AWAIT</p>
+                    <h1>THE COMMAND<br> SANCTUM</h1>
+                    <p class="hub-intro">Prepare your forces, shape your commander's strengths, and return to the battlefield.</p>
+                    <div class="hub-feature-grid">
+                        <article class="hub-feature hub-feature-play">
+                            <div class="hub-feature-kicker">YOUR NEXT EXPEDITION</div>
+                            <h2>ENTER THE FRONTIER</h2>
+                            <p>Defend the last fortress across three hostile regions. Every five waves brings a new reward.</p>
+                            <div class="hub-feature-actions"><button id="hub-play" type="button">BEGIN EXPEDITION</button><button id="continue-run" type="button" hidden>CONTINUE RUN</button></div>
+                        </article>
+                        <article class="hub-feature hub-feature-commander">
+                            <div class="hub-feature-icon">♜</div><div class="hub-feature-kicker">YOUR LEADER</div>
+                            <h2>COMMANDERS</h2><p>Choose one of six leaders, each with a unique passive and battlefield ability.</p>
+                            <button type="button" data-hub-view="commanders">VIEW COMMANDERS</button>
+                        </article>
+                        <article class="hub-feature hub-feature-skills">
+                            <div class="hub-feature-icon">✧</div><div class="hub-feature-kicker">PERMANENT PROGRESSION</div>
+                            <h2>SKILL TREE</h2><p>Invest skill points in fortress health, ability cooldown, tower damage and range.</p>
+                            <button type="button" data-hub-view="skills">OPEN SKILL TREE</button>
+                        </article>
+                    </div>
+                    <div class="hub-bottom-note"><span>THE REALMS ARE BREAKING</span><span>ONLY THE PREPARED WILL ENDURE</span></div>
+                </section>
+                <section id="hub-commanders-view" class="hub-view" hidden>
+                    <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
+                    <div id="commander-selection"></div>
+                </section>
+                <section id="hub-skills-view" class="hub-view" hidden>
+                    <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
+                    <div id="commander-skill-tree"></div>
+                </section>
+            </main>
+        </div>
+    </section>
 
     <!-- SETTINGS -->
     <div id="settings-overlay" class="settings-overlay" hidden>
