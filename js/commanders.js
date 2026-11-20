@@ -71,6 +71,8 @@
     });
     const summary = document.getElementById("commander-selected-summary");
     if (summary) summary.textContent = "SELECTED COMMANDER · " + selected.name.toUpperCase();
+    const startingHealth = document.querySelector("#preparation-screen .preparation-content .prep-column:first-child .prep-stat:nth-child(2) strong");
+    if (startingHealth) startingHealth.textContent = selected.id === "warden" ? "120" : "100";
     try {
       localStorage.setItem(storageKey, selectedId);
     } catch (error) {
