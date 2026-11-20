@@ -80,6 +80,12 @@
     }
   }
 
+  window.setRiftboundCommanderSelection = function(id) {
+    if (!commanders.some(commander => commander.id === id)) return;
+    selectedId = id;
+    publishSelection();
+  };
+
   function createCommanderSection() {
     const preparation = document.getElementById("preparation-screen");
     const anchor = preparation?.querySelector(".preparation-content");
