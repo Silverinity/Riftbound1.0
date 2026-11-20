@@ -53,7 +53,7 @@
         [["Royal Mint","Gain 100 gold after every completed destination.",{stageGold:100}],["Bounty Ledger","Enemies drop 20% more gold.",{goldBonus:.20}]],
         [["Master Builder","Tower upgrades cost 20% less.",{costReduction:.20}],["War Treasury","Start each run with 150 extra gold.",{startingGold:150}]],
         [["Golden Decree","Royal Decree grants 100 additional gold.",{abilityGold:100}],["Spoils of War","Bosses grant 30% more gold.",{bossGold:.30}]],
-        [["Infinite Reserve","Gain 250 gold immediately when chosen.",{instantGold:250}],["Kingdom's Fortune","All gold gains increase by 20%.",{goldBonus:.20}]]]},
+        [["Infinite Reserve","Begin each expedition with 250 additional gold.",{startingGold:250}],["Kingdom's Fortune","All gold gains increase by 20%.",{goldBonus:.20}]]]},
     pyromancer:{title:"INFERNO ROOT",tagline:"Spread flame through enemy ranks and burn down bosses.",nodes:[
       {id:"living-flame",name:"Living Flame",icon:"♨",desc:"Increase burn damage.",effect:"burnDamage",per:1,format:"+1 burn damage / second / rank"},
       {id:"wildfire",name:"Wildfire",icon:"✹",desc:"Increase the chance to ignite enemies.",effect:"burnChance",per:.03,format:"+3% burn chance / rank"},
@@ -137,7 +137,7 @@
       '<div class="skill-tree-branches"><div class="branch-trunk"></div>'+milestoneRows+'</div>'+
       '<p class="skill-tree-footnote">Every class level grants 1 skill point. Core branches cost 1 point per rank. Milestone choices unlock at levels 5, 10, 15 and 20, and cost 2 points. Choices are permanent for that class.</p>';
     root.querySelectorAll("[data-core-node]").forEach(b=>b.addEventListener("click",()=>{const n=tree.nodes.find(x=>x.id===b.dataset.coreNode);if(!n||c.skillPoints<1)return;const rank=Math.max(0,Math.floor(Number(c.nodes[n.id])||0));if(rank>=5)return;c.skillPoints--;c.spentPoints++;c.nodes[n.id]=rank+1;save();}));
-    root.querySelectorAll("[data-fork-choice]").forEach(b=>b.addEventListener("click",()=>{const level=Number(b.dataset.forkLevel),choice=b.dataset.forkChoice;if(c.level<level||c.skillPoints<2||c.choices[level])return;c.skillPoints-=2;c.spentPoints+=2;c.choices[level]=choice;const option=tree.forks[MILESTONES.indexOf(level)]?.find(item=>item[0]===choice);const instantGold=option?.[2]?.instantGold||0;save();if(instantGold&&typeof window.grantRiftboundImmediateGold==="function")window.grantRiftboundImmediateGold(instantGold);}));
+    root.querySelectorAll("[data-fork-choice]").forEach(b=>b.addEventListener("click",()=>{const level=Number(b.dataset.forkLevel),choice=b.dataset.forkChoice;if(c.level<level||c.skillPoints<2||c.choices[level])return;c.skillPoints-=2;c.spentPoints+=2;c.choices[level]=choice;save();}));
   }
   function renderTraits(){
     const root=document.getElementById("trait-collection");if(!root)return;
