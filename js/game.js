@@ -324,9 +324,11 @@ function getPathPosition(progress){
 function createWaveQueue(wave){
   if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&wave===5)return ["treant"];
   const totalWave=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+wave;
-  const count=5+wave*2+(currentRun.area-1)*3+Math.floor((totalWave-1)/15),queue=[];
+  const count=5+wave*2+(currentRun.area-1)*3+Math.floor((totalWave-1)/8),queue=[];
   for(let i=0;i<count;i++){
-    if(currentRun.area>=2&&wave>=3&&i%4===0)queue.push("brute");
+    if(totalWave>=46&&i%3===0)queue.push("brute");
+    else if(totalWave>=25&&i%5===2)queue.push("riftwing");
+    else if(currentRun.area>=2&&wave>=3&&i%4===0)queue.push("brute");
     else if(wave>=2&&i%5===2)queue.push("riftwing");
     else if(wave>=3&&i%4===0)queue.push("brute");
     else queue.push("riftling");
@@ -356,9 +358,9 @@ function spawnEnemy(type,waveNumber){
   const d=enemyTypes[type];
   const totalWave=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+waveNumber;
   const progression=totalWave-1;
-  const healthScale=areaData().enemyScale*(1+progression*.0085);
-  const damageScale=1+progression*.0055;
-  const speedScale=1+progression*.0012;
+  const healthScale=areaData().enemyScale*(1+progression*.022+progression*progression*.00012);
+  const damageScale=1+progression*.012+progression*progression*.00005;
+  const speedScale=1+progression*.002;
   const health=d.health*healthScale;
   currentRun.enemies.push({type,x:pathPoints[0].x,y:pathPoints[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale});
 }
