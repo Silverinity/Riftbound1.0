@@ -66,12 +66,26 @@
         body: JSON.stringify({ save: { version: 1, run: run || null, settings: window.riftboundSettings, progression: typeof window.getRiftboundProgressionExport === "function" ? window.getRiftboundProgressionExport() : null } })
       });
       if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
-      cloudSaveAvailable = !!run;
+      cloudSaveAvailable = !!run && !run.completed;
       byId("continue-run").hidden = !cloudSaveAvailable;
       byId("auth-status").textContent = run ? "BETA ACCESS VERIFIED · PROGRESS SAVED" : "BETA ACCESS VERIFIED · PROFILE SAVED";
     } catch (error) {
       console.error("Could not save Riftbound progress:", error);
       byId("auth-status").textContent = "CLOUD SAVE FAILED · CHECK BACKEND DATABASE";
+    }
+  };
+
+  window.riftboundCloudSaveProfile = async () => {
+    if (!betaAuthenticated) return;
+    try {
+      const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
+      if (!response.ok) throw new Error("Could not read the existing cloud save.");
+      const data = await response.json();
+      const existingRun = data.save?.run;
+      return window.riftboundCloudSave(existingRun && !existingRun.completed ? existingRun : null);
+    } catch (error) {
+      console.warn("Could not update cloud progression without a run:", error);
+      byId("auth-status").textContent = "PROFILE SAVED LOCALLY · CLOUD SYNC UNAVAILABLE";
     }
   };
 
