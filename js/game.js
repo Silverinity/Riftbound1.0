@@ -511,6 +511,13 @@ function activateCommanderAbility(){
   }
   if(effect)currentRun.abilityEffects.push(effect);
   currentRun.abilityCooldown=ability.cooldown;
+  const abilityButton=document.getElementById("commander-ability-button");
+  if(abilityButton){
+    abilityButton.classList.remove("ability-activated");
+    void abilityButton.offsetWidth;
+    abilityButton.classList.add("ability-activated");
+    window.setTimeout(()=>abilityButton.classList.remove("ability-activated"),700);
+  }
   updateCommanderAbilityButton();
   updateGameDisplay();
   persistRunCheckpoint("battle");
