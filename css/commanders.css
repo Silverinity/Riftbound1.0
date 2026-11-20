@@ -209,3 +209,16 @@
 @media (prefers-reduced-motion: reduce) {
   .commander-ability-button:not(:disabled):hover { transform: none; }
 }
+
+
+@keyframes commanderAbilityPulse {
+  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 12px rgba(185,154,232,.2); }
+  35% { transform: scale(1.045); filter: brightness(1.55); box-shadow: 0 0 28px rgba(185,154,232,.75); }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 12px rgba(185,154,232,.2); }
+}
+.commander-ability-button.ability-activated {
+  animation: commanderAbilityPulse .7s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .commander-ability-button.ability-activated { animation: none; }
+}
