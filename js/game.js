@@ -121,7 +121,7 @@ function createNewRun(){
   const startingHealth=commanderId==="warden"?120:100;
   return {
     commanderId,gold:100,castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
-    towers:[{type:"archer",x:300,y:280,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
+    towers:[{type:"archer",x:300,y:280,cooldown:0,level:1,investedGold:0,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
     devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],
@@ -142,7 +142,7 @@ function persistRunCheckpoint(checkpoint="battle"){
   const run={
     gold:currentRun.gold,castleHealth:currentRun.castleHealth,maxCastleHealth:currentRun.maxCastleHealth,
     area:currentRun.area,campsite:currentRun.campsite,stage:currentRun.stage,currentWave:currentRun.currentWave,
-    totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,
+    totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,investedGold:getTowerInvestment(t),
       upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
     towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
     commanderId:currentRun.commanderId||"warden",abilityCooldown:currentRun.abilityCooldown||0,
@@ -195,6 +195,7 @@ function updateGameDisplay(){
   if(!currentRun)return;
   document.getElementById("gold-display").textContent=Math.floor(currentRun.gold);
   document.getElementById("health-display").textContent=currentRun.castleHealth+" / "+currentRun.maxCastleHealth;
+  drawBattlefield();
   document.getElementById("wave-display").textContent=(((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave)+" / 30";
   const progress=document.getElementById("progress-summary");if(progress)progress.textContent="AREA "+currentRun.area+" · CAMPSITE "+currentRun.campsite+"/2 · STAGE "+currentRun.stage+"/3";
   const start=document.getElementById("start-wave");if(start)start.disabled=currentRun.waveActive||currentRun.gameOver||currentRun.currentWave>=5;
@@ -379,6 +380,17 @@ function drawCastle(){
   ctx.fillStyle="#17251B";ctx.fillRect(855,225,85,100);ctx.fillStyle="#655A70";ctx.fillRect(860,235,70,70);ctx.fillStyle="#98899E";ctx.fillRect(870,245,50,50);
   ctx.fillStyle="#4A3B55";ctx.fillRect(852,220,22,35);ctx.fillRect(916,220,22,35);ctx.fillRect(852,285,22,35);ctx.fillRect(916,285,22,35);
   ctx.fillStyle="#B99AE8";ctx.fillRect(852,216,22,6);ctx.fillRect(916,216,22,6);ctx.fillStyle="#241932";ctx.fillRect(885,275,22,30);
+  const hpRatio=Math.max(0,Math.min(1,currentRun.castleHealth/currentRun.maxCastleHealth));
+  const barX=846,barY=198,barW=104,barH=12;
+  ctx.fillStyle="rgba(8,6,12,.94)";ctx.fillRect(barX-3,barY-3,barW+6,barH+6);
+  ctx.strokeStyle="#D8C0FF";ctx.lineWidth=1.5;ctx.strokeRect(barX-3,barY-3,barW+6,barH+6);
+  ctx.fillStyle="#38212B";ctx.fillRect(barX,barY,barW,barH);
+  ctx.fillStyle=hpRatio>.6?"#69C77A":hpRatio>.3?"#E4B85C":"#E06470";
+  ctx.fillRect(barX,barY,barW*hpRatio,barH);
+  ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.lineWidth=3;
+  ctx.strokeStyle="#100B16";ctx.strokeText("FORTRESS  "+Math.ceil(currentRun.castleHealth)+" / "+currentRun.maxCastleHealth,898,190);
+  ctx.fillStyle="#FFF";ctx.fillText("FORTRESS  "+Math.ceil(currentRun.castleHealth)+" / "+currentRun.maxCastleHealth,898,190);
+  ctx.textAlign="left";
 }
 function drawTowers(){
   if(!currentRun)return;
@@ -419,9 +431,12 @@ function drawEnemies(){
       ctx.strokeStyle="#F0D58A";ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,(size+10)*pulse,0,Math.PI*2);ctx.stroke();
       ctx.fillStyle="#F0D58A";ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.fillText("MARKED",e.x,e.y-size-22);
     }
-    const w=e.type==="treant"?64:42,p=Math.max(0,e.health/e.maxHealth),barY=e.y-size-15;
-    ctx.fillStyle="#241932";ctx.fillRect(e.x-w/2,barY,w,7);ctx.fillStyle=p>.5?"#75C77A":"#D66B75";ctx.fillRect(e.x-w/2,barY,w*p,7);
-    ctx.font="10px Arial";ctx.textAlign="center";ctx.fillStyle="#FFFFFF";ctx.strokeStyle="#241932";ctx.lineWidth=2;
+    const w=e.type==="treant"?72:48,p=Math.max(0,e.health/e.maxHealth),barY=e.y-size-17;
+    ctx.fillStyle="rgba(8,6,12,.96)";ctx.fillRect(e.x-w/2-2,barY-2,w+4,12);
+    ctx.strokeStyle="rgba(245,235,255,.9)";ctx.lineWidth=1;ctx.strokeRect(e.x-w/2-2,barY-2,w+4,12);
+    ctx.fillStyle="#38212B";ctx.fillRect(e.x-w/2,barY,w,8);
+    ctx.fillStyle=p>.6?"#69C77A":p>.3?"#E4B85C":"#E06470";ctx.fillRect(e.x-w/2,barY,w*p,8);
+    ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.fillStyle="#FFFFFF";ctx.strokeStyle="#100B16";ctx.lineWidth=3;
     const hp=Math.max(0,Math.ceil(e.health))+"/"+Math.ceil(e.maxHealth);ctx.strokeText(hp,e.x,barY-3);ctx.fillText(hp,e.x,barY-3);
     if(e.type==="treant"){ctx.font="12px Georgia";ctx.fillStyle="#F0D58A";ctx.fillText("ANCIENT TREANT",e.x,e.y-size-25);}
   });ctx.textAlign="left";
@@ -906,7 +921,7 @@ function handleBattlefieldClick(e){
   if(!selectedTower){selectedTowerEntity=null;updateTowerPanel();return;}
   const type=towerTypes[selectedTower];if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
   if(!canBuild(p.x,p.y)){showBattleMessage("THAT LOCATION IS BLOCKED — TRY ANOTHER OPEN AREA");return;}
-  currentRun.gold-=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}});
+  currentRun.gold-=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,investedGold:type.cost,upgrades:{damage:0,range:0,speed:0}});
   updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(type.name.toUpperCase()+" BUILT");
 }
 function selectTower(type){
@@ -914,11 +929,28 @@ function selectTower(type){
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.toggle("selected",b.dataset.tower===type));
   updateTowerPanel();showBattleMessage(type.toUpperCase()+" SELECTED — CLICK AN OPEN AREA TO BUILD");
 }
+function getTowerInvestment(t){
+  if(Number.isFinite(t.investedGold))return Math.max(0,t.investedGold);
+  const base=towerTypes[t.type]?.cost||0;
+  let total=base;
+  for(let level=1;level<t.level;level++)total+=(towerTypes[t.type]?.upgradeCost||0)+(level-1)*35;
+  return total;
+}
+function sellSelectedTower(){
+  const t=selectedTowerEntity;if(!t||!currentRun)return;
+  const index=currentRun.towers.indexOf(t);if(index<0)return;
+  const refund=Math.floor(getTowerInvestment(t)*.5);
+  currentRun.gold+=refund;
+  currentRun.towers.splice(index,1);
+  selectedTowerEntity=null;selectedTower=null;
+  updateGameDisplay();persistRunCheckpoint("battle");
+  showBattleMessage("TOWER DISMANTLED · "+refund+" GOLD REFUNDED");
+}
 function upgradeSelectedTower(stat){
-  const t=selectedTowerEntity;if(!t||!currentRun)return;const s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*35;
+  const t=selectedTowerEntity;if(!t||!currentRun)return;const cost=towerTypes[t.type].upgradeCost+(t.level-1)*35;
   if(t.level>=4){showBattleMessage("THIS TOWER IS FULLY UPGRADED");return;}
   if(currentRun.gold<cost){showBattleMessage("NOT ENOUGH GOLD FOR THIS UPGRADE");return;}
-  currentRun.gold-=cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
+  currentRun.gold-=cost;t.investedGold=getTowerInvestment(t)+cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
 }
 function updateTowerPanel(){
   const panel=document.getElementById("tower-info-panel");if(!panel)return;
@@ -932,8 +964,11 @@ function updateTowerPanel(){
     '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="damage">Increase damage <span>+30% base damage</span></button>'+
     '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="range">Increase range <span>+22 px</span></button>'+
     '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="speed">Faster attacks <span>-0.16s cooldown</span></button>'+
-    '<p class="panel-hint">'+(t.level>=4?"MAX LEVEL REACHED":"Each upgrade increases the tower level. Maximum level: 4.")+'</p>';
+    '<p class="panel-hint">'+(t.level>=4?"MAX LEVEL REACHED":"Each upgrade increases the tower level. Maximum level: 4.")+'</p>'+
+    '<div class="tower-sell-summary"><span>INVESTED · '+getTowerInvestment(t)+' G</span><strong>REFUND · '+Math.floor(getTowerInvestment(t)*.5)+' G</strong></div>'+
+    '<button class="tower-sell-button" type="button" data-sell-tower>DISMANTLE TOWER · '+Math.floor(getTowerInvestment(t)*.5)+' G</button>';
   panel.querySelectorAll("[data-upgrade]").forEach(b=>b.addEventListener("click",()=>upgradeSelectedTower(b.dataset.upgrade)));
+  panel.querySelector("[data-sell-tower]")?.addEventListener("click",sellSelectedTower);
 }
 canvas.addEventListener("pointermove",e=>{if(!gameScreenIsHidden())pointerWorld=canvasPoint(e);});
 canvas.addEventListener("pointerleave",()=>pointerWorld=null);
