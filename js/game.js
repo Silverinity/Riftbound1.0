@@ -48,6 +48,14 @@ const cardPool = [
 ];
 
 function getRunCommanderId(){return currentRun?.commanderId||window.riftboundCommanderId||"warden";}
+const commanderAbilities={
+  warden:{name:"IRON BASTION",cooldown:45,description:"Reduce castle damage by 50% and increase tower attack speed for 12 seconds.",requiresEnemies:false},
+  arcanist:{name:"RIFT SURGE",cooldown:40,description:"Deal 90 damage to all enemies and slow them for 4 seconds.",requiresEnemies:true},
+  huntmaster:{name:"MARKED PREY",cooldown:35,description:"Mark the most advanced elite, or the most advanced enemy, for 8 seconds. Towers deal 50% more damage to it.",requiresEnemies:true},
+  treasurer:{name:"ROYAL DECREE",cooldown:60,description:"Immediately gain 100 gold.",requiresEnemies:false},
+  pyromancer:{name:"INFERNO",cooldown:45,description:"Deal 45 damage to every enemy and burn them for 5 seconds.",requiresEnemies:true},
+  necromancer:{name:"RAISE THE FALLEN",cooldown:50,description:"Summon three spectral defenders for 10 seconds.",requiresEnemies:true}
+};
 function createNewRun(){
   const commanderId=window.riftboundCommanderId||"warden";
   const startingHealth=commanderId==="warden"?120:100;
@@ -56,7 +64,8 @@ function createNewRun(){
     towers:[{type:"archer",x:330,y:200,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
-    devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[]
+    devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],
+    abilityCooldown:0,bastionTimer:0,markedEnemy:null,markedTimer:0,abilityEffects:[]
   };
 }
 function startNewRun(){
@@ -76,7 +85,7 @@ function persistRunCheckpoint(checkpoint="battle"){
     totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,
       upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
     towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
-    commanderId:currentRun.commanderId||"warden",
+    commanderId:currentRun.commanderId||"warden",abilityCooldown:currentRun.abilityCooldown||0,
     campsiteRestUsed:!!currentRun.campsiteRestUsed,checkpoint
   };
   window.riftboundCloudSave(run);
@@ -156,7 +165,7 @@ function environmentPalette(){
   return {ground:"#263B2B",textureA:"#304632",textureB:"#203326",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#17251B",tree:"#315438",treeLight:"#426443",trunk:"#64472F"};
 }
 function drawBattlefield(){
-  const palette=environmentPalette();ctx.fillStyle=palette.ground;ctx.fillRect(0,0,960,540);drawGroundTexture();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawPlacementPreview();
+  const palette=environmentPalette();ctx.fillStyle=palette.ground;ctx.fillRect(0,0,960,540);drawGroundTexture();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawCommanderEffects();drawPlacementPreview();
 }
 function drawGroundTexture(){
   const p=environmentPalette();
@@ -199,6 +208,11 @@ function drawEnemies(){
   currentRun.enemies.forEach(e=>{
     const t=enemyTypes[e.type],size=t.size;ctx.fillStyle="rgba(0,0,0,.3)";ctx.fillRect(e.x-size,e.y+size/2,size*2,5);
     ctx.fillStyle=t.color;ctx.fillRect(e.x-size/2,e.y-size/2,size,size);ctx.fillStyle="#241932";ctx.fillRect(e.x-4,e.y-3,3,3);ctx.fillRect(e.x+2,e.y-3,3,3);
+    if(currentRun.markedEnemy===e&&currentRun.markedTimer>0){
+      const pulse=1+Math.sin(performance.now()/90)*.12;
+      ctx.strokeStyle="#F0D58A";ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,(size+10)*pulse,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle="#F0D58A";ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.fillText("MARKED",e.x,e.y-size-22);
+    }
     const w=e.type==="treant"?64:42,p=Math.max(0,e.health/e.maxHealth),barY=e.y-size-15;
     ctx.fillStyle="#241932";ctx.fillRect(e.x-w/2,barY,w,7);ctx.fillStyle=p>.5?"#75C77A":"#D66B75";ctx.fillRect(e.x-w/2,barY,w*p,7);
     ctx.font="10px Arial";ctx.textAlign="center";ctx.fillStyle="#FFFFFF";ctx.strokeStyle="#241932";ctx.lineWidth=2;
@@ -208,6 +222,36 @@ function drawEnemies(){
 }
 function drawProjectiles(){
   if(!currentRun)return;currentRun.projectiles.forEach(p=>{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();});
+}
+function drawCommanderEffects(){
+  if(!currentRun?.abilityEffects?.length)return;
+  const now=performance.now();
+  currentRun.abilityEffects.forEach(effect=>{
+    const progress=1-effect.life/effect.duration;
+    ctx.save();
+    if(effect.type==="bastion"){
+      const pulse=1+Math.sin(now/110)*.06;
+      ctx.strokeStyle="rgba(116,190,255,"+(0.85*(1-progress*.35))+")";ctx.lineWidth=5;
+      ctx.beginPath();ctx.arc(895,270,58*pulse,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle="rgba(116,190,255,.10)";ctx.beginPath();ctx.arc(895,270,54*pulse,0,Math.PI*2);ctx.fill();
+    }else if(effect.type==="rift"){
+      ctx.strokeStyle="rgba(190,135,255,"+(0.9*(1-progress))+")";ctx.lineWidth=7;
+      ctx.shadowColor="#B99AE8";ctx.shadowBlur=18;ctx.beginPath();
+      pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+      ctx.shadowBlur=0;
+      pathPoints.forEach((p,i)=>{const r=7+Math.sin(now/80+i)*3;ctx.fillStyle="rgba(216,192,255,.75)";ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();});
+    }else if(effect.type==="mark"&&effect.target){
+      ctx.strokeStyle="#F0D58A";ctx.lineWidth=4;ctx.beginPath();ctx.arc(effect.target.x,effect.target.y,28+Math.sin(now/75)*5,0,Math.PI*2);ctx.stroke();
+    }else if(effect.type==="gold"){
+      ctx.textAlign="center";ctx.font="bold 28px Georgia";ctx.fillStyle="rgba(240,213,138,"+(1-progress)+")";ctx.fillText("+100 GOLD",895,190-progress*55);
+      for(let i=0;i<8;i++){const angle=now/180+i*Math.PI/4;const x=895+Math.cos(angle)* (30+progress*35),y=270+Math.sin(angle)*(30+progress*35);ctx.fillStyle="#F0D58A";ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();}
+    }else if(effect.type==="inferno"){
+      currentRun.enemies.forEach((enemy,i)=>{const radius=18+Math.sin(now/65+i)*5;ctx.fillStyle="rgba(255,132,58,"+(0.22*(1-progress))+")";ctx.beginPath();ctx.arc(enemy.x,enemy.y,radius,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,207,112,"+(0.85*(1-progress))+")";ctx.lineWidth=2;ctx.stroke();});
+    }else if(effect.type==="spirits"){
+      for(let i=0;i<3;i++){const angle=now/260+i*Math.PI*2/3;const x=480+Math.cos(angle)* (35+progress*25),y=270+Math.sin(angle)* (35+progress*25);ctx.fillStyle="rgba(190,165,255,"+(0.8*(1-progress))+")";ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(235,220,255,.9)";ctx.lineWidth=2;ctx.stroke();}
+    }
+    ctx.restore();
+  });
 }
 function drawPlacementPreview(){
   if(!pointerWorld||!currentRun||!selectedTower)return;
@@ -274,7 +318,9 @@ function updateEnemies(dt){
       e.health-=3*burnStep;
       if(e.health<=0&&!e.rewarded)damageEnemy(e,0,false);
     }
-    e.progress+=enemyTypes[e.type].speed*dt/totalPathLength;
+    if(e.slowTimer>0)e.slowTimer=Math.max(0,e.slowTimer-dt);
+    const slowFactor=e.slowTimer>0?.65:1;
+    e.progress+=enemyTypes[e.type].speed*slowFactor*dt/totalPathLength;
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
@@ -284,10 +330,15 @@ function updateEnemies(dt){
 function updateTowers(dt){
   currentRun.towers.forEach(t=>{
     const s=getTowerStats(t);t.cooldown-=dt;if(t.cooldown>0)return;
-    let target=null,best=-1;currentRun.enemies.forEach(e=>{if(Math.hypot(e.x-t.x,e.y-t.y)<=s.range&&e.progress>best){best=e.progress;target=e;}});
+    let target=null,best=-1;
+    const marked=currentRun.markedTimer>0?currentRun.markedEnemy:null;
+    if(marked&&currentRun.enemies.includes(marked)&&Math.hypot(marked.x-t.x,marked.y-t.y)<=s.range)target=marked;
+    if(!target)currentRun.enemies.forEach(e=>{if(Math.hypot(e.x-t.x,e.y-t.y)<=s.range&&e.progress>best){best=e.progress;target=e;}});
     if(!target)return;
     const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
-    currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*eliteBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});t.cooldown=s.cooldown;
+    const markedBonus=target===marked?1.5:1;
+    currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*eliteBonus*markedBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});
+    t.cooldown=s.cooldown*(currentRun.bastionTimer>0?.8:1);
   });
 }
 function damageEnemy(e,dmg,applyPassive=true){
@@ -313,11 +364,75 @@ function updateSpectralAllies(dt){
     if(ally.life<=0)return false;
     if(ally.cooldown<=0){
       const target=currentRun.enemies.filter(e=>!e.rewarded&&e.health>0).sort((a,b)=>b.progress-a.progress)[0];
-      if(target){damageEnemy(target,12,false);ally.cooldown=.8;}
+      if(target){damageEnemy(target,ally.damage||12,false);ally.cooldown=ally.interval||.8;}
       else ally.cooldown=.2;
     }
     return true;
   });
+}
+function updateCommanderAbilityState(dt){
+  if(!currentRun)return;
+  currentRun.abilityCooldown=Math.max(0,(currentRun.abilityCooldown||0)-dt);
+  currentRun.bastionTimer=Math.max(0,(currentRun.bastionTimer||0)-dt);
+  currentRun.markedTimer=Math.max(0,(currentRun.markedTimer||0)-dt);
+  if(currentRun.markedTimer<=0)currentRun.markedEnemy=null;
+  currentRun.abilityEffects=(currentRun.abilityEffects||[]).filter(effect=>(effect.life-=dt)>0);
+  updateCommanderAbilityButton();
+}
+function updateCommanderAbilityButton(){
+  const button=document.getElementById("commander-ability-button");
+  const name=document.getElementById("commander-ability-name");
+  const status=document.getElementById("commander-ability-cooldown");
+  if(!button||!currentRun)return;
+  const ability=commanderAbilities[getRunCommanderId()]||commanderAbilities.warden;
+  if(name)name.textContent=ability.name;
+  const cooldown=Math.ceil(currentRun.abilityCooldown||0);
+  if(status)status.textContent=cooldown>0?"COOLDOWN · "+cooldown+"s":"READY · Q";
+  const needsEnemies=ability.requiresEnemies&&!currentRun.enemies.some(enemy=>enemy.health>0&&!enemy.rewarded);
+  button.disabled=!!currentRun.gameOver||cooldown>0||needsEnemies;
+  button.setAttribute("aria-label",ability.name+". "+(cooldown>0?"Cooldown "+cooldown+" seconds":needsEnemies?"Waiting for enemies":"Ready. Press Q to activate"));
+}
+function activateCommanderAbility(){
+  if(!currentRun||currentRun.gameOver)return;
+  const id=getRunCommanderId(),ability=commanderAbilities[id]||commanderAbilities.warden;
+  if((currentRun.abilityCooldown||0)>0)return;
+  const enemies=currentRun.enemies.filter(enemy=>enemy.health>0&&!enemy.rewarded);
+  if(ability.requiresEnemies&&!enemies.length){showBattleMessage("WAIT FOR ENEMIES BEFORE USING "+ability.name);return;}
+  let effect=null;
+  if(id==="warden"){
+    currentRun.bastionTimer=12;
+    effect={type:"bastion",life:1.8,duration:1.8};
+    showBattleMessage("IRON BASTION · CASTLE SHIELDS RAISED");
+  }else if(id==="arcanist"){
+    enemies.forEach(enemy=>{enemy.slowTimer=Math.max(enemy.slowTimer||0,4);damageEnemy(enemy,90,false);});
+    effect={type:"rift",life:1.35,duration:1.35};
+    showBattleMessage("RIFT SURGE · ENEMIES STRUCK BY ARCANE ENERGY");
+  }else if(id==="huntmaster"){
+    const elites=enemies.filter(enemy=>enemy.maxHealth>=150);
+    const candidates=elites.length?elites:enemies;
+    const target=candidates.sort((a,b)=>b.progress-a.progress)[0];
+    currentRun.markedEnemy=target;currentRun.markedTimer=8;
+    effect={type:"mark",target,life:1.1,duration:1.1};
+    showBattleMessage("MARKED PREY · TOWERS WILL FOCUS THE TARGET");
+  }else if(id==="treasurer"){
+    currentRun.gold+=100;
+    effect={type:"gold",life:1.6,duration:1.6};
+    showBattleMessage("ROYAL DECREE · THE TREASURY GRANTS 100 GOLD");
+    updateGameDisplay();
+  }else if(id==="pyromancer"){
+    enemies.forEach(enemy=>{enemy.burnTimer=Math.max(enemy.burnTimer||0,5);damageEnemy(enemy,45,false);});
+    effect={type:"inferno",life:2.4,duration:2.4};
+    showBattleMessage("INFERNO · THE ENEMY FORCES ARE ENGULFED IN FLAME");
+  }else if(id==="necromancer"){
+    for(let i=0;i<3;i++)currentRun.spectralAllies.push({life:10,cooldown:i*.2,damage:15,interval:1});
+    effect={type:"spirits",life:2,duration:2};
+    showBattleMessage("RAISE THE FALLEN · THREE SPECTRAL DEFENDERS ANSWER");
+  }
+  if(effect)currentRun.abilityEffects.push(effect);
+  currentRun.abilityCooldown=ability.cooldown;
+  updateCommanderAbilityButton();
+  updateGameDisplay();
+  persistRunCheckpoint("battle");
 }
 function updateCommanderHud(){
   const hud=document.getElementById("commander-combat-hud");
@@ -332,6 +447,7 @@ function updateCommanderHud(){
   };
   const entry=details[getRunCommanderId()]||details.warden;
   hud.innerHTML="<strong>"+entry[0]+"</strong><span>"+entry[1]+"</span>";
+  updateCommanderAbilityButton();
 }
 function updateProjectiles(dt){
   currentRun.projectiles=currentRun.projectiles.filter(p=>{
@@ -403,6 +519,7 @@ function gameLoop(timestamp){
   const rawDt=Math.min(Math.max((timestamp-lastFrameTime)/1000,0),.033);
   const dt=rawDt*(currentRun.devGameSpeed||1);
   lastFrameTime=timestamp;
+  updateCommanderAbilityState(dt);
   if(currentRun.waveActive){
     updateEnemies(dt);
     updateTowers(dt);
@@ -491,6 +608,13 @@ canvas.addEventListener("contextmenu",e=>{e.preventDefault();selectedTowerEntity
 function gameScreenIsHidden(){const s=document.getElementById("game-screen");return !s||s.hidden;}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&& !gameScreenIsHidden()){selectedTowerEntity=null;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();}});
 document.getElementById("start-wave").addEventListener("click",()=>startWave(false));
+document.getElementById("commander-ability-button").addEventListener("click",activateCommanderAbility);
+document.addEventListener("keydown",event=>{
+  if(event.key.toLowerCase()!=="q"||event.repeat||gameScreenIsHidden())return;
+  const target=event.target;
+  if(target&&(target.isContentEditable||["INPUT","TEXTAREA","SELECT"].includes(target.tagName)))return;
+  event.preventDefault();activateCommanderAbility();
+});
 document.getElementById("progress-continue").addEventListener("click",continueFromProgress);
 document.getElementById("campsite-free-rest").addEventListener("click",restByCampfire);
 document.getElementById("campsite-heal").addEventListener("click",healAtCampsite);
