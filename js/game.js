@@ -14,6 +14,21 @@ function getSettings(){ return window.riftboundSettings || { towerRanges:false }
 const canvas = document.getElementById("battlefield");
 const ctx = canvas.getContext("2d");
 
+// Illustrated backgrounds for all three areas. Routes and gameplay objects remain separate.
+const areaBackgrounds = {
+  1: "assets/maps/verdant-reach/background.png",
+  2: "assets/maps/ashen-wastes/background.png",
+  3: "assets/maps/frostbound-expanse/background.png"
+};
+const backgroundImages = {};
+Object.entries(areaBackgrounds).forEach(([area, source]) => {
+  const image = new Image();
+  image.onload = () => { if (currentRun && currentRun.area === Number(area)) drawBattlefield(); };
+  image.onerror = () => console.warn("Riftbound map background could not be loaded:", source);
+  image.src = source;
+  backgroundImages[area] = image;
+});
+
 // Pixel-art tower sprites. Missing files safely fall back to the original canvas drawings.
 const towerSpritePaths = {
   archer: "assets/towers/archer.png",
@@ -28,15 +43,46 @@ Object.entries(towerSpritePaths).forEach(([type, source]) => {
   towerSprites[type] = sprite;
 });
 
-const pathPoints = [
-  {x:75,y:270},{x:230,y:270},{x:230,y:130},{x:440,y:130},
-  {x:440,y:405},{x:690,y:405},{x:690,y:270},{x:850,y:270}
+// Each realm has its own route. All routes share the same portal and castle endpoints,
+// but their bends and tactical build spaces are deliberately different.
+const pathsByArea = [
+  [
+    {x:75,y:270},{x:190,y:270},{x:190,y:115},{x:365,y:115},
+    {x:365,y:330},{x:555,y:330},{x:555,y:185},{x:735,y:185},
+    {x:735,y:390},{x:850,y:390},{x:850,y:270}
+  ],
+  [
+    {x:75,y:270},{x:190,y:270},{x:190,y:115},{x:365,y:115},
+    {x:365,y:330},{x:555,y:330},{x:555,y:185},{x:735,y:185},
+    {x:735,y:390},{x:850,y:390},{x:850,y:270}
+  ],
+  [
+    {x:75,y:270},{x:190,y:270},{x:190,y:115},{x:365,y:115},
+    {x:365,y:330},{x:555,y:330},{x:555,y:185},{x:735,y:185},
+    {x:735,y:390},{x:850,y:390},{x:850,y:270}
+  ]
 ];
-const treePositions = [
-  [70,70],[145,90],[90,170],[330,55],[390,65],[520,70],[610,90],[780,75],[900,80],
-  [100,390],[150,465],[320,470],[540,490],[800,450],[900,400],[560,230],[820,170],
-  [350,330],[110,330],[760,340],[920,180]
+const treesByArea = [
+  [[65,75],[145,75],[290,65],[420,65],[515,75],[650,70],[820,75],[920,80],[110,445],[285,480],[490,475],[650,475],[910,455],[115,185],[310,220],[470,245],[640,235],[805,225],[900,185]],
+  [[145,65],[345,65],[535,65],[735,70],[910,75],[155,475],[340,480],[520,485],[710,485],[910,475],[175,220],[345,245],[530,300],[720,245],[900,185]],
+  [[65,70],[145,75],[300,65],[475,65],[650,65],[805,70],[920,80],[115,475],[285,480],[485,480],[650,475],[900,475],[115,180],[315,220],[500,230],[655,205],[805,230],[910,185]]
 ];
+function getAreaIndex(){return Math.max(0,Math.min(2,(currentRun?.area||1)-1));}
+function getPathPoints(){
+  const points=pathsByArea[getAreaIndex()];
+  // Keep the portal and castle endpoints fixed while gently shortening each
+  // route toward the centre of the battlefield.
+  return points.map((point,index)=>{
+    if(index===0||index===points.length-1)return point;
+    const loweredY=Math.min(490,point.y+55);
+    const compactY=270+(loweredY-270)*.78;
+    return {
+      x:Math.round(480+(point.x-480)*.90),
+      y:Math.round(270+(compactY-270)*.90)
+    };
+  });
+}
+function getTreePositions(){return treesByArea[getAreaIndex()];}
 const areas = [
   {name:"Verdant Woods",subtitle:"The Last Fortress",boss:"",enemyScale:1},
   {name:"Ashen Wastes",subtitle:"The Scorched Crossing",boss:"",enemyScale:1.3},
@@ -75,7 +121,7 @@ function createNewRun(){
   const startingHealth=commanderId==="warden"?120:100;
   return {
     commanderId,gold:100,castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
-    towers:[{type:"archer",x:330,y:200,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
+    towers:[{type:"archer",x:300,y:280,cooldown:0,level:1,investedGold:0,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
     devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],
@@ -96,7 +142,7 @@ function persistRunCheckpoint(checkpoint="battle"){
   const run={
     gold:currentRun.gold,castleHealth:currentRun.castleHealth,maxCastleHealth:currentRun.maxCastleHealth,
     area:currentRun.area,campsite:currentRun.campsite,stage:currentRun.stage,currentWave:currentRun.currentWave,
-    totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,
+    totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,investedGold:getTowerInvestment(t),
       upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
     towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
     commanderId:currentRun.commanderId||"warden",abilityCooldown:currentRun.abilityCooldown||0,
@@ -112,9 +158,14 @@ window.restoreRiftboundRun=function(saved){
   const savedCommander=data.commanderId||window.riftboundCommanderId||"warden";
   window.riftboundCommanderId=savedCommander;
   if(typeof window.setRiftboundCommanderSelection==="function")window.setRiftboundCommanderSelection(savedCommander);
-  currentRun={...createNewRun(),...data,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
+  const restoredTowers=(data.towers||[]).map((tower,index)=>({
+    ...tower,
+    investedGold:Number.isFinite(tower.investedGold)?tower.investedGold:(index===0?0:undefined)
+  }));
+  currentRun={...createNewRun(),...data,towers:restoredTowers,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
     gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
   selectedTower=null;selectedTowerEntity=null;
+  relocateTowersForCurrentArea();
   document.getElementById("main-menu").style.display="none";
   document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=data.checkpoint==="campsite";
@@ -148,6 +199,7 @@ function updateGameDisplay(){
   if(!currentRun)return;
   document.getElementById("gold-display").textContent=Math.floor(currentRun.gold);
   document.getElementById("health-display").textContent=currentRun.castleHealth+" / "+currentRun.maxCastleHealth;
+  drawBattlefield();
   document.getElementById("wave-display").textContent=(((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave)+" / 30";
   const progress=document.getElementById("progress-summary");if(progress)progress.textContent="AREA "+currentRun.area+" · CAMPSITE "+currentRun.campsite+"/2 · STAGE "+currentRun.stage+"/3";
   const start=document.getElementById("start-wave");if(start)start.disabled=currentRun.waveActive||currentRun.gameOver||currentRun.currentWave>=5;
@@ -175,28 +227,153 @@ function getTowerStats(t){
   return {...base,damage,range,fireRate,cooldown};
 }
 function environmentPalette(){
-  if(currentRun.area===2)return {ground:"#302B2A",textureA:"#403634",textureB:"#211F20",pathDark:"#29201F",path:"#665047",pathEdge:"#9A7965",treeDark:"#211C1B",tree:"#49403A",treeLight:"#6A5B50",trunk:"#554137"};
-  if(currentRun.area===3)return {ground:"#26313C",textureA:"#344352",textureB:"#1D2935",pathDark:"#222832",path:"#586675",pathEdge:"#9AAEC0",treeDark:"#1A2730",tree:"#344B5A",treeLight:"#607D91",trunk:"#52616D"};
+  if(currentRun.area===2)return {ground:"#302B2A",textureA:"#403634",textureB:"#211F20",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#211C1B",tree:"#49403A",treeLight:"#6A5B50",trunk:"#554137"};
+  if(currentRun.area===3)return {ground:"#26313C",textureA:"#344352",textureB:"#1D2935",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#1A2730",tree:"#344B5A",treeLight:"#607D91",trunk:"#52616D"};
   return {ground:"#263B2B",textureA:"#304632",textureB:"#203326",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#17251B",tree:"#315438",treeLight:"#426443",trunk:"#64472F"};
 }
 function drawBattlefield(){
-  const palette=environmentPalette();ctx.fillStyle=palette.ground;ctx.fillRect(0,0,960,540);drawGroundTexture();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawSpectralAllies();drawCommanderEffects();drawPlacementPreview();
+  const palette=environmentPalette();
+  const background=backgroundImages[currentRun.area];
+  const hasIllustratedBackground=!!(background&&background.complete&&background.naturalWidth>0);
+  if(hasIllustratedBackground){
+    // Canvas dimensions are 960x540 (16:9), matching the map artwork.
+    ctx.drawImage(background,0,0,960,540);
+  }else{
+    ctx.fillStyle=palette.ground;
+    ctx.fillRect(0,0,960,540);
+    drawGroundTexture();
+    drawTerrainDetails();
+    drawMapLandmarks();
+    drawTrees();
+  }
+  // Keep the route and all interactive game elements above the background artwork.
+  drawPath();
+  drawPortal();
+  drawCastle();
+  drawTowers();
+  drawEnemies();
+  drawProjectiles();
+  drawSpectralAllies();
+  drawCommanderEffects();
+  drawPlacementPreview();
 }
 function drawGroundTexture(){
   const p=environmentPalette();
-  for(let x=0;x<960;x+=32)for(let y=0;y<540;y+=32){const v=(x*7+y*13)%5;if(v===0){ctx.fillStyle=p.textureA;ctx.fillRect(x,y,16,16);}else if(v===1){ctx.fillStyle=p.textureB;ctx.fillRect(x+12,y+8,12,12);}}
+  for(let x=0;x<960;x+=24)for(let y=0;y<540;y+=24){
+    const seed=(x*17+y*29+getAreaIndex()*11)%11;
+    if(seed<3){ctx.fillStyle=seed===0?p.textureA:p.textureB;ctx.globalAlpha=seed===0?.42:.24;ctx.fillRect(x+seed*3,y+(seed%2)*5,5+seed*3,4+seed*2);ctx.globalAlpha=1;}
+    if(currentRun.area===2&&seed===4){ctx.strokeStyle="rgba(226,112,58,.22)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+8,y+5);ctx.lineTo(x+14,y+2);ctx.stroke();}
+    if(currentRun.area===3&&seed===5){ctx.fillStyle="rgba(174,213,239,.22)";ctx.beginPath();ctx.moveTo(x+5,y);ctx.lineTo(x+10,y+8);ctx.lineTo(x+4,y+14);ctx.closePath();ctx.fill();}
+  }
+}
+function drawTerrainDetails(){
+  const area=currentRun.area;
+  const vignette=ctx.createRadialGradient(480,265,150,480,265,650);
+  vignette.addColorStop(0,"rgba(0,0,0,0)");
+  vignette.addColorStop(1,area===3?"rgba(5,13,24,.48)":area===2?"rgba(20,8,5,.42)":"rgba(5,15,8,.4)");
+  ctx.fillStyle=vignette;ctx.fillRect(0,0,960,540);
+  for(let x=18;x<950;x+=37)for(let y=18;y<530;y+=31){
+    const seed=(x*19+y*31+area*47)%101;
+    if(area===1){
+      if(seed<23){ctx.save();ctx.translate(x+(seed%9),y+(seed%7));ctx.strokeStyle=seed%2?"rgba(113,151,91,.46)":"rgba(164,177,103,.38)";ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(0,4);ctx.quadraticCurveTo(-5,-3,-4,-7);ctx.moveTo(0,4);ctx.quadraticCurveTo(4,-4,7,-6);ctx.stroke();ctx.restore();}
+      else if(seed>84){ctx.fillStyle="rgba(185,133,210,.55)";ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(235,210,175,.62)";ctx.fillRect(x-1,y-4,2,3);}
+      else if(seed>62&&seed<69){ctx.fillStyle="rgba(25,35,23,.36)";ctx.beginPath();ctx.ellipse(x,y,8,3,seed,0,Math.PI*2);ctx.fill();}
+    }else if(area===2){
+      if(seed<18){ctx.strokeStyle="rgba(17,15,15,.55)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-5,y-4);ctx.lineTo(x,y);ctx.lineTo(x+7,y-2);ctx.lineTo(x+11,y+5);ctx.stroke();ctx.strokeStyle="rgba(218,91,43,.24)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+7,y-2);ctx.stroke();}
+      else if(seed>78){ctx.fillStyle="rgba(10,9,10,.42)";ctx.beginPath();ctx.moveTo(x-5,y+3);ctx.lineTo(x-2,y-4);ctx.lineTo(x+4,y-6);ctx.lineTo(x+7,y+3);ctx.closePath();ctx.fill();ctx.fillStyle="rgba(170,91,60,.28)";ctx.fillRect(x-1,y-3,2,4);}
+      else if(seed>51&&seed<57){ctx.fillStyle="rgba(255,126,59,.3)";ctx.beginPath();ctx.arc(x,y,1.7,0,Math.PI*2);ctx.fill();}
+    }else{
+      if(seed<21){ctx.strokeStyle="rgba(164,204,229,.36)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x-7,y+5);ctx.lineTo(x-2,y);ctx.lineTo(x+1,y+2);ctx.lineTo(x+7,y-6);ctx.stroke();}
+      else if(seed>78){ctx.fillStyle="rgba(198,225,242,.3)";ctx.beginPath();ctx.ellipse(x,y,8,3,seed,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(225,241,250,.42)";ctx.fillRect(x-3,y-1,6,1);}
+      else if(seed>53&&seed<59){ctx.fillStyle="rgba(132,190,221,.38)";ctx.beginPath();ctx.moveTo(x,y-5);ctx.lineTo(x-3,y+3);ctx.lineTo(x+3,y+3);ctx.closePath();ctx.fill();}
+    }
+  }
+  ctx.save();ctx.strokeStyle=area===3?"rgba(167,207,232,.22)":area===2?"rgba(195,112,78,.2)":"rgba(151,174,119,.2)";ctx.lineWidth=3;ctx.strokeRect(7,7,946,526);ctx.strokeStyle="rgba(0,0,0,.22)";ctx.lineWidth=1;ctx.strokeRect(12,12,936,516);ctx.restore();
 }
 function drawPath(){
-  const palette=environmentPalette();ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=68;ctx.stroke();ctx.strokeStyle=palette.path;ctx.lineWidth=54;ctx.stroke();
-  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=2;ctx.setLineDash([12,15]);ctx.stroke();ctx.setLineDash([]);
+  const palette=environmentPalette(),points=getPathPoints();
+  ctx.save();ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();
+  points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  // Slim, restrained road layers leave substantially more of the map visible.
+  ctx.strokeStyle="rgba(0,0,0,.30)";ctx.lineWidth=28;ctx.stroke();
+  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=24;ctx.stroke();
+  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=20;ctx.stroke();
+  ctx.strokeStyle=palette.path;ctx.lineWidth=16;ctx.stroke();
+  ctx.strokeStyle="rgba(42,34,25,.32)";
+  ctx.lineWidth=1;ctx.setLineDash([2,9]);ctx.stroke();ctx.setLineDash([]);
+  // Fine, intermittent highlights define the road without adding bulky borders.
+  ctx.strokeStyle="rgba(218,190,132,.38)";
+  ctx.lineWidth=1;ctx.setLineDash([3,22]);ctx.stroke();ctx.setLineDash([]);
+  for(let i=0;i<points.length-1;i++){
+    const a=points[i],b=points[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.floor(len/22);
+    for(let j=1;j<steps;j++){
+      const t=j/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+      const seed=(i*97+j*31+currentRun.area*53)%11;
+      if(seed<4){
+        ctx.fillStyle="rgba(42,35,28,.36)";
+        ctx.fillRect(Math.round(x)-2,Math.round(y)-1,3,2);
+      }else if(seed===8){
+        ctx.fillStyle="rgba(222,202,153,.4)";
+        ctx.fillRect(Math.round(x),Math.round(y),2,1);
+      }
+    }
+  }
+  ctx.restore();
 }
 function drawTrees(){
   const p=environmentPalette();
-  treePositions.forEach(([x,y])=>{
-    ctx.fillStyle=p.treeDark;ctx.fillRect(x-15,y-12,38,34);ctx.fillStyle=p.trunk;ctx.fillRect(x-5,y+5,10,15);
-    ctx.fillStyle=p.tree;ctx.fillRect(x-18,y-25,36,35);ctx.fillStyle=p.treeLight;ctx.fillRect(x-12,y-30,25,25);ctx.fillStyle=p.tree;ctx.fillRect(x-5,y-25,12,12);
+  getTreePositions().forEach(([x,y],index)=>{
+    ctx.save();
+    if(currentRun.area===3){
+      ctx.fillStyle="rgba(5,12,20,.35)";ctx.beginPath();ctx.ellipse(x,y+8,23,10,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.treeDark;ctx.beginPath();ctx.moveTo(x,y-42);ctx.lineTo(x-22,y+12);ctx.lineTo(x+22,y+12);ctx.closePath();ctx.fill();
+      ctx.fillStyle=p.tree;ctx.beginPath();ctx.moveTo(x,y-36);ctx.lineTo(x-17,y+5);ctx.lineTo(x+17,y+5);ctx.closePath();ctx.fill();
+      ctx.fillStyle=p.treeLight;ctx.beginPath();ctx.moveTo(x,y-30);ctx.lineTo(x-10,y-2);ctx.lineTo(x+10,y-2);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#B7DDF4";ctx.fillRect(x-2,y-20,3,9);
+    }else if(currentRun.area===2){
+      ctx.fillStyle="rgba(5,3,3,.35)";ctx.beginPath();ctx.ellipse(x,y+8,23,9,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.trunk;ctx.fillRect(x-4,y-3,8,18);
+      ctx.fillStyle=p.treeDark;ctx.beginPath();ctx.moveTo(x,y-34);ctx.lineTo(x-24,y+5);ctx.lineTo(x+22,y+5);ctx.closePath();ctx.fill();
+      ctx.fillStyle=p.tree;ctx.beginPath();ctx.moveTo(x-3,y-29);ctx.lineTo(x-18,y-1);ctx.lineTo(x+17,y-1);ctx.closePath();ctx.fill();
+      ctx.fillStyle=p.treeLight;ctx.fillRect(x-3,y-22,6,5);
+    }else{
+      ctx.fillStyle="rgba(4,12,7,.35)";ctx.beginPath();ctx.ellipse(x,y+8,24,10,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.trunk;ctx.fillRect(x-5,y-2,10,20);
+      ctx.fillStyle=p.treeDark;ctx.beginPath();ctx.arc(x,y-17,24,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.tree;ctx.beginPath();ctx.arc(x-8,y-23,16,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+9,y-19,17,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.treeLight;ctx.beginPath();ctx.arc(x-7,y-29,8,0,Math.PI*2);ctx.fill();
+      if(index%3===0){ctx.fillStyle="rgba(180,120,220,.65)";ctx.fillRect(x+9,y-12,3,3);}
+    }
+    ctx.restore();
   });
+}
+function drawMapLandmarks(){
+  const area=currentRun.area,now=performance.now();
+  if(area===1){
+    // Ancient mossy standing stones and luminous forest pools.
+    [[300,455],[485,65],[805,465]].forEach(([x,y],i)=>{
+      ctx.fillStyle="rgba(7,16,10,.35)";ctx.beginPath();ctx.ellipse(x,y+12,25,8,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#394B3A";ctx.fillRect(x-8,y-25,16,36);ctx.fillStyle="#65785A";ctx.fillRect(x-5,y-22,5,25);
+      ctx.strokeStyle="rgba(173,132,218,.55)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y-8,12+Math.sin(now/420+i)*2,0,Math.PI*2);ctx.stroke();
+    });
+    [[115,115],[480,470],[790,95]].forEach(([x,y])=>{ctx.fillStyle="rgba(133,89,177,.18)";ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.fill();ctx.fillStyle="#A78BC4";ctx.fillRect(x-3,y-3,6,6);});
+  }else if(area===2){
+    // Obsidian outcrops and glowing fissures.
+    [[170,185],[365,455],[550,70],[760,105],[910,360]].forEach(([x,y],i)=>{
+      ctx.fillStyle="#171718";ctx.beginPath();ctx.moveTo(x-20,y+12);ctx.lineTo(x-11,y-15-(i%2)*8);ctx.lineTo(x+3,y-23);ctx.lineTo(x+21,y+12);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#5B4036";ctx.fillRect(x-5,y-7,4,14);
+      ctx.strokeStyle="rgba(255,116,55,.55)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-12,y+7);ctx.lineTo(x-2,y);ctx.lineTo(x+5,y+6);ctx.lineTo(x+13,y-4);ctx.stroke();
+    });
+    [[310,80],[690,455]].forEach(([x,y])=>{ctx.fillStyle="rgba(238,91,39,.16)";ctx.beginPath();ctx.ellipse(x,y,30,13,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#D96D3D";ctx.fillRect(x-12,y-2,24,4);});
+  }else{
+    // Ice spires, frozen pools and frost-lit ruins.
+    [[155,85],[330,475],[635,65],[800,455],[915,190]].forEach(([x,y],i)=>{
+      ctx.fillStyle="rgba(4,13,23,.32)";ctx.beginPath();ctx.ellipse(x,y+14,22,8,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#63849A";ctx.beginPath();ctx.moveTo(x,y-34-(i%2)*10);ctx.lineTo(x-12,y+12);ctx.lineTo(x+12,y+12);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#B7DDF4";ctx.beginPath();ctx.moveTo(x-2,y-27);ctx.lineTo(x-5,y+5);ctx.lineTo(x+3,y+7);ctx.closePath();ctx.fill();
+    });
+    [[280,75],[745,470]].forEach(([x,y])=>{ctx.fillStyle="rgba(153,208,245,.16)";ctx.beginPath();ctx.arc(x,y,25,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(191,229,255,.55)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,17,0,Math.PI*2);ctx.stroke();});
+  }
 }
 function drawPortal(){
   const p=1+Math.sin(performance.now()/300)*.12;ctx.fillStyle="rgba(129,85,184,.15)";ctx.beginPath();ctx.arc(75,270,48*p,0,Math.PI*2);ctx.fill();
@@ -207,6 +384,17 @@ function drawCastle(){
   ctx.fillStyle="#17251B";ctx.fillRect(855,225,85,100);ctx.fillStyle="#655A70";ctx.fillRect(860,235,70,70);ctx.fillStyle="#98899E";ctx.fillRect(870,245,50,50);
   ctx.fillStyle="#4A3B55";ctx.fillRect(852,220,22,35);ctx.fillRect(916,220,22,35);ctx.fillRect(852,285,22,35);ctx.fillRect(916,285,22,35);
   ctx.fillStyle="#B99AE8";ctx.fillRect(852,216,22,6);ctx.fillRect(916,216,22,6);ctx.fillStyle="#241932";ctx.fillRect(885,275,22,30);
+  const hpRatio=Math.max(0,Math.min(1,currentRun.castleHealth/currentRun.maxCastleHealth));
+  const barX=846,barY=198,barW=104,barH=12;
+  ctx.fillStyle="rgba(8,6,12,.94)";ctx.fillRect(barX-3,barY-3,barW+6,barH+6);
+  ctx.strokeStyle="#D8C0FF";ctx.lineWidth=1.5;ctx.strokeRect(barX-3,barY-3,barW+6,barH+6);
+  ctx.fillStyle="#38212B";ctx.fillRect(barX,barY,barW,barH);
+  ctx.fillStyle=hpRatio>.6?"#69C77A":hpRatio>.3?"#E4B85C":"#E06470";
+  ctx.fillRect(barX,barY,barW*hpRatio,barH);
+  ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.lineWidth=3;
+  ctx.strokeStyle="#100B16";ctx.strokeText("FORTRESS  "+Math.ceil(currentRun.castleHealth)+" / "+currentRun.maxCastleHealth,898,190);
+  ctx.fillStyle="#FFF";ctx.fillText("FORTRESS  "+Math.ceil(currentRun.castleHealth)+" / "+currentRun.maxCastleHealth,898,190);
+  ctx.textAlign="left";
 }
 function drawTowers(){
   if(!currentRun)return;
@@ -247,9 +435,12 @@ function drawEnemies(){
       ctx.strokeStyle="#F0D58A";ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,(size+10)*pulse,0,Math.PI*2);ctx.stroke();
       ctx.fillStyle="#F0D58A";ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.fillText("MARKED",e.x,e.y-size-22);
     }
-    const w=e.type==="treant"?64:42,p=Math.max(0,e.health/e.maxHealth),barY=e.y-size-15;
-    ctx.fillStyle="#241932";ctx.fillRect(e.x-w/2,barY,w,7);ctx.fillStyle=p>.5?"#75C77A":"#D66B75";ctx.fillRect(e.x-w/2,barY,w*p,7);
-    ctx.font="10px Arial";ctx.textAlign="center";ctx.fillStyle="#FFFFFF";ctx.strokeStyle="#241932";ctx.lineWidth=2;
+    const w=e.type==="treant"?72:48,p=Math.max(0,e.health/e.maxHealth),barY=e.y-size-17;
+    ctx.fillStyle="rgba(8,6,12,.96)";ctx.fillRect(e.x-w/2-2,barY-2,w+4,12);
+    ctx.strokeStyle="rgba(245,235,255,.9)";ctx.lineWidth=1;ctx.strokeRect(e.x-w/2-2,barY-2,w+4,12);
+    ctx.fillStyle="#38212B";ctx.fillRect(e.x-w/2,barY,w,8);
+    ctx.fillStyle=p>.6?"#69C77A":p>.3?"#E4B85C":"#E06470";ctx.fillRect(e.x-w/2,barY,w*p,8);
+    ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.fillStyle="#FFFFFF";ctx.strokeStyle="#100B16";ctx.lineWidth=3;
     const hp=Math.max(0,Math.ceil(e.health))+"/"+Math.ceil(e.maxHealth);ctx.strokeText(hp,e.x,barY-3);ctx.fillText(hp,e.x,barY-3);
     if(e.type==="treant"){ctx.font="12px Georgia";ctx.fillStyle="#F0D58A";ctx.fillText("ANCIENT TREANT",e.x,e.y-size-25);}
   });ctx.textAlign="left";
@@ -300,11 +491,11 @@ function drawCommanderEffects(){
     }else if(effect.type==="rift"){
       ctx.strokeStyle="rgba(190,135,255,"+(0.95*alpha)+")";ctx.lineWidth=9;
       ctx.shadowColor="#B99AE8";ctx.shadowBlur=24;ctx.beginPath();
-      pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+      getPathPoints().forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
       ctx.shadowBlur=0;
-      pathPoints.forEach((p,i)=>{const radius=9+Math.sin(now/70+i)*4;ctx.fillStyle="rgba(216,192,255,"+alpha+")";ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();});
+      getPathPoints().forEach((p,i)=>{const radius=9+Math.sin(now/70+i)*4;ctx.fillStyle="rgba(216,192,255,"+alpha+")";ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();});
       ctx.strokeStyle="rgba(238,220,255,"+alpha+")";ctx.lineWidth=2;
-      for(let i=0;i<5;i++){const p=pathPoints[(Math.floor(now/130)+i)%pathPoints.length];ctx.beginPath();ctx.arc(p.x,p.y,16+i*5,0,Math.PI*2);ctx.stroke();}
+      for(let i=0;i<5;i++){const p=getPathPoints()[(Math.floor(now/130)+i)%getPathPoints().length];ctx.beginPath();ctx.arc(p.x,p.y,16+i*5,0,Math.PI*2);ctx.stroke();}
     }else if(effect.type==="mark"&&effect.target){
       const radius=30+Math.sin(now/75)*7;
       ctx.strokeStyle="#F0D58A";ctx.lineWidth=4;ctx.shadowColor="#F0D58A";ctx.shadowBlur=18;
@@ -342,10 +533,11 @@ function drawPlacementPreview(){
   ctx.strokeStyle=valid?"rgba(185,154,232,.65)":"rgba(214,107,117,.8)";ctx.lineWidth=2;ctx.stroke();
   ctx.globalAlpha=.65;ctx.fillStyle=valid?s.color:"#D66B75";ctx.fillRect(pointerWorld.x-14,pointerWorld.y-14,28,28);ctx.globalAlpha=1;
 }
-function getTotalPathLength(){let n=0;for(let i=0;i<pathPoints.length-1;i++)n+=Math.hypot(pathPoints[i+1].x-pathPoints[i].x,pathPoints[i+1].y-pathPoints[i].y);return n;}
-const totalPathLength=getTotalPathLength();
+function getTotalPathLength(){const points=getPathPoints();let n=0;for(let i=0;i<points.length-1;i++)n+=Math.hypot(points[i+1].x-points[i].x,points[i+1].y-points[i].y);return n;}
 function getPathPosition(progress){
-  let d=progress*totalPathLength;for(let i=0;i<pathPoints.length-1;i++){const a=pathPoints[i],b=pathPoints[i+1],len=Math.hypot(b.x-a.x,b.y-a.y);if(d<=len){const t=d/len;return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}d-=len;}return pathPoints[pathPoints.length-1];
+  const points=getPathPoints();let d=progress*getTotalPathLength();
+  for(let i=0;i<points.length-1;i++){const a=points[i],b=points[i+1],len=Math.hypot(b.x-a.x,b.y-a.y);if(d<=len){const t=d/len;return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}d-=len;}
+  return points[points.length-1];
 }
 function createWaveQueue(wave){
   if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&wave===5)return ["treant"];
@@ -388,7 +580,7 @@ function spawnEnemy(type,waveNumber){
   const damageScale=1+progression*.012+progression*progression*.00005;
   const speedScale=1+progression*.002;
   const health=d.health*healthScale;
-  currentRun.enemies.push({type,x:pathPoints[0].x,y:pathPoints[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale});
+  currentRun.enemies.push({type,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale});
 }
 function updateEnemies(dt){
   currentRun.spawnBatches.forEach(batch=>{
@@ -410,7 +602,7 @@ function updateEnemies(dt){
     }
     if(e.slowTimer>0)e.slowTimer=Math.max(0,e.slowTimer-dt);
     const slowFactor=e.slowTimer>0?.55:1;
-    e.progress+=(e.speed||enemyTypes[e.type].speed)*slowFactor*dt/totalPathLength;
+    e.progress+=(e.speed||enemyTypes[e.type].speed)*slowFactor*dt/getTotalPathLength();
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
@@ -441,7 +633,10 @@ function damageEnemy(e,dmg,applyPassive=true){
     const commanderBonus=getRunCommanderId()==="treasurer"?2:0;
     currentRun.gold+=e.reward+cardBonus+commanderBonus;
     if(applyPassive&&getRunCommanderId()==="necromancer"&&Math.random()<.2){
-      currentRun.spectralAllies.push({life:4,cooldown:0});
+      currentRun.spectralAllies.push({
+        life:4,cooldown:0,damage:18,interval:.85,
+        x:895,y:270,orbitAngle:Math.random()*Math.PI*2,attacking:0
+      });
       showBattleMessage("SOUL HARVESTED · A SPECTRAL ALLY JOINS THE FIGHT");
     }
     updateGameDisplay();
@@ -451,6 +646,12 @@ function updateSpectralAllies(dt){
   if(!currentRun.spectralAllies?.length)return;
   const center={x:895,y:270};
   currentRun.spectralAllies=currentRun.spectralAllies.filter((ally,index)=>{
+    // Keep newly spawned or older saved allies on the battlefield.
+    if(!Number.isFinite(ally.x)||!Number.isFinite(ally.y)){
+      const angle=index*Math.PI*2/3;
+      ally.x=center.x+Math.cos(angle)*24;
+      ally.y=center.y+Math.sin(angle)*18;
+    }
     ally.life-=dt;
     ally.cooldown=Math.max(0,(ally.cooldown||0)-dt);
     ally.orbitAngle=(ally.orbitAngle||index*Math.PI*2/3)+dt*(ally.attacking?.35:1.25);
@@ -617,10 +818,12 @@ function chooseCard(id){
   currentRun.cards.push(id);
   if(id==="walls"){currentRun.maxCastleHealth+=20;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+20);}
   document.getElementById("card-overlay").hidden=true;
+  const previousArea=currentRun.area;
   if(currentRun.stage<3)currentRun.stage++;
   else if(currentRun.campsite<2){currentRun.campsite++;currentRun.stage=1;}
   else if(currentRun.area<3){currentRun.area++;currentRun.campsite=1;currentRun.stage=1;}
   else{currentRun.runFinished=true;showRunCompleteScreen();return;}
+  if(currentRun.area!==previousArea)relocateTowersForCurrentArea();
   currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];currentRun.waveActive=false;currentRun.waitingForWave=false;currentRun.waveStarted=false;currentRun.waveIntervalTimer=0;
   selectedTowerEntity=null;selectedTower=null;currentRun.campsiteRestUsed=false;
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
@@ -664,27 +867,51 @@ function gameLoop(timestamp){
 function startGameLoop(){stopGameLoop();gameRunning=true;lastFrameTime=performance.now();animationFrame=requestAnimationFrame(gameLoop);}
 function stopGameLoop(){gameRunning=false;if(animationFrame!==null){cancelAnimationFrame(animationFrame);animationFrame=null;}}
 function isOnPath(x,y){
-  for(let i=0;i<pathPoints.length-1;i++){const a=pathPoints[i],b=pathPoints[i+1],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;let t=((x-a.x)*dx+(y-a.y)*dy)/l;t=Math.max(0,Math.min(1,t));if(Math.hypot(x-(a.x+t*dx),y-(a.y+t*dy))<38)return true;}return false;
+  const clearance=20,points=getPathPoints();
+  for(let i=0;i<points.length-1;i++){
+    const a=points[i],b=points[i+1],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;
+    let t=((x-a.x)*dx+(y-a.y)*dy)/l;t=Math.max(0,Math.min(1,t));
+    if(Math.hypot(x-(a.x+t*dx),y-(a.y+t*dy))<clearance)return true;
+  }
+  return false;
+}
+function isValidTowerSpot(x,y,ignoreTower=null){
+  if(!Number.isFinite(x)||!Number.isFinite(y))return false;
+  if(x<42||x>918||y<42||y>498||isOnPath(x,y)||Math.hypot(x-75,y-270)<68||(x>824&&y>194&&y<346))return false;
+  if(getTreePositions().some(([tx,ty])=>Math.hypot(x-tx,y-ty)<43))return false;
+  if(currentRun.towers.some(t=>t!==ignoreTower&&Math.hypot(x-t.x,y-t.y)<44))return false;
+  return true;
+}
+function relocateTowersForCurrentArea(){
+  if(!currentRun)return;
+  let moved=0;
+  currentRun.towers.forEach(t=>{
+    if(isValidTowerSpot(t.x,t.y,t))return;
+    let found=null;
+    for(let radius=12;radius<=360&&!found;radius+=12){
+      for(let step=0;step<48;step++){
+        const angle=step*Math.PI*2/48;
+        const x=Math.round((t.x+Math.cos(angle)*radius)/6)*6;
+        const y=Math.round((t.y+Math.sin(angle)*radius)/6)*6;
+        if(isValidTowerSpot(x,y,t)){found={x,y};break;}
+      }
+    }
+    if(found){t.x=found.x;t.y=found.y;moved++;}
+  });
+  if(moved)showBattleMessage(moved+" TOWER"+(moved===1?"":"S")+" REPOSITIONED TO CLEAR THE NEW ROAD");
 }
 function canBuild(x,y,checkGold=true){
-  if(!Number.isFinite(x)||!Number.isFinite(y))return false;
-  if(x<22||x>938||y<22||y>518||isOnPath(x,y)||Math.hypot(x-75,y-270)<62||(x>830&&y>200&&y<340))return false;
-  if(treePositions.some(([tx,ty])=>Math.abs(x-tx)<34&&y>ty-46&&y<ty+26))return false;
-  if(currentRun.towers.some(t=>Math.hypot(x-t.x,y-t.y)<37))return false;
+  if(!isValidTowerSpot(x,y))return false;
   return !checkGold||currentRun.gold>=towerTypes[selectedTower].cost;
 }
 function canvasPoint(e){
   const rect=canvas.getBoundingClientRect();
-  // Pointer coordinates must be measured from the canvas drawing area,
-  // not its outer border. The CSS border otherwise creates a visible offset.
-  const contentLeft=rect.left+canvas.clientLeft;
-  const contentTop=rect.top+canvas.clientTop;
-  const contentWidth=canvas.clientWidth;
-  const contentHeight=canvas.clientHeight;
-  if(!contentWidth||!contentHeight)return{x:0,y:0};
+  // The canvas has no CSS border: its outline is purely decorative and does
+  // not change the drawing area. Map the full visible rectangle to its bitmap.
+  if(!rect.width||!rect.height)return{x:0,y:0};
   return {
-    x:(e.clientX-contentLeft)*(canvas.width/contentWidth),
-    y:(e.clientY-contentTop)*(canvas.height/contentHeight)
+    x:Math.max(0,Math.min(canvas.width,(e.clientX-rect.left)*(canvas.width/rect.width))),
+    y:Math.max(0,Math.min(canvas.height,(e.clientY-rect.top)*(canvas.height/rect.height)))
   };
 }
 function handleBattlefieldClick(e){
@@ -694,7 +921,7 @@ function handleBattlefieldClick(e){
   if(!selectedTower){selectedTowerEntity=null;updateTowerPanel();return;}
   const type=towerTypes[selectedTower];if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
   if(!canBuild(p.x,p.y)){showBattleMessage("THAT LOCATION IS BLOCKED — TRY ANOTHER OPEN AREA");return;}
-  currentRun.gold-=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}});
+  currentRun.gold-=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,investedGold:type.cost,upgrades:{damage:0,range:0,speed:0}});
   updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(type.name.toUpperCase()+" BUILT");
 }
 function selectTower(type){
@@ -702,11 +929,28 @@ function selectTower(type){
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.toggle("selected",b.dataset.tower===type));
   updateTowerPanel();showBattleMessage(type.toUpperCase()+" SELECTED — CLICK AN OPEN AREA TO BUILD");
 }
+function getTowerInvestment(t){
+  if(Number.isFinite(t.investedGold))return Math.max(0,t.investedGold);
+  const base=towerTypes[t.type]?.cost||0;
+  let total=base;
+  for(let level=1;level<t.level;level++)total+=(towerTypes[t.type]?.upgradeCost||0)+(level-1)*35;
+  return total;
+}
+function sellSelectedTower(){
+  const t=selectedTowerEntity;if(!t||!currentRun)return;
+  const index=currentRun.towers.indexOf(t);if(index<0)return;
+  const refund=Math.floor(getTowerInvestment(t)*.5);
+  currentRun.gold+=refund;
+  currentRun.towers.splice(index,1);
+  selectedTowerEntity=null;selectedTower=null;
+  updateGameDisplay();persistRunCheckpoint("battle");
+  showBattleMessage("TOWER DISMANTLED · "+refund+" GOLD REFUNDED");
+}
 function upgradeSelectedTower(stat){
-  const t=selectedTowerEntity;if(!t||!currentRun)return;const s=getTowerStats(t),cost=towerTypes[t.type].upgradeCost+(t.level-1)*35;
+  const t=selectedTowerEntity;if(!t||!currentRun)return;const cost=towerTypes[t.type].upgradeCost+(t.level-1)*35;
   if(t.level>=4){showBattleMessage("THIS TOWER IS FULLY UPGRADED");return;}
   if(currentRun.gold<cost){showBattleMessage("NOT ENOUGH GOLD FOR THIS UPGRADE");return;}
-  currentRun.gold-=cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
+  currentRun.gold-=cost;t.investedGold=getTowerInvestment(t)+cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
 }
 function updateTowerPanel(){
   const panel=document.getElementById("tower-info-panel");if(!panel)return;
@@ -720,8 +964,11 @@ function updateTowerPanel(){
     '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="damage">Increase damage <span>+30% base damage</span></button>'+
     '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="range">Increase range <span>+22 px</span></button>'+
     '<button class="tower-upgrade-button" '+(disabled?'disabled':'')+' data-upgrade="speed">Faster attacks <span>-0.16s cooldown</span></button>'+
-    '<p class="panel-hint">'+(t.level>=4?"MAX LEVEL REACHED":"Each upgrade increases the tower level. Maximum level: 4.")+'</p>';
+    '<p class="panel-hint">'+(t.level>=4?"MAX LEVEL REACHED":"Each upgrade increases the tower level. Maximum level: 4.")+'</p>'+
+    '<div class="tower-sell-summary"><span>INVESTED · '+getTowerInvestment(t)+' G</span><strong>REFUND · '+Math.floor(getTowerInvestment(t)*.5)+' G</strong></div>'+
+    '<button class="tower-sell-button" type="button" data-sell-tower>DISMANTLE TOWER · '+Math.floor(getTowerInvestment(t)*.5)+' G</button>';
   panel.querySelectorAll("[data-upgrade]").forEach(b=>b.addEventListener("click",()=>upgradeSelectedTower(b.dataset.upgrade)));
+  panel.querySelector("[data-sell-tower]")?.addEventListener("click",sellSelectedTower);
 }
 canvas.addEventListener("pointermove",e=>{if(!gameScreenIsHidden())pointerWorld=canvasPoint(e);});
 canvas.addEventListener("pointerleave",()=>pointerWorld=null);
