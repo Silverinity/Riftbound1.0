@@ -357,7 +357,7 @@
         </div>
     </div>
 
-    <script>window.RIFTBOUND_API_BASE = "https://riftbound-auth.onrender.com";</script>
+    <script>window.RIFTBOUND_API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:3000" : "https://riftbound-auth.onrender.com";</script>
     <script src="js/commanders.js"></script>
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>
