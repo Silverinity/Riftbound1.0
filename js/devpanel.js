@@ -91,6 +91,24 @@
 
   $("dev-pause").addEventListener("click",()=>{if(!active())return;stopGameLoop();say("Game loop paused. Use Resume Game to continue.");});
   $("dev-resume").addEventListener("click",()=>{if(!active())return;if($("card-overlay").hidden&&$("progress-overlay").hidden&&$("result-overlay").hidden)startGameLoop();say("Game loop resumed.");});
+  $("dev-add-class-xp").addEventListener("click",()=>{
+    if(!active())return;
+    const id=$("dev-class").value,n=amount("dev-xp-amount",500,100000);
+    const result=window.devRiftboundGrantClassXP?.(id,n);
+    if(!result){say("Could not grant class XP.");return;}
+    say("Granted "+n+" XP to "+id.toUpperCase()+" · LEVEL "+result.level+".");
+  });
+  $("dev-add-skill-points").addEventListener("click",()=>{
+    if(!active())return;
+    const id=$("dev-class").value,n=amount("dev-points-amount",2,1000);
+    const total=window.devRiftboundGrantSkillPoints?.(id,n);
+    say("Granted "+n+" skill points to "+id.toUpperCase()+" · TOTAL "+total+".");
+  });
+  $("dev-test-campfire").addEventListener("click",()=>{
+    if(!active())return;
+    if(window.devRiftboundForceCampfire?.()){say("Campfire checkpoint opened. Continue Run will now resume here.");}
+    else say("Could not open a campfire checkpoint.");
+  });
   $("dev-apply-speed").addEventListener("click",()=>{if(!active())return;currentRun.devGameSpeed=Math.max(.5,Math.min(3,Number($("dev-speed").value)||1));say("Game speed set to "+currentRun.devGameSpeed+"×.");});
 
   // Drag by the title bar; clamp the panel so its header remains reachable.
