@@ -269,7 +269,7 @@ window.restoreRiftboundRun=function(saved){
     gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
   const legacyWaveCheckpoint=data.waveInProgress===undefined&&Number(data.currentWave)>0;
   if((data.waveInProgress||legacyWaveCheckpoint)&&!currentRun.pendingCardSelection&&!currentRun.pendingRoute)currentRun.currentWave=Math.max(0,(Number(data.currentWave)||1)-1);
-  if(!data.pendingCardSelection&&!data.pendingRoute&&Number(data.currentWave)>=5){
+  if(data.waveInProgress===undefined&&!data.pendingCardSelection&&!data.pendingRoute&&Number(data.currentWave)>=5){
     currentRun.pendingCardSelection=true;
     currentRun.pendingCompletedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+5;
     currentRun.currentWave=0;
