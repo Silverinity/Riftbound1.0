@@ -30,7 +30,6 @@
 
   const byId = id => document.getElementById(id);
   const mainMenu = byId("main-menu");
-  const preparationScreen = byId("preparation-screen");
   const hubScreen = byId("hub-screen");
   const gameScreen = byId("game-screen");
   const campsiteScreen = byId("campsite-screen");
@@ -206,7 +205,6 @@
 
   function hideScreens() {
     mainMenu.style.display = "none";
-    preparationScreen.hidden = true;
     if (hubScreen) hubScreen.hidden = true;
     gameScreen.hidden = true;
     if (campsiteScreen) campsiteScreen.hidden = true;
