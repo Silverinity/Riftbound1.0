@@ -211,6 +211,7 @@ function persistRunCheckpoint(checkpoint="battle"){
   };
   window.riftboundCloudSave(run);
 }
+window.persistRiftboundCheckpoint = persistRunCheckpoint;
 
 window.restoreRiftboundRun=function(saved){
   if(!saved||!saved.run)return false;
