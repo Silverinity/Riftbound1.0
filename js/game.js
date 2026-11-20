@@ -68,12 +68,13 @@ const treesByArea = [
 function getAreaIndex(){return Math.max(0,Math.min(2,(currentRun?.area||1)-1));}
 function getPathPoints(){
   const points=pathsByArea[getAreaIndex()];
-  // Nudge the route's bends downward while keeping its portal and castle endpoints fixed.
-  return points.map((point,index)=>(
-    index===0||index===points.length-1
-      ? point
-      : {x:point.x,y:Math.min(490,point.y+55)}
-  ));
+  // Keep each route's original sequence of bends, but make the route more compact
+  // and lower on the battlefield. The portal and castle endpoints stay anchored.
+  return points.map((point,index)=>{
+    if(index===0||index===points.length-1)return point;
+    const loweredY=Math.min(490,point.y+55);
+    return {x:point.x,y:Math.round(270+(loweredY-270)*.78)};
+  });
 }
 function getTreePositions(){return treesByArea[getAreaIndex()];}
 const areas = [
@@ -282,21 +283,28 @@ function drawPath(){
   const palette=environmentPalette(),points=getPathPoints();
   ctx.save();ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();
   points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.strokeStyle="rgba(0,0,0,.30)";ctx.lineWidth=50;ctx.stroke();
-  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=46;ctx.stroke();
-  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=40;ctx.stroke();
-  ctx.strokeStyle=palette.path;ctx.lineWidth=34;ctx.stroke();
-  ctx.strokeStyle=currentRun.area===2?"rgba(35,25,23,.38)":currentRun.area===3?"rgba(206,228,243,.2)":"rgba(42,34,25,.28)";ctx.lineWidth=1.5;ctx.setLineDash([2,8]);ctx.stroke();ctx.setLineDash([]);
-  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=2;ctx.stroke();
-  ctx.strokeStyle=currentRun.area===2?"rgba(255,174,104,.32)":currentRun.area===3?"rgba(205,235,255,.48)":"rgba(218,190,132,.38)";
-  ctx.lineWidth=2;ctx.setLineDash([3,13]);ctx.stroke();ctx.setLineDash([]);
-  // Small embedded stones make the road read as a finished game-map surface.
+  // Narrow, layered road surface with a crisp pixel-art border.
+  ctx.strokeStyle="rgba(0,0,0,.34)";ctx.lineWidth=40;ctx.stroke();
+  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=35;ctx.stroke();
+  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=30;ctx.stroke();
+  ctx.strokeStyle=palette.path;ctx.lineWidth=26;ctx.stroke();
+  ctx.strokeStyle=currentRun.area===2?"rgba(35,25,23,.48)":currentRun.area===3?"rgba(206,228,243,.28)":"rgba(42,34,25,.38)";
+  ctx.lineWidth=1.5;ctx.setLineDash([2,7]);ctx.stroke();ctx.setLineDash([]);
+  // Broken edge highlights and inset stones add definition without widening the road.
+  ctx.strokeStyle=currentRun.area===2?"rgba(255,174,104,.42)":currentRun.area===3?"rgba(205,235,255,.58)":"rgba(218,190,132,.48)";
+  ctx.lineWidth=1.5;ctx.setLineDash([4,18]);ctx.stroke();ctx.setLineDash([]);
   for(let i=0;i<points.length-1;i++){
-    const a=points[i],b=points[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.floor(len/34);
+    const a=points[i],b=points[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.floor(len/22);
     for(let j=1;j<steps;j++){
       const t=j/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
-      ctx.fillStyle=currentRun.area===2?"rgba(35,25,22,.32)":currentRun.area===3?"rgba(210,231,246,.22)":"rgba(42,35,28,.25)";
-      ctx.fillRect(x-3,y-2,6,4);
+      const seed=(i*97+j*31+currentRun.area*53)%11;
+      if(seed<4){
+        ctx.fillStyle=currentRun.area===2?"rgba(35,25,22,.42)":currentRun.area===3?"rgba(210,231,246,.34)":"rgba(42,35,28,.36)";
+        ctx.fillRect(Math.round(x)-2,Math.round(y)-1,3,2);
+      }else if(seed===8){
+        ctx.fillStyle=currentRun.area===2?"rgba(255,153,91,.38)":currentRun.area===3?"rgba(235,248,255,.42)":"rgba(222,202,153,.4)";
+        ctx.fillRect(Math.round(x),Math.round(y),2,1);
+      }
     }
   }
   ctx.restore();
@@ -825,7 +833,7 @@ function gameLoop(timestamp){
 function startGameLoop(){stopGameLoop();gameRunning=true;lastFrameTime=performance.now();animationFrame=requestAnimationFrame(gameLoop);}
 function stopGameLoop(){gameRunning=false;if(animationFrame!==null){cancelAnimationFrame(animationFrame);animationFrame=null;}}
 function isOnPath(x,y){
-  const clearance=34,points=getPathPoints();
+  const clearance=29,points=getPathPoints();
   for(let i=0;i<points.length-1;i++){
     const a=points[i],b=points[i+1],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;
     let t=((x-a.x)*dx+(y-a.y)*dy)/l;t=Math.max(0,Math.min(1,t));
