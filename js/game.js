@@ -228,7 +228,6 @@ window.restoreRiftboundRun=function(saved){
   relocateTowersForCurrentArea();
   document.getElementById("main-menu").style.display="none";
   document.getElementById("hub-screen").hidden=true;
-  document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=data.checkpoint==="campsite";
   document.getElementById("campsite-screen").hidden=data.checkpoint!=="campsite";
   updateAreaLabels();updateGameDisplay();
@@ -1253,4 +1252,3 @@ function showRunCompleteScreen(){
   document.getElementById("result-continue").textContent="RETURN TO MENU";
   document.getElementById("result-overlay").hidden=false;
 }
-function updatePreparationArea(){document.getElementById("preparation-screen").querySelector(".prep-eyebrow").textContent="YOUR NEXT EXPEDITION · AREA 01";document.querySelector(".region-details span").textContent="30 WAVES · 2 CAMPSITES";}
