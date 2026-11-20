@@ -267,7 +267,13 @@ window.restoreRiftboundRun=function(saved){
     encounter:data.encounter||{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},traitId:data.traitId||"bulwarks-oath",defeatedBosses:Array.isArray(data.defeatedBosses)?data.defeatedBosses:[],
     pendingCardSelection:!!data.pendingCardSelection,pendingRoute:!!data.pendingRoute,pendingCompletedWaves:Number(data.pendingCompletedWaves)||0,
     gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
-  if(data.waveInProgress&&!currentRun.pendingCardSelection&&!currentRun.pendingRoute)currentRun.currentWave=Math.max(0,(Number(data.currentWave)||1)-1);
+  const legacyWaveCheckpoint=data.waveInProgress===undefined&&Number(data.currentWave)>0;
+  if((data.waveInProgress||legacyWaveCheckpoint)&&!currentRun.pendingCardSelection&&!currentRun.pendingRoute)currentRun.currentWave=Math.max(0,(Number(data.currentWave)||1)-1);
+  if(!data.pendingCardSelection&&!data.pendingRoute&&Number(data.currentWave)>=5){
+    currentRun.pendingCardSelection=true;
+    currentRun.pendingCompletedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+5;
+    currentRun.currentWave=0;
+  }
   selectedTower=null;selectedTowerEntity=null;
   relocateTowersForCurrentArea();
   document.getElementById("main-menu").style.display="none";
