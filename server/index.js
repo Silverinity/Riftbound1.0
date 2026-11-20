@@ -344,6 +344,13 @@ function cleanSave(body) {
       stats[key] = Number.isFinite(run.stats?.[key]) ? Math.max(0, Math.floor(run.stats[key])) : 0;
     }
     const routeIds = new Set(["bear-cave","wolf-den","goblin-camp","hollow-bear","rift-alpha","cinder-quarry","ash-wastes","scavenger-crossing","ash-colossus","goblin-warlord","frozen-hollow","wraithwood","shattered-keep","frost-wyrm","riftbound-knight"]);
+    const commanderIds = new Set(["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"]);
+    const bonusKeys = ["fortressHp","cooldown","damage","range","damageReduction","towerSpeed","arcaneDamage","slowPower","abilityDamage","eliteDamage","eliteGold","goldBonus","costReduction","startingGold","archerDamage","cannonDamage","burnDamage","burnChance","areaDamage","summonChance","summonDamage","summonDuration","bossDamage","slowDuration","stageHeal","flatHealth","healthyDamage","lowHealthSpeed","bossReduction","arcaneRange","markedDamage","stageGold","abilityGold","bossGold","bossGoldFlat","burnDamageBonus","burnDuration","burnSlow","extraWraith","summonDamageBonus","summonBossDamage","slowedDamage","freshDamage","lowDamage","cannonSplash","abilityEcho"];
+    const cleanBonuses = {};
+    if (run.skillBonuses && typeof run.skillBonuses === "object") {
+      for (const key of bonusKeys) if (Number.isFinite(run.skillBonuses[key])) cleanBonuses[key] = Math.max(0, Math.min(5, run.skillBonuses[key]));
+      for (const key of ["everyFifthSoul","burnSpread","wraithSlow"]) if (typeof run.skillBonuses[key] === "boolean") cleanBonuses[key] = run.skillBonuses[key];
+    }
     const bossIds = new Set(["hollow-bear","rift-alpha","ash-colossus","goblin-warlord","frost-wyrm","riftbound-knight"]);
     const encounter = run.encounter && routeIds.has(run.encounter.id) ? {
       id: run.encounter.id,
@@ -359,8 +366,8 @@ function cleanSave(body) {
         investedGold: Number.isFinite(t.investedGold) ? Math.max(0, t.investedGold) : 0,
         upgrades: { damage: t.upgrades.damage, range: t.upgrades.range, speed: t.upgrades.speed } })),
       towerDamageBonus: run.towerDamageBonus, cards: run.cards,
-      commanderId: typeof run.commanderId === "string" ? run.commanderId : "warden",
-      skillBonuses: run.skillBonuses && typeof run.skillBonuses === "object" ? run.skillBonuses : {},
+      commanderId: commanderIds.has(run.commanderId) ? run.commanderId : "warden",
+      skillBonuses: cleanBonuses,
       abilityCooldown: Number.isFinite(run.abilityCooldown) ? Math.max(0, run.abilityCooldown) : 0,
       campsiteRestUsed: Boolean(run.campsiteRestUsed), checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle",
       completed: Boolean(run.completed),
