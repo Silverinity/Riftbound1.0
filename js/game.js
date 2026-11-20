@@ -233,60 +233,7 @@ function startNewRun(){
 window.startRiftboundNewRun=startNewRun;
 function areaData(){return areas[currentRun.area-1]||areas[0];}
 
-function persistRunCheckpoint(checkpoint="battle"){
-  if(!currentRun||checkpoint!=="campsite"||typeof window.riftboundCloudSave!=="function")return false;
-  const run={
-    gold:currentRun.gold,castleHealth:currentRun.castleHealth,maxCastleHealth:currentRun.maxCastleHealth,
-    area:currentRun.area,campsite:currentRun.campsite,stage:currentRun.stage,currentWave:currentRun.currentWave,
-    totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,investedGold:getTowerInvestment(t),
-      upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
-    towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
-    commanderId:currentRun.commanderId||"warden",traitId:currentRun.traitId||"bulwarks-oath",skillBonuses:currentRun.skillBonuses||{},abilityCooldown:currentRun.abilityCooldown||0,
-    campsiteRestUsed:!!currentRun.campsiteRestUsed,stats:currentRun.stats||{},encounter:currentRun.encounter||null,
-    defeatedBosses:currentRun.defeatedBosses||[],completed:!!currentRun.finalized,
-    pendingCardSelection:!!currentRun.pendingCardSelection,pendingRoute:!!currentRun.pendingRoute,
-    pendingCompletedWaves:currentRun.pendingCompletedWaves||0,
-    waveInProgress:!!(currentRun.waveActive&&(currentRun.spawnBatches.length||currentRun.enemies.length)),checkpoint
-  };
-  window.riftboundCloudSave(run);
-  return true;
-}
-window.persistRiftboundCheckpoint = persistRunCheckpoint;
-
-window.restoreRiftboundRun=function(saved){
-  if(!saved||!saved.run)return false;
-  const data=saved.run;
-  stopGameLoop();
-  const savedCommander=data.commanderId||window.riftboundCommanderId||"warden";
-  window.riftboundCommanderId=savedCommander;
-  if(typeof window.setRiftboundCommanderSelection==="function")window.setRiftboundCommanderSelection(savedCommander);
-  const restoredTowers=(data.towers||[]).map((tower,index)=>({
-    ...tower,
-    investedGold:Number.isFinite(tower.investedGold)?tower.investedGold:(index===0?0:undefined)
-  }));
-  currentRun={...createNewRun(),...data,towers:restoredTowers,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
-    stats:{damageDealt:0,damageTaken:0,goldSpent:0,enemiesKilled:0,wavesCompleted:0,bossesDefeated:0,...(data.stats||{})},
-    encounter:data.encounter||{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},traitId:data.traitId||"bulwarks-oath",defeatedBosses:Array.isArray(data.defeatedBosses)?data.defeatedBosses:[],
-    pendingCardSelection:!!data.pendingCardSelection,pendingRoute:!!data.pendingRoute,pendingCompletedWaves:Number(data.pendingCompletedWaves)||0,
-    gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
-  const legacyWaveCheckpoint=data.waveInProgress===undefined&&Number(data.currentWave)>0;
-  if((data.waveInProgress||legacyWaveCheckpoint)&&!currentRun.pendingCardSelection&&!currentRun.pendingRoute)currentRun.currentWave=Math.max(0,(Number(data.currentWave)||1)-1);
-  selectedTower=null;selectedTowerEntity=null;
-  relocateTowersForCurrentArea();
-  document.getElementById("main-menu").style.display="none";
-  document.getElementById("hub-screen").hidden=true;
-  document.getElementById("game-screen").hidden=data.checkpoint==="campsite";
-  document.getElementById("campsite-screen").hidden=data.checkpoint!=="campsite";
-  updateAreaLabels();updateGameDisplay();
-  if(data.checkpoint==="campsite"){
-    showCampsiteScreen(((currentRun.area-1)*30)+((currentRun.campsite-1)*15));
-  }else{
-    initBattlefield();
-    if(currentRun.pendingCardSelection)showCardSelection();
-    else if(currentRun.pendingRoute)showDestinationSelection(currentRun.pendingCompletedWaves);
-  }
-  return true;
-};
+function persistRunCheckpoint(){return false;}
 function updateAreaLabels(){
   const a=areaData();
   const battleRegion=document.querySelector(".battle-region span");
