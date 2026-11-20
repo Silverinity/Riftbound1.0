@@ -925,7 +925,7 @@ function getEnemyDamageMultiplier(target){
   const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   let multiplier=1;
   if(getRunCommanderId()==="huntmaster"&&target.maxHealth>=150)multiplier*=1.2*(1+(bonuses.eliteDamage||0));
-  if(target===currentRun.markedEnemy&&currentRun.markedTimer>0)multiplier*=1.6+(bonuses.markedDamage||0);
+  if(target===currentRun.markedEnemy&&currentRun.markedTimer>0)multiplier*=1.6*(1+(bonuses.markedDamage||0));
   if(target.isBoss)multiplier*=1+(bonuses.bossDamage||0)+(trait.bossDamage||0);
   if(target.slowTimer>0)multiplier*=1+(bonuses.slowedDamage||0)+(trait.slowedDamage||0);
   if(target.health/target.maxHealth>.7)multiplier*=1+(bonuses.freshDamage||0);
