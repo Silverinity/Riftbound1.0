@@ -222,3 +222,49 @@
 @media (prefers-reduced-motion: reduce) {
   .commander-ability-button.ability-activated { animation: none; }
 }
+
+
+/* Commander hub panels */
+#commander-selection { margin-top:4px; padding:clamp(16px,2.5vw,28px); background:rgba(24,21,23,.76); border:1px solid rgba(160,128,94,.28); }
+.commander-section-heading h2,.skill-tree-heading h2 { color:#EEE5D8; font-size:clamp(22px,3vw,30px); letter-spacing:1.6px; }
+.commander-section-heading > div > p:last-child,.skill-tree-heading > div > p:last-child { color:#A99E92; margin-top:9px; line-height:1.6; font-size:12px; }
+#commander-selected-summary { color:#C2A17A; font-size:10px; letter-spacing:1.4px; }
+.commander-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:13px; }
+.commander-card { background:linear-gradient(155deg,#211D1E,#151316); border-color:rgba(160,128,94,.24); }
+.commander-card-selected { border-color:#B99A78; background:linear-gradient(145deg,rgba(117,83,52,.25),#171416 78%); box-shadow:inset 0 0 0 1px rgba(185,154,120,.15); }
+.commander-emblem { color:#C7A77E; background:#2B2420; border-color:#806448; }
+.commander-speciality,.commander-detail span,.commander-tradeoff b { color:#C2A17A; }
+.commander-card h3 { color:#EEE5D8; }
+.commander-detail p,.commander-playstyle,.commander-tradeoff { color:#B0A69B; }
+.commander-playstyle { border-color:rgba(160,128,94,.2); }
+.commander-card button { color:#E8DCCB; background:#30251F; border-color:#806448; }
+.commander-card button:hover { background:#49372A; border-color:#B99A78; }
+.commander-card-selected button { background:#49372A; border-color:#B99A78; }
+.skill-tree-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; margin:4px 0 28px; }
+.skill-tree-heading h2 { margin-top:8px; }
+.skill-points { display:flex; align-items:center; gap:12px; min-width:145px; padding:12px 16px; border:1px solid #806448; background:rgba(117,83,52,.16); }
+.skill-points strong { color:#E0BD8F; font-size:30px; font-variant-numeric:tabular-nums; }
+.skill-points span { color:#B9A995; font-size:8px; line-height:1.5; letter-spacing:1.4px; }
+.skill-commander-label { display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid rgba(160,128,94,.2); border-bottom:1px solid rgba(160,128,94,.2); color:#BDA17D; font-size:9px; letter-spacing:1.5px; }
+.skill-path-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:16px; }
+.skill-path-card { display:flex; flex-direction:column; min-width:0; padding:20px; background:linear-gradient(145deg,#211D1E,#151316); border:1px solid rgba(160,128,94,.28); }
+.skill-path-icon { display:grid; place-items:center; width:40px; height:40px; margin-bottom:14px; color:#D1B18A; background:rgba(145,111,77,.13); border:1px solid rgba(177,142,105,.34); font-size:20px; }
+.skill-path-kicker { color:#B99A78; font-size:8px; letter-spacing:1.6px; }
+.skill-path-copy h3 { margin-top:7px; color:#EEE5D8; font-size:15px; letter-spacing:1px; }
+.skill-path-copy p { min-height:38px; margin-top:8px; color:#A99E92; font-size:11px; line-height:1.55; }
+.skill-node-row { display:flex; gap:7px; margin:17px 0 13px; }
+.skill-node { display:grid; place-items:center; width:27px; height:27px; color:#83796F; border:1px solid #51463C; background:#151316; font-size:9px; }
+.skill-node.unlocked { color:#F1DDC0; border-color:#B08A5F; background:#55402D; box-shadow:inset 0 0 10px rgba(185,154,120,.12); }
+.skill-path-footer { display:flex; justify-content:space-between; gap:10px; margin-top:auto; color:#A99E92; font-size:9px; letter-spacing:1px; }
+.skill-path-footer strong { color:#D1B18A; }
+.skill-path-card button { min-height:39px; margin-top:14px; padding:9px; color:#E8DCCB; background:#30251F; border:1px solid #806448; font-size:8px; letter-spacing:1.2px; cursor:pointer; }
+.skill-path-card button:hover:not(:disabled) { background:#49372A; border-color:#B99A78; }
+.skill-path-card button:disabled { opacity:.5; cursor:not-allowed; }
+.skill-tree-footnote { margin-top:18px; color:#82786F; font-size:10px; line-height:1.5; }
+@media (max-width:900px) { .commander-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:620px) {
+  #commander-selection { padding:15px; }
+  .commander-grid,.skill-path-grid { grid-template-columns:1fr; }
+  .skill-tree-heading { align-items:flex-start; flex-direction:column; }
+  .skill-path-copy p { min-height:0; }
+}
