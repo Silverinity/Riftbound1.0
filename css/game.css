@@ -262,7 +262,7 @@
     border: 2px solid #49335F;
     background: #18251B;
     image-rendering: pixelated;
-    cursor: crosshair;
+    cursor: default;
     touch-action: none;
     user-select: none;
 }
