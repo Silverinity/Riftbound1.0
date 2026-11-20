@@ -322,46 +322,72 @@ async function verifiedSaveUser(req) {
 function cleanSave(body) {
   if (!body || typeof body !== "object" || !body.save || typeof body.save !== "object") return null;
   const save = body.save;
+  if (save.version !== 1 || JSON.stringify(save).length > 100000) return null;
   const run = save.run;
-  if (save.version !== 1 || !run || typeof run !== "object" || JSON.stringify(save).length > 100000) return null;
-  const numeric = ["gold", "castleHealth", "maxCastleHealth", "area", "campsite", "stage", "currentWave", "totalWaves", "towerDamageBonus"];
-  if (!numeric.every(k => Number.isFinite(run[k]))) return null;
-  if (run.gold < 0 || run.castleHealth < 0 || run.maxCastleHealth < 1 || run.area < 1 || run.area > 3 ||
-      run.campsite < 1 || run.campsite > 2 || run.stage < 1 || run.stage > 3 || run.currentWave < 0 || run.currentWave > 5) return null;
-  const towerTypes = new Set(["archer", "arcane", "cannon"]);
-  if (!Array.isArray(run.towers) || run.towers.length < 1 || run.towers.length > 100) return null;
-  for (const t of run.towers) {
-    if (!t || !towerTypes.has(t.type) || !Number.isFinite(t.x) || !Number.isFinite(t.y) ||
-        !Number.isInteger(t.level) || t.level < 1 || t.level > 4 || !t.upgrades ||
-        !["damage", "range", "speed"].every(k => Number.isInteger(t.upgrades[k]) && t.upgrades[k] >= 0 && t.upgrades[k] <= 3)) return null;
-  }
-  const cards = new Set(["arrows", "arcane", "siege", "greed", "walls"]);
-  if (!Array.isArray(run.cards) || run.cards.length > 100 || !run.cards.every(c => cards.has(c))) return null;
-  const settingKeys = ["masterVolume", "musicVolume", "sfxVolume", "screenShake", "damageNumbers", "towerRanges", "difficulty", "developerMode"];
-  const settings = {};
-  if (save.settings && typeof save.settings === "object") {
-    for (const key of settingKeys) {
-      if (Object.hasOwn(save.settings, key)) settings[key] = save.settings[key];
+  let cleanRun = null;
+  if (run !== null && run !== undefined) {
+    const numeric = ["gold", "castleHealth", "maxCastleHealth", "area", "campsite", "stage", "currentWave", "totalWaves", "towerDamageBonus"];
+    if (typeof run !== "object" || !numeric.every(k => Number.isFinite(run[k]))) return null;
+    if (run.gold < 0 || run.castleHealth < 0 || run.maxCastleHealth < 1 || run.area < 1 || run.area > 3 ||
+        run.campsite < 1 || run.campsite > 2 || run.stage < 1 || run.stage > 3 || run.currentWave < 0 || run.currentWave > 5) return null;
+    const towerTypes = new Set(["archer", "arcane", "cannon"]);
+    if (!Array.isArray(run.towers) || run.towers.length < 1 || run.towers.length > 100) return null;
+    for (const t of run.towers) {
+      if (!t || !towerTypes.has(t.type) || !Number.isFinite(t.x) || !Number.isFinite(t.y) ||
+          !Number.isInteger(t.level) || t.level < 1 || t.level > 4 || !t.upgrades ||
+          !["damage", "range", "speed"].every(k => Number.isInteger(t.upgrades[k]) && t.upgrades[k] >= 0 && t.upgrades[k] <= 3)) return null;
     }
-  }
-  return {
-    version: 1,
-    run: {
+    const cards = new Set(["arrows", "arcane", "siege", "greed", "walls"]);
+    if (!Array.isArray(run.cards) || run.cards.length > 100 || !run.cards.every(card => cards.has(card))) return null;
+    const stats = {};
+    for (const key of ["damageDealt", "damageTaken", "goldSpent", "enemiesKilled", "wavesCompleted", "bossesDefeated"]) {
+      stats[key] = Number.isFinite(run.stats?.[key]) ? Math.max(0, Math.floor(run.stats[key])) : 0;
+    }
+    cleanRun = {
       gold: run.gold, castleHealth: run.castleHealth, maxCastleHealth: run.maxCastleHealth,
       area: run.area, campsite: run.campsite, stage: run.stage, currentWave: run.currentWave,
       totalWaves: run.totalWaves,
       towers: run.towers.map(t => ({ type: t.type, x: t.x, y: t.y, level: t.level,
-        investedGold: Number.isFinite(t.investedGold) ? t.investedGold : 0,
+        investedGold: Number.isFinite(t.investedGold) ? Math.max(0, t.investedGold) : 0,
         upgrades: { damage: t.upgrades.damage, range: t.upgrades.range, speed: t.upgrades.speed } })),
       towerDamageBonus: run.towerDamageBonus, cards: run.cards,
       commanderId: typeof run.commanderId === "string" ? run.commanderId : "warden",
       skillBonuses: run.skillBonuses && typeof run.skillBonuses === "object" ? run.skillBonuses : {},
       abilityCooldown: Number.isFinite(run.abilityCooldown) ? Math.max(0, run.abilityCooldown) : 0,
-      campsiteRestUsed: Boolean(run.campsiteRestUsed),
-      checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle"
-    },
-    settings
-  };
+      campsiteRestUsed: Boolean(run.campsiteRestUsed), checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle",
+      stats, encounter: run.encounter && typeof run.encounter === "object" ? run.encounter : null,
+      defeatedBosses: Array.isArray(run.defeatedBosses) ? run.defeatedBosses.filter(x => typeof x === "string").slice(0, 20) : []
+    };
+  }
+  const settingKeys = ["masterVolume", "musicVolume", "sfxVolume", "screenShake", "damageNumbers", "towerRanges", "developerMode"];
+  const settings = {};
+  if (save.settings && typeof save.settings === "object") {
+    for (const key of settingKeys) if (Object.hasOwn(save.settings, key)) settings[key] = save.settings[key];
+  }
+  const classIds = ["warden", "arcanist", "huntmaster", "treasurer", "pyromancer", "necromancer"];
+  const traitIds = ["bulwarks-oath", "hawks-eye", "coin-scent", "frost-sigil", "ember-heart", "soul-conduit", "siege-savant", "rift-tactician", "golden-forge", "worldbreaker"];
+  const input = save.progression && typeof save.progression === "object" ? save.progression : {};
+  const progression = { equippedTrait: traitIds.includes(input.equippedTrait) ? input.equippedTrait : "bulwarks-oath", classes: {} };
+  for (const id of classIds) {
+    const source = input.classes?.[id] || {};
+    const nodes = {};
+    if (source.nodes && typeof source.nodes === "object") {
+      for (const [key, value] of Object.entries(source.nodes)) if (/^[a-z-]{2,40}$/.test(key) && Number.isFinite(value)) nodes[key] = Math.max(0, Math.min(5, Math.floor(value)));
+    }
+    const choices = {};
+    if (source.choices && typeof source.choices === "object") {
+      for (const level of ["5", "10", "15", "20"]) if (typeof source.choices[level] === "string" && source.choices[level].length <= 80) choices[level] = source.choices[level];
+    }
+    progression.classes[id] = {
+      xp: Number.isFinite(source.xp) ? Math.max(0, Math.min(10000000, source.xp)) : 0,
+      level: Number.isFinite(source.level) ? Math.max(1, Math.min(100, Math.floor(source.level))) : 1,
+      skillPoints: Number.isFinite(source.skillPoints) ? Math.max(0, Math.min(10000, Math.floor(source.skillPoints))) : 0,
+      spentPoints: Number.isFinite(source.spentPoints) ? Math.max(0, Math.min(10000, Math.floor(source.spentPoints))) : 0,
+      totalXp: Number.isFinite(source.totalXp) ? Math.max(0, Math.min(10000000, source.totalXp)) : 0,
+      nodes, choices
+    };
+  }
+  return { version: 1, run: cleanRun, settings, progression };
 }
 
 app.get("/api/save", async (req, res) => {
@@ -370,7 +396,7 @@ app.get("/api/save", async (req, res) => {
   try {
     const result = await pool.query("SELECT save_data, updated_at FROM player_saves WHERE discord_user_id = $1", [auth.userId]);
     if (!result.rowCount) return res.json({ hasSave: false });
-    return res.json({ hasSave: true, save: result.rows[0].save_data, updatedAt: result.rows[0].updated_at });
+    return res.json({ hasSave: !!result.rows[0].save_data?.run, save: result.rows[0].save_data, progression: result.rows[0].save_data?.progression || null, updatedAt: result.rows[0].updated_at });
   } catch (error) {
     console.error("Could not load player save:", error.message);
     return res.status(503).json({ error: "save-service-unavailable" });
