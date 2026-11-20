@@ -219,13 +219,6 @@
     height: 17px;
     accent-color: #8155B8;
 }
-#difficulty {
-    width: 100%;
-    padding: 10px 12px;
-    background: #241932;
-    border: 1px solid #62447F;
-    color: #E5DDF0;
-}
 .settings-footer button {
     padding: 12px 16px;
     background: #241932;
