@@ -49,12 +49,12 @@ const cardPool = [
 
 function getRunCommanderId(){return currentRun?.commanderId||window.riftboundCommanderId||"warden";}
 const commanderAbilities={
-  warden:{name:"IRON BASTION",cooldown:45,description:"Reduce castle damage by 50% and increase tower attack speed for 12 seconds.",requiresEnemies:false},
-  arcanist:{name:"RIFT SURGE",cooldown:40,description:"Deal 90 damage to all enemies and slow them for 4 seconds.",requiresEnemies:true},
-  huntmaster:{name:"MARKED PREY",cooldown:35,description:"Mark the most advanced elite, or the most advanced enemy, for 8 seconds. Towers deal 50% more damage to it.",requiresEnemies:true},
-  treasurer:{name:"ROYAL DECREE",cooldown:60,description:"Immediately gain 100 gold.",requiresEnemies:false},
-  pyromancer:{name:"INFERNO",cooldown:45,description:"Deal 45 damage to every enemy and burn them for 5 seconds.",requiresEnemies:true},
-  necromancer:{name:"RAISE THE FALLEN",cooldown:50,description:"Summon three spectral defenders for 10 seconds.",requiresEnemies:true}
+  warden:{name:"IRON BASTION",cooldown:45,description:"Raise a fortress ward for 12 seconds: halve incoming castle damage and make towers fire 25% faster.",requiresEnemies:false},
+  arcanist:{name:"RIFT SURGE",cooldown:40,description:"Unleash a rift pulse dealing 120 damage to every enemy and slowing them by 45% for 5 seconds.",requiresEnemies:true},
+  huntmaster:{name:"MARKED PREY",cooldown:35,description:"Mark the most advanced elite for 10 seconds. All towers prioritise it and deal 60% more damage.",requiresEnemies:true},
+  treasurer:{name:"ROYAL DECREE",cooldown:60,description:"Call in the royal treasury for an instant grant of 125 gold.",requiresEnemies:false},
+  pyromancer:{name:"INFERNO",cooldown:45,description:"Call down a fiery eruption dealing 65 damage to every enemy and burning them for 5 seconds.",requiresEnemies:true},
+  necromancer:{name:"RAISE THE FALLEN",cooldown:50,description:"Summon three spectral wraiths for 12 seconds. They hunt enemies, strike for 18 damage, then drift back into battle.",requiresEnemies:true}
 };
 function createNewRun(){
   const commanderId=window.riftboundCommanderId||"warden";
@@ -165,7 +165,7 @@ function environmentPalette(){
   return {ground:"#263B2B",textureA:"#304632",textureB:"#203326",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#17251B",tree:"#315438",treeLight:"#426443",trunk:"#64472F"};
 }
 function drawBattlefield(){
-  const palette=environmentPalette();ctx.fillStyle=palette.ground;ctx.fillRect(0,0,960,540);drawGroundTexture();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawCommanderEffects();drawPlacementPreview();
+  const palette=environmentPalette();ctx.fillStyle=palette.ground;ctx.fillRect(0,0,960,540);drawGroundTexture();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawSpectralAllies();drawCommanderEffects();drawPlacementPreview();
 }
 function drawGroundTexture(){
   const p=environmentPalette();
@@ -223,34 +223,76 @@ function drawEnemies(){
 function drawProjectiles(){
   if(!currentRun)return;currentRun.projectiles.forEach(p=>{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();});
 }
-function drawCommanderEffects(){
-  if(!currentRun?.abilityEffects?.length)return;
+function drawSpectralAllies(){
+  if(!currentRun?.spectralAllies?.length)return;
   const now=performance.now();
-  currentRun.abilityEffects.forEach(effect=>{
+  currentRun.spectralAllies.forEach((ally,index)=>{
+    const fade=Math.min(1,ally.life/1.2);
+    const bob=Math.sin(now/115+index*2.1)*3;
+    ctx.save();ctx.translate(ally.x,ally.y+bob);ctx.globalAlpha=fade;
+    ctx.shadowColor="#B99AE8";ctx.shadowBlur=18;
+    ctx.fillStyle="rgba(166,119,226,.22)";ctx.beginPath();ctx.ellipse(0,2,17,23,0,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle="rgba(201,174,255,.88)";ctx.beginPath();ctx.arc(0,-7,8,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="rgba(130,91,190,.92)";ctx.beginPath();ctx.moveTo(-10,-1);ctx.quadraticCurveTo(-18,13,-8,22);ctx.quadraticCurveTo(-3,17,0,23);ctx.quadraticCurveTo(5,17,10,22);ctx.quadraticCurveTo(17,9,10,-1);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#F4E9FF";ctx.fillRect(-4,-9,2,3);ctx.fillRect(3,-9,2,3);
+    ctx.strokeStyle="rgba(230,211,255,.7)";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,2,13+Math.sin(now/100+index)*2,0,Math.PI*2);ctx.stroke();
+    if(ally.attacking>0){
+      ctx.strokeStyle="rgba(221,196,255,.95)";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-24);ctx.stroke();
+      ctx.fillStyle="#F3E7FF";ctx.beginPath();ctx.arc(0,-25,4,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  });
+}
+function drawCommanderEffects(){
+  if(!currentRun)return;
+  const now=performance.now();
+  currentRun.abilityEffects=(currentRun.abilityEffects||[]).filter(effect=>{
     const progress=1-effect.life/effect.duration;
+    const alpha=Math.max(0,1-progress);
     ctx.save();
     if(effect.type==="bastion"){
       const pulse=1+Math.sin(now/110)*.06;
-      ctx.strokeStyle="rgba(116,190,255,"+(0.85*(1-progress*.35))+")";ctx.lineWidth=5;
+      ctx.strokeStyle="rgba(116,190,255,"+(0.95*alpha)+")";ctx.lineWidth=5;
+      ctx.shadowColor="#75B8E8";ctx.shadowBlur=20;
       ctx.beginPath();ctx.arc(895,270,58*pulse,0,Math.PI*2);ctx.stroke();
-      ctx.fillStyle="rgba(116,190,255,.10)";ctx.beginPath();ctx.arc(895,270,54*pulse,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="rgba(116,190,255,.14)";ctx.beginPath();ctx.arc(895,270,54*pulse,0,Math.PI*2);ctx.fill();
+      for(let i=0;i<8;i++){const a=now/350+i*Math.PI/4;ctx.fillStyle="rgba(170,220,255,"+alpha+")";ctx.fillRect(895+Math.cos(a)*60-2,270+Math.sin(a)*60-2,4,4);}
     }else if(effect.type==="rift"){
-      ctx.strokeStyle="rgba(190,135,255,"+(0.9*(1-progress))+")";ctx.lineWidth=7;
-      ctx.shadowColor="#B99AE8";ctx.shadowBlur=18;ctx.beginPath();
+      ctx.strokeStyle="rgba(190,135,255,"+(0.95*alpha)+")";ctx.lineWidth=9;
+      ctx.shadowColor="#B99AE8";ctx.shadowBlur=24;ctx.beginPath();
       pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
       ctx.shadowBlur=0;
-      pathPoints.forEach((p,i)=>{const r=7+Math.sin(now/80+i)*3;ctx.fillStyle="rgba(216,192,255,.75)";ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();});
+      pathPoints.forEach((p,i)=>{const radius=9+Math.sin(now/70+i)*4;ctx.fillStyle="rgba(216,192,255,"+alpha+")";ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle="rgba(238,220,255,"+alpha+")";ctx.lineWidth=2;
+      for(let i=0;i<5;i++){const p=pathPoints[(Math.floor(now/130)+i)%pathPoints.length];ctx.beginPath();ctx.arc(p.x,p.y,16+i*5,0,Math.PI*2);ctx.stroke();}
     }else if(effect.type==="mark"&&effect.target){
-      ctx.strokeStyle="#F0D58A";ctx.lineWidth=4;ctx.beginPath();ctx.arc(effect.target.x,effect.target.y,28+Math.sin(now/75)*5,0,Math.PI*2);ctx.stroke();
+      const radius=30+Math.sin(now/75)*7;
+      ctx.strokeStyle="#F0D58A";ctx.lineWidth=4;ctx.shadowColor="#F0D58A";ctx.shadowBlur=18;
+      ctx.beginPath();ctx.arc(effect.target.x,effect.target.y,radius,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(effect.target.x-19,effect.target.y);ctx.lineTo(effect.target.x+19,effect.target.y);ctx.moveTo(effect.target.x,effect.target.y-19);ctx.lineTo(effect.target.x,effect.target.y+19);ctx.stroke();
     }else if(effect.type==="gold"){
-      ctx.textAlign="center";ctx.font="bold 28px Georgia";ctx.fillStyle="rgba(240,213,138,"+(1-progress)+")";ctx.fillText("+100 GOLD",895,190-progress*55);
-      for(let i=0;i<8;i++){const angle=now/180+i*Math.PI/4;const x=895+Math.cos(angle)* (30+progress*35),y=270+Math.sin(angle)*(30+progress*35);ctx.fillStyle="#F0D58A";ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();}
+      ctx.textAlign="center";ctx.font="bold 28px Georgia";ctx.fillStyle="rgba(255,225,150,"+alpha+")";ctx.shadowColor="#F0D58A";ctx.shadowBlur=18;ctx.fillText("+125 GOLD",895,190-progress*55);
+      for(let i=0;i<14;i++){const angle=now/180+i*Math.PI*2/14;const radius=25+progress*60;const x=895+Math.cos(angle)*radius,y=270+Math.sin(angle)*radius;ctx.fillStyle="#F0D58A";ctx.beginPath();ctx.arc(x,y,3+Math.sin(now/70+i)*1.5,0,Math.PI*2);ctx.fill();}
     }else if(effect.type==="inferno"){
-      currentRun.enemies.forEach((enemy,i)=>{const radius=18+Math.sin(now/65+i)*5;ctx.fillStyle="rgba(255,132,58,"+(0.22*(1-progress))+")";ctx.beginPath();ctx.arc(enemy.x,enemy.y,radius,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,207,112,"+(0.85*(1-progress))+")";ctx.lineWidth=2;ctx.stroke();});
+      currentRun.enemies.forEach((enemy,i)=>{const radius=22+Math.sin(now/65+i)*7;ctx.fillStyle="rgba(255,104,35,"+(0.32*alpha)+")";ctx.beginPath();ctx.arc(enemy.x,enemy.y,radius,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,207,112,"+(0.95*alpha)+")";ctx.lineWidth=3;ctx.stroke();});
     }else if(effect.type==="spirits"){
-      for(let i=0;i<3;i++){const angle=now/260+i*Math.PI*2/3;const x=480+Math.cos(angle)* (35+progress*25),y=270+Math.sin(angle)* (35+progress*25);ctx.fillStyle="rgba(190,165,255,"+(0.8*(1-progress))+")";ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(235,220,255,.9)";ctx.lineWidth=2;ctx.stroke();}
+      const pulse=1+Math.sin(now/90)*.12;
+      ctx.strokeStyle="rgba(196,155,255,"+alpha+")";ctx.lineWidth=5;ctx.shadowColor="#B99AE8";ctx.shadowBlur=24;
+      ctx.beginPath();ctx.ellipse(895,270,52*pulse,30*pulse,0,0,Math.PI*2);ctx.stroke();
+      for(let i=0;i<3;i++){
+        const angle=now/210+i*Math.PI*2/3;
+        const x=895+Math.cos(angle)*(38+progress*25),y=270+Math.sin(angle)*(24+progress*15);
+        ctx.fillStyle="rgba(207,180,255,"+alpha+")";ctx.beginPath();ctx.arc(x,y,11,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle="rgba(245,230,255,"+alpha+")";ctx.lineWidth=2;ctx.stroke();
+      }
+    }else if(effect.type==="wraith-strike"){
+      ctx.strokeStyle="rgba(225,205,255,"+alpha+")";ctx.lineWidth=4;ctx.shadowColor="#B99AE8";ctx.shadowBlur=14;
+      ctx.beginPath();ctx.arc(effect.x,effect.y,10+progress*22,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(effect.x-12,effect.y);ctx.lineTo(effect.x+12,effect.y);ctx.moveTo(effect.x,effect.y-12);ctx.lineTo(effect.x,effect.y+12);ctx.stroke();
     }
     ctx.restore();
+    return effect.life>0;
   });
 }
 function drawPlacementPreview(){
@@ -315,11 +357,11 @@ function updateEnemies(dt){
     if(e.burnTimer>0){
       const burnStep=Math.min(dt,e.burnTimer);
       e.burnTimer-=burnStep;
-      e.health-=3*burnStep;
+      e.health-=(e.burnDamage||3)*burnStep;
       if(e.health<=0&&!e.rewarded)damageEnemy(e,0,false);
     }
     if(e.slowTimer>0)e.slowTimer=Math.max(0,e.slowTimer-dt);
-    const slowFactor=e.slowTimer>0?.65:1;
+    const slowFactor=e.slowTimer>0?.55:1;
     e.progress+=enemyTypes[e.type].speed*slowFactor*dt/totalPathLength;
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
@@ -336,7 +378,7 @@ function updateTowers(dt){
     if(!target)currentRun.enemies.forEach(e=>{if(Math.hypot(e.x-t.x,e.y-t.y)<=s.range&&e.progress>best){best=e.progress;target=e;}});
     if(!target)return;
     const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
-    const markedBonus=target===marked?1.5:1;
+    const markedBonus=target===marked?1.6:1;
     currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*eliteBonus*markedBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});
     t.cooldown=s.cooldown*(currentRun.bastionTimer>0?.8:1);
   });
@@ -359,15 +401,36 @@ function damageEnemy(e,dmg,applyPassive=true){
 }
 function updateSpectralAllies(dt){
   if(!currentRun.spectralAllies?.length)return;
-  currentRun.spectralAllies=currentRun.spectralAllies.filter(ally=>{
-    ally.life-=dt;ally.cooldown-=dt;
-    if(ally.life<=0)return false;
-    if(ally.cooldown<=0){
-      const target=currentRun.enemies.filter(e=>!e.rewarded&&e.health>0).sort((a,b)=>b.progress-a.progress)[0];
-      if(target){damageEnemy(target,ally.damage||12,false);ally.cooldown=ally.interval||.8;}
-      else ally.cooldown=.2;
+  const center={x:895,y:270};
+  currentRun.spectralAllies=currentRun.spectralAllies.filter((ally,index)=>{
+    ally.life-=dt;
+    ally.cooldown=Math.max(0,(ally.cooldown||0)-dt);
+    ally.orbitAngle=(ally.orbitAngle||index*Math.PI*2/3)+dt*(ally.attacking?.35:1.25);
+    const target=currentRun.enemies
+      .filter(enemy=>!enemy.rewarded&&enemy.health>0)
+      .sort((a,b)=>Math.hypot(a.x-ally.x,a.y-ally.y)-Math.hypot(b.x-ally.x,b.y-ally.y))[0];
+    let destination;
+    if(target){
+      destination={x:target.x,y:target.y-13};
+      ally.target=target;
+    }else{
+      ally.target=null;
+      destination={x:center.x+Math.cos(ally.orbitAngle)*42,y:center.y+Math.sin(ally.orbitAngle)*30};
     }
-    return true;
+    const dx=destination.x-ally.x,dy=destination.y-ally.y,distance=Math.hypot(dx,dy);
+    const speed=target?245:125;
+    if(distance>2){
+      const step=Math.min(distance,speed*dt);
+      ally.x+=dx/distance*step;ally.y+=dy/distance*step;
+    }
+    ally.attacking=Math.max(0,(ally.attacking||0)-dt);
+    if(target&&Math.hypot(target.x-ally.x,target.y-ally.y)<25&&ally.cooldown<=0){
+      damageEnemy(target,ally.damage||18,false);
+      ally.cooldown=ally.interval||.85;
+      ally.attacking=.22;
+      currentRun.abilityEffects.push({type:"wraith-strike",life:.28,duration:.28,x:target.x,y:target.y});
+    }
+    return ally.life>0;
   });
 }
 function updateCommanderAbilityState(dt){
@@ -401,32 +464,36 @@ function activateCommanderAbility(){
   let effect=null;
   if(id==="warden"){
     currentRun.bastionTimer=12;
-    effect={type:"bastion",life:1.8,duration:1.8};
-    showBattleMessage("IRON BASTION · CASTLE SHIELDS RAISED");
+    effect={type:"bastion",life:2.6,duration:2.6};
+    showBattleMessage("IRON BASTION · THE FORTRESS IS WARDED");
   }else if(id==="arcanist"){
-    enemies.forEach(enemy=>{enemy.slowTimer=Math.max(enemy.slowTimer||0,4);damageEnemy(enemy,90,false);});
-    effect={type:"rift",life:1.35,duration:1.35};
-    showBattleMessage("RIFT SURGE · ENEMIES STRUCK BY ARCANE ENERGY");
+    enemies.forEach(enemy=>{enemy.slowTimer=Math.max(enemy.slowTimer||0,5);damageEnemy(enemy,120,false);});
+    effect={type:"rift",life:2.1,duration:2.1};
+    showBattleMessage("RIFT SURGE · ARCANE ENERGY TEARS THROUGH THE ENEMY");
   }else if(id==="huntmaster"){
     const elites=enemies.filter(enemy=>enemy.maxHealth>=150);
     const candidates=elites.length?elites:enemies;
     const target=candidates.sort((a,b)=>b.progress-a.progress)[0];
-    currentRun.markedEnemy=target;currentRun.markedTimer=8;
-    effect={type:"mark",target,life:1.1,duration:1.1};
-    showBattleMessage("MARKED PREY · TOWERS WILL FOCUS THE TARGET");
+    currentRun.markedEnemy=target;currentRun.markedTimer=10;
+    effect={type:"mark",target,life:1.8,duration:1.8};
+    showBattleMessage("MARKED PREY · ALL TOWERS HUNT THE TARGET");
   }else if(id==="treasurer"){
-    currentRun.gold+=100;
-    effect={type:"gold",life:1.6,duration:1.6};
-    showBattleMessage("ROYAL DECREE · THE TREASURY GRANTS 100 GOLD");
+    currentRun.gold+=125;
+    effect={type:"gold",life:2.1,duration:2.1};
+    showBattleMessage("ROYAL DECREE · 125 GOLD HAS BEEN GRANTED");
     updateGameDisplay();
   }else if(id==="pyromancer"){
-    enemies.forEach(enemy=>{enemy.burnTimer=Math.max(enemy.burnTimer||0,5);damageEnemy(enemy,45,false);});
-    effect={type:"inferno",life:2.4,duration:2.4};
-    showBattleMessage("INFERNO · THE ENEMY FORCES ARE ENGULFED IN FLAME");
+    enemies.forEach(enemy=>{enemy.burnTimer=Math.max(enemy.burnTimer||0,5);enemy.burnDamage=6;damageEnemy(enemy,65,false);});
+    effect={type:"inferno",life:3,duration:3};
+    showBattleMessage("INFERNO · THE BATTLEFIELD ERUPTS IN FLAME");
   }else if(id==="necromancer"){
-    for(let i=0;i<3;i++)currentRun.spectralAllies.push({life:10,cooldown:i*.2,damage:15,interval:1});
-    effect={type:"spirits",life:2,duration:2};
-    showBattleMessage("RAISE THE FALLEN · THREE SPECTRAL DEFENDERS ANSWER");
+    for(let i=0;i<3;i++){
+      const angle=i*Math.PI*2/3;
+      currentRun.spectralAllies.push({life:12,cooldown:.35+i*.18,damage:18,interval:.85,
+        x:895+Math.cos(angle)*24,y:270+Math.sin(angle)*18,orbitAngle:angle,attacking:0});
+    }
+    effect={type:"spirits",life:2.8,duration:2.8};
+    showBattleMessage("RAISE THE FALLEN · THREE WRAITHS JOIN THE BATTLE");
   }
   if(effect)currentRun.abilityEffects.push(effect);
   currentRun.abilityCooldown=ability.cooldown;
