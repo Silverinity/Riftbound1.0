@@ -45,6 +45,7 @@
       if (!response.ok) throw new Error("Cloud save could not be loaded.");
       const data = await response.json();
       cloudSaveAvailable = !!data.hasSave;
+      if (data.progression && typeof window.loadRiftboundProgression === "function") window.loadRiftboundProgression(data.progression);
       byId("continue-run").hidden = !cloudSaveAvailable;
       if (cloudSaveAvailable) byId("auth-status").textContent = "BETA ACCESS VERIFIED · CLOUD SAVE FOUND";
       return data;
@@ -62,12 +63,12 @@
       const response = await fetch(API_BASE + "/api/save", {
         method: "PUT", credentials: "include",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ save: { version: 1, run, settings: window.riftboundSettings } })
+        body: JSON.stringify({ save: { version: 1, run: run || null, settings: window.riftboundSettings, progression: typeof window.getRiftboundProgressionExport === "function" ? window.getRiftboundProgressionExport() : null } })
       });
       if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
-      cloudSaveAvailable = true;
-      byId("continue-run").hidden = false;
-      byId("auth-status").textContent = "BETA ACCESS VERIFIED · PROGRESS SAVED";
+      cloudSaveAvailable = !!run;
+      byId("continue-run").hidden = !cloudSaveAvailable;
+      byId("auth-status").textContent = run ? "BETA ACCESS VERIFIED · PROGRESS SAVED" : "BETA ACCESS VERIFIED · PROFILE SAVED";
     } catch (error) {
       console.error("Could not save Riftbound progress:", error);
       byId("auth-status").textContent = "CLOUD SAVE FAILED · CHECK BACKEND DATABASE";
@@ -349,7 +350,15 @@
       openHub();
     }
   });
-  byId("result-continue").addEventListener("click", returnToMenu);
+  byId("result-continue").addEventListener("click", async () => {
+    try { await window.riftboundCloudSave?.(null); } catch (error) { console.warn("Could not clear completed expedition:", error); }
+    openHub();
+  });
+  byId("result-stats-toggle").addEventListener("click", () => {
+    const panel = byId("result-stats");
+    panel.hidden = !panel.hidden;
+    byId("result-stats-toggle").textContent = panel.hidden ? "VIEW RUN STATISTICS" : "HIDE RUN STATISTICS";
+  });
 
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && !settingsOverlay.hidden) closeSettings();
