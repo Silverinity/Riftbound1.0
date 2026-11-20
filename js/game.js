@@ -917,7 +917,7 @@ function updateEnemies(dt){
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
-    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=incomingDamage;currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
+    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=Math.min(currentRun.castleHealth,incomingDamage);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
   });
 }
 function getEnemyDamageMultiplier(target){
