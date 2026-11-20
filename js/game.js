@@ -1143,13 +1143,15 @@ function activateCommanderAbility(){
     showBattleMessage("ROYAL DECREE · "+decreeGold+" GOLD HAS BEEN GRANTED");
     updateGameDisplay();
   }else if(id==="pyromancer"){
-    enemies.forEach(enemy=>{enemy.burnTimer=Math.max(enemy.burnTimer||0,5+(currentRun.skillBonuses?.burnDuration||0));enemy.burnDamage=6+(currentRun.skillBonuses?.burnDamage||0);damageEnemy(enemy,65*(1+(currentRun.skillBonuses?.abilityDamage||0)+(currentRun.skillBonuses?.areaDamage||0)),false);});
+    const trait=getRunTraitEffects();
+    enemies.forEach(enemy=>{enemy.burnTimer=Math.max(enemy.burnTimer||0,5+(currentRun.skillBonuses?.burnDuration||0)+(trait.burnDuration||0));enemy.burnDamage=6+(currentRun.skillBonuses?.burnDamage||0);damageEnemy(enemy,65*(1+(currentRun.skillBonuses?.abilityDamage||0)+(currentRun.skillBonuses?.areaDamage||0)),false);});
     effect={type:"inferno",life:3,duration:3};
     showBattleMessage("INFERNO · THE BATTLEFIELD ERUPTS IN FLAME");
   }else if(id==="necromancer"){
+    const trait=getRunTraitEffects();
     for(let i=0;i<3+(currentRun.skillBonuses?.extraWraith||0);i++){
       const angle=i*Math.PI*2/3;
-      currentRun.spectralAllies.push({life:12+(currentRun.skillBonuses?.summonDuration||0),cooldown:.35+i*.18,damage:(18+(currentRun.skillBonuses?.summonDamage||0))*(1+(currentRun.skillBonuses?.summonDamageBonus||0)),interval:.85,
+      currentRun.spectralAllies.push({life:12+(currentRun.skillBonuses?.summonDuration||0)+(trait.summonDuration||0),cooldown:.35+i*.18,damage:(18+(currentRun.skillBonuses?.summonDamage||0))*(1+(currentRun.skillBonuses?.summonDamageBonus||0)),interval:.85,
         x:895+Math.cos(angle)*24,y:270+Math.sin(angle)*18,orbitAngle:angle,attacking:0});
     }
     effect={type:"spirits",life:2.8,duration:2.8};
