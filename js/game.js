@@ -734,7 +734,7 @@ function healAtCampsite(){
   currentRun.gold-=40;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function upgradeAtCampsite(){
-  if(!currentRun||currentRun.gold<75)return;
+  if(!currentRun||currentRun.gold<100)return;
   currentRun.gold-=100;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function showCampsiteScreen(completedWaves){
