@@ -1156,7 +1156,7 @@ function activateCommanderAbility(){
     showBattleMessage("RAISE THE FALLEN · THREE WRAITHS JOIN THE BATTLE");
   }
   if(effect)currentRun.abilityEffects.push(effect);
-  const cooldownReduction=(currentRun.skillBonuses?.cooldown||0)+(currentRun.skillBonuses?.cooldownReduction||0);
+  const cooldownReduction=currentRun.skillBonuses?.cooldown||0;
   currentRun.abilityCooldown=Math.max(5,ability.cooldown*(1-cooldownReduction));
   const abilityButton=document.getElementById("commander-ability-button");
   if(abilityButton){
