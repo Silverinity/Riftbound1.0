@@ -79,7 +79,9 @@
     const next={classes:{},equippedTrait:traitList.some(t=>t.id===raw?.equippedTrait)?raw.equippedTrait:"bulwarks-oath"};
     CLASS_IDS.forEach(id=>{
       const c=raw?.classes?.[id]||{};
-      next.classes[id]={...blankClass(),xp:Math.max(0,Number(c.xp)||0),level:Math.max(1,Math.min(100,Math.floor(Number(c.level)||1))),skillPoints:Math.max(0,Math.floor(Number(c.skillPoints)||0)),spentPoints:Math.max(0,Math.floor(Number(c.spentPoints)||0)),nodes:c.nodes&&typeof c.nodes==="object"?c.nodes:{},choices:c.choices&&typeof c.choices==="object"?c.choices:{},totalXp:Math.max(0,Number(c.totalXp)||0)};
+      const tree=coreTrees[id],rawChoices=c.choices&&typeof c.choices==="object"?c.choices:{},choices={};
+      MILESTONES.forEach((level,index)=>{const choice=rawChoices[level];if(tree.forks[index].some(option=>option[0]===choice))choices[level]=choice;});
+      next.classes[id]={...blankClass(),xp:Math.max(0,Number(c.xp)||0),level:Math.max(1,Math.min(100,Math.floor(Number(c.level)||1))),skillPoints:Math.max(0,Math.floor(Number(c.skillPoints)||0)),spentPoints:Math.max(0,Math.floor(Number(c.spentPoints)||0)),nodes:c.nodes&&typeof c.nodes==="object"?c.nodes:{},choices,totalXp:Math.max(0,Number(c.totalXp)||0)};
     });
     return next;
   }
