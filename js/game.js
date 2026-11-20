@@ -195,6 +195,7 @@ function startNewRun(){
   updateAreaLabels();
   updateGameDisplay();
 }
+window.startRiftboundNewRun=startNewRun;
 function areaData(){return areas[currentRun.area-1]||areas[0];}
 
 function persistRunCheckpoint(checkpoint="battle"){
@@ -240,10 +241,18 @@ window.restoreRiftboundRun=function(saved){
 };
 function updateAreaLabels(){
   const a=areaData();
-  document.querySelector(".battle-region span").textContent="AREA 0"+currentRun.area+" · "+a.name.toUpperCase();
-  document.querySelector(".battle-region h1").textContent=a.subtitle.toUpperCase();
-  document.querySelector(".region-heading .prep-eyebrow").textContent="AREA 0"+currentRun.area;
-  document.querySelector(".region-heading h2").textContent=a.name.toUpperCase();
+  const battleRegion=document.querySelector(".battle-region span");
+  const battleTitle=document.querySelector(".battle-region h1");
+  if(battleRegion)battleRegion.textContent="AREA 0"+currentRun.area+" · "+a.name.toUpperCase();
+  if(battleTitle)battleTitle.textContent=a.subtitle.toUpperCase();
+
+  // The old preparation screen was removed when the Command Sanctum was added.
+  // Keep these optional labels guarded so a new run can start without that markup.
+  const regionEyebrow=document.querySelector(".region-heading .prep-eyebrow");
+  const regionTitle=document.querySelector(".region-heading h2");
+  if(regionEyebrow)regionEyebrow.textContent="AREA 0"+currentRun.area;
+  if(regionTitle)regionTitle.textContent=a.name.toUpperCase();
+
   const details=document.querySelectorAll(".region-details span");
   if(details[0])details[0].textContent="30 WAVES · 2 CAMPSITES";
   if(details[1])details[1].textContent=currentRun.area===3?"ANCIENT TREANT BOSS":"BOSS THREAT UNKNOWN";
