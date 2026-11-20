@@ -276,11 +276,11 @@
       return;
     }
     if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your existing cloud save. Continue?")) return;
-    startNewRun();
     openPreparation();
   });
   byId("back-to-menu").addEventListener("click", returnToMenu);
   byId("begin-defense").addEventListener("click", () => {
+    startNewRun();
     hideScreens();
     gameScreen.hidden = false;
     initBattlefield();
