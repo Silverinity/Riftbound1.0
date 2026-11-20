@@ -269,3 +269,49 @@
 @media (max-width:900px) {
   .hub-feature { border-bottom-color: rgba(98,68,127,.34); }
 }
+
+
+/* Restore the purple Riftbound identity on the title screen. */
+.main-menu {
+  background:
+    radial-gradient(ellipse at 76% 38%, rgba(112,75,151,.30), transparent 43%),
+    radial-gradient(ellipse at 18% 86%, rgba(76,43,112,.22), transparent 36%),
+    linear-gradient(115deg,#0B0812 0%,#171022 52%,#0B0812 100%);
+}
+.main-menu::before {
+  border-color: rgba(185,154,232,.22);
+  background:
+    linear-gradient(90deg,rgba(185,154,232,.025) 1px,transparent 1px),
+    linear-gradient(rgba(185,154,232,.025) 1px,transparent 1px);
+}
+.main-menu::after {
+  border-color: rgba(185,154,232,.18);
+  box-shadow:0 0 0 34px rgba(185,154,232,.035),0 0 0 86px rgba(112,75,151,.025),inset 0 0 80px rgba(112,75,151,.12);
+}
+.menu-content::before {
+  background:linear-gradient(transparent,#8F6BB5 18%,#8F6BB5 82%,transparent);
+}
+.subtitle { color:#B99AE8; }
+.menu-content h1 { color:#F0E8FA; }
+.description { color:#A99BB8; }
+.menu-buttons button {
+  color:#E5DDF0;
+  background:rgba(30,22,42,.92);
+  border-color:rgba(98,68,127,.65);
+}
+.menu-buttons button:first-child {
+  color:#F7F0FF;
+  background:linear-gradient(135deg,#68458B,#432D5D);
+  border-color:#A17AC9;
+}
+.menu-buttons button:hover:not(:disabled) {
+  border-color:#CDB5EE;
+  background-color:#352348;
+}
+.beta-access { color:#A99BB8; }
+.beta-access button {
+  color:#E5DDF0;
+  background:#241932;
+  border-color:#62447F;
+}
+.version { color:#82748F; }
