@@ -1530,6 +1530,13 @@ function upgradeAtCampsite(){
   if(!currentRun)return;
   const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));const cost=Math.max(1,Math.ceil(100*(1-reduction)));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
+window.devRiftboundForceCampfire=function(){
+  if(!currentRun||currentRun.finalized)return false;
+  currentRun.stage=3;
+  const completedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+15;
+  arriveAtCampfire(completedWaves);
+  return true;
+};
 function showCampsiteScreen(completedWaves){
   stopGameLoop();
   document.getElementById("main-menu").style.display="none";
