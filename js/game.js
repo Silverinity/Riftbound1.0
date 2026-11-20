@@ -176,9 +176,11 @@ const commanderAbilities={
 };
 function createNewRun(){
   const commanderId=window.riftboundCommanderId||"warden";
-  const startingHealth=commanderId==="warden"?120:100;
+  const skillBonuses=typeof window.getRiftboundSkillBonuses==="function"?window.getRiftboundSkillBonuses(commanderId):{};
+  const baseHealth=commanderId==="warden"?120:100;
+  const startingHealth=Math.round(baseHealth*(1+(skillBonuses.fortressHp||0)));
   return {
-    commanderId,gold:100,castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
+    commanderId,skillBonuses,gold:100,castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
     towers:[{type:"archer",x:300,y:280,cooldown:0,level:1,investedGold:0,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
@@ -203,7 +205,7 @@ function persistRunCheckpoint(checkpoint="battle"){
     totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,investedGold:getTowerInvestment(t),
       upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
     towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
-    commanderId:currentRun.commanderId||"warden",abilityCooldown:currentRun.abilityCooldown||0,
+    commanderId:currentRun.commanderId||"warden",skillBonuses:currentRun.skillBonuses||{},abilityCooldown:currentRun.abilityCooldown||0,
     campsiteRestUsed:!!currentRun.campsiteRestUsed,checkpoint
   };
   window.riftboundCloudSave(run);
@@ -225,7 +227,7 @@ window.restoreRiftboundRun=function(saved){
   selectedTower=null;selectedTowerEntity=null;
   relocateTowersForCurrentArea();
   document.getElementById("main-menu").style.display="none";
-  document.getElementById("preparation-screen").hidden=true;
+  document.getElementById("hub-screen").hidden=true;
   document.getElementById("game-screen").hidden=data.checkpoint==="campsite";
   document.getElementById("campsite-screen").hidden=data.checkpoint!=="campsite";
   updateAreaLabels();updateGameDisplay();
@@ -278,6 +280,8 @@ function getTowerStats(t){
   let cooldown=Math.max(.18,1/base.fireRate-(u.speed||0)*.16);
   let fireRate=1/cooldown;
   if(t.type==="arcane"&&getRunCommanderId()==="arcanist")damage*=1.25;
+  damage*=1+(currentRun.skillBonuses?.damage||0);
+  range*=1+(currentRun.skillBonuses?.range||0);
   if(t.type==="archer")damage+=currentRun.cards.filter(c=>c==="arrows").length*5;
   if(t.type==="arcane")damage+=currentRun.cards.filter(c=>c==="arcane").length*10;
   if(t.type==="cannon")range+=currentRun.cards.filter(c=>c==="siege").length*25;
@@ -938,7 +942,8 @@ function activateCommanderAbility(){
     showBattleMessage("RAISE THE FALLEN · THREE WRAITHS JOIN THE BATTLE");
   }
   if(effect)currentRun.abilityEffects.push(effect);
-  currentRun.abilityCooldown=ability.cooldown;
+  const cooldownReduction=currentRun.skillBonuses?.cooldown||0;
+  currentRun.abilityCooldown=Math.max(5,ability.cooldown*(1-cooldownReduction));
   const abilityButton=document.getElementById("commander-ability-button");
   if(abilityButton){
     abilityButton.classList.remove("ability-activated");
@@ -1009,6 +1014,10 @@ function showCardSelection(){
 function chooseCard(id){
   if(!currentRun||!pendingCards.some(c=>c.id===id))return;
   const completedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+5;
+  if(typeof window.awardRiftboundSkillPoint==="function"){
+    window.awardRiftboundSkillPoint();
+    showBattleMessage("STAGE CLEARED · 1 COMMAND SKILL POINT EARNED");
+  }
   currentRun.cards.push(id);
   if(id==="walls"){currentRun.maxCastleHealth+=20;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+20);}
   document.getElementById("card-overlay").hidden=true;
@@ -1209,7 +1218,6 @@ function upgradeAtCampsite(){
 function showCampsiteScreen(completedWaves){
   stopGameLoop();
   document.getElementById("main-menu").style.display="none";
-  document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=true;
   document.getElementById("campsite-screen").hidden=false;
   document.getElementById("result-overlay").hidden=true;
@@ -1232,7 +1240,6 @@ function continueFromCampsite(){
 function showRunCompleteScreen(){
   stopGameLoop();
   document.getElementById("main-menu").style.display="none";
-  document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=true;
   document.getElementById("campsite-screen").hidden=true;
   document.getElementById("card-overlay").hidden=true;
@@ -1243,4 +1250,3 @@ function showRunCompleteScreen(){
   document.getElementById("result-continue").textContent="RETURN TO MENU";
   document.getElementById("result-overlay").hidden=false;
 }
-function updatePreparationArea(){document.getElementById("preparation-screen").querySelector(".prep-eyebrow").textContent="YOUR NEXT EXPEDITION · AREA 01";document.querySelector(".region-details span").textContent="30 WAVES · 2 CAMPSITES";}

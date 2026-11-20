@@ -30,7 +30,7 @@
 
   const byId = id => document.getElementById(id);
   const mainMenu = byId("main-menu");
-  const preparationScreen = byId("preparation-screen");
+  const hubScreen = byId("hub-screen");
   const gameScreen = byId("game-screen");
   const campsiteScreen = byId("campsite-screen");
   const resultOverlay = byId("result-overlay");
@@ -101,8 +101,8 @@
         userLabel.textContent = "SIGNED IN AS " + (data.user?.username || "DISCORD USER");
         userLabel.hidden = false;
         logout.hidden = false;
-        newRun.disabled = false;
         const cloud = await loadCloudSave();
+        newRun.disabled = false;
         if (cloud?.save?.settings) {
           window.riftboundSettings = { ...DEFAULT_SETTINGS, ...cloud.save.settings };
           persistSettings();
@@ -205,7 +205,7 @@
 
   function hideScreens() {
     mainMenu.style.display = "none";
-    preparationScreen.hidden = true;
+    if (hubScreen) hubScreen.hidden = true;
     gameScreen.hidden = true;
     if (campsiteScreen) campsiteScreen.hidden = true;
     byId("card-overlay").hidden = true;
@@ -218,15 +218,26 @@
     if (typeof stopGameLoop === "function") stopGameLoop();
     hideScreens();
     mainMenu.style.display = "flex";
+    if (hubScreen) hubScreen.hidden = true;
     resultOverlay.hidden = true;
     settingsOverlay.hidden = true;
     byId("card-overlay").hidden = true;
   }
 
-  function openPreparation() {
+  function showHubView(view) {
+    document.querySelectorAll(".hub-view").forEach(section => {
+      section.hidden = section.id !== "hub-" + view + "-view";
+    });
+    document.querySelectorAll("[data-hub-view]").forEach(button => {
+      button.classList.toggle("active", button.dataset.hubView === view);
+    });
+  }
+
+  function openHub() {
     if (typeof stopGameLoop === "function") stopGameLoop();
     hideScreens();
-    preparationScreen.hidden = false;
+    hubScreen.hidden = false;
+    showHubView("home");
     resultOverlay.hidden = true;
     settingsOverlay.hidden = true;
   }
@@ -270,16 +281,19 @@
     byId("auth-status").textContent = "NO VALID CLOUD SAVE WAS FOUND";
   });
 
-  byId("new-run").addEventListener("click", async () => {
+  byId("new-run").addEventListener("click", () => {
     if (!betaAuthenticated) {
       byId("auth-status").textContent = "PLEASE SIGN IN WITH AN APPROVED BETA TESTER ACCOUNT";
       return;
     }
     if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your existing cloud save. Continue?")) return;
-    openPreparation();
+    openHub();
   });
-  byId("back-to-menu").addEventListener("click", returnToMenu);
-  byId("begin-defense").addEventListener("click", () => {
+  byId("hub-back").addEventListener("click", returnToMenu);
+  document.querySelectorAll("[data-hub-view]").forEach(button => {
+    button.addEventListener("click", () => showHubView(button.dataset.hubView));
+  });
+  byId("hub-play").addEventListener("click", () => {
     startNewRun();
     hideScreens();
     gameScreen.hidden = false;
@@ -294,13 +308,6 @@
     }
   });
   byId("result-continue").addEventListener("click", returnToMenu);
-
-  byId("upgrades").addEventListener("click", () => {
-    window.alert("Permanent upgrades are planned for a future update. Tower upgrades during a run are available on the battlefield.");
-  });
-  byId("collection").addEventListener("click", () => {
-    window.alert("The collection and bestiary are planned for a future update. Your run cards are shown when you earn a reward.");
-  });
 
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && !settingsOverlay.hidden) closeSettings();

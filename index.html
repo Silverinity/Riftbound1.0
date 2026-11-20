@@ -26,21 +26,69 @@
             <section class="beta-access" aria-label="Beta access">
                 <p id="auth-status" role="status">CHECKING BETA ACCESS...</p>
                 <p id="auth-user" hidden></p>
-                <button id="discord-login" type="button" hidden>LOGIN WITH DISCORD</button>
                 <button id="discord-logout" type="button" hidden>LOG OUT</button>
             </section>
 
             <div class="menu-buttons">
-                <button id="continue-run" hidden>CONTINUE EXPEDITION</button>
-                <button id="new-run" disabled>NEW RUN</button>
-                <button id="upgrades">UPGRADES</button>
-                <button id="collection">COLLECTION</button>
+                <button id="new-run" disabled>PLAY</button>
                 <button id="settings">SETTINGS</button>
+                <button id="discord-login" type="button" hidden>LOGIN WITH DISCORD</button>
             </div>
 
             <p class="version">EARLY DEVELOPMENT BUILD</p>
         </div>
     </main>
+
+    <!-- COMMAND HUB -->
+    <section id="hub-screen" class="hub-screen" hidden>
+        <header class="hub-topbar">
+            <div class="hub-brand"><span class="hub-brand-mark">R</span><div><strong>RIFTBOUND</strong><small>COMMAND SANCTUM</small></div></div>
+            <div class="hub-topbar-right"><span id="hub-selected-commander">THE WARDEN SELECTED</span><button id="hub-back" type="button">MAIN MENU</button></div>
+        </header>
+        <div class="hub-layout">
+            <aside class="hub-sidebar">
+                <p class="hub-side-label">EXPEDITION</p>
+                <button class="hub-nav-button active" data-hub-view="home" type="button"><span>01</span> OVERVIEW</button>
+                <button class="hub-nav-button" data-hub-view="commanders" type="button"><span>02</span> COMMANDERS</button>
+                <button class="hub-nav-button" data-hub-view="skills" type="button"><span>03</span> SKILL TREE</button>
+                <div class="hub-sidebar-bottom"><span class="hub-status-dot"></span><span>BETA BUILD · 0.1</span></div>
+            </aside>
+            <main class="hub-main">
+                <section id="hub-home-view" class="hub-view">
+                    <p class="hub-eyebrow">THE RIFT IS SPREADING · YOUR ORDERS AWAIT</p>
+                    <h1>THE COMMAND<br> SANCTUM</h1>
+                    <p class="hub-intro">Prepare your forces, shape your commander's strengths, and return to the battlefield.</p>
+                    <div class="hub-feature-grid">
+                        <article class="hub-feature hub-feature-play">
+                            <div class="hub-feature-kicker">YOUR NEXT EXPEDITION</div>
+                            <h2>ENTER THE FRONTIER</h2>
+                            <p>Defend the last fortress across three hostile regions. Every five waves brings a new reward.</p>
+                            <div class="hub-feature-actions"><button id="hub-play" type="button">BEGIN EXPEDITION</button><button id="continue-run" type="button" hidden>CONTINUE RUN</button></div>
+                        </article>
+                        <article class="hub-feature hub-feature-commander">
+                            <div class="hub-feature-icon">♜</div><div class="hub-feature-kicker">YOUR LEADER</div>
+                            <h2>COMMANDERS</h2><p>Choose one of six leaders, each with a unique passive and battlefield ability.</p>
+                            <button type="button" data-hub-view="commanders">VIEW COMMANDERS</button>
+                        </article>
+                        <article class="hub-feature hub-feature-skills">
+                            <div class="hub-feature-icon">✧</div><div class="hub-feature-kicker">PERMANENT PROGRESSION</div>
+                            <h2>SKILL TREE</h2><p>Invest skill points in fortress health, ability cooldown, tower damage and range.</p>
+                            <button type="button" data-hub-view="skills">OPEN SKILL TREE</button>
+                        </article>
+                    </div>
+                    <div class="hub-bottom-note"><span>THE REALMS ARE BREAKING</span><span>ONLY THE PREPARED WILL ENDURE</span></div>
+                </section>
+                <section id="hub-commanders-view" class="hub-view" hidden>
+                    <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
+                    <div id="commander-selection"></div>
+                </section>
+                <section id="hub-skills-view" class="hub-view" hidden>
+                    <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
+                    <div id="commander-skill-tree"></div>
+                </section>
+            </main>
+        </div>
+    </section>
 
     <!-- SETTINGS -->
     <div id="settings-overlay" class="settings-overlay" hidden>
@@ -92,66 +140,6 @@
             </div>
         </div>
     </div>
-
-    <!-- PREPARATION SCREEN -->
-    <section id="preparation-screen" class="preparation-screen" hidden>
-        <header class="preparation-header">
-            <div>
-                <p class="prep-eyebrow">YOUR NEXT EXPEDITION</p>
-                <h1>PREPARE FOR DEFENSE</h1>
-            </div>
-            <button id="back-to-menu">BACK</button>
-        </header>
-
-        <div class="region-banner">
-            <div class="region-heading">
-                <p class="prep-eyebrow">REGION 01</p>
-                <h2>VERDANT WOODS</h2>
-                <p class="region-description">
-                    An ancient forest consumed by unstable rifts.
-                    Something is stirring beneath the trees.
-                </p>
-            </div>
-
-            <div class="region-details">
-                <span>30 WAVES · 2 CAMPSITES</span>
-                <span>ANCIENT TREANT BOSS</span>
-                <span>UNKNOWN THREATS</span>
-            </div>
-        </div>
-
-        <div class="preparation-content">
-            <div class="prep-column">
-                <h3>STARTING RESOURCES</h3>
-                <div class="prep-stat"><span>GOLD</span><strong>100</strong></div>
-                <div class="prep-stat"><span>CASTLE HP</span><strong>100</strong></div>
-                <div class="prep-stat"><span>STARTING TOWERS</span><strong>1</strong></div>
-            </div>
-
-            <div class="prep-column">
-                <h3>STARTING TOWER</h3>
-                <div class="starting-tower">
-                    <div class="tower-symbol">♜</div>
-                    <div>
-                        <h4>ARCHER TOWER</h4>
-                        <p>A reliable defensive structure.</p>
-                        <span>10 DAMAGE · 120 RANGE</span>
-                    </div>
-                </div>
-                <p class="prep-note">
-                    Build additional towers using the gold you collect.
-                </p>
-            </div>
-        </div>
-
-        <div class="preparation-footer">
-            <div>
-                <h3>READY TO BEGIN?</h3>
-                <p>Survive 30 waves across two campsites, earning a card after every five waves.</p>
-            </div>
-            <button id="begin-defense">BEGIN DEFENSE</button>
-        </div>
-    </section>
 
     <!-- BATTLEFIELD -->
     <section id="game-screen" class="game-screen" hidden>
