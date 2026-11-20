@@ -8,7 +8,7 @@
     {id:"huntmaster",name:"The Huntmaster",speciality:"PRECISION",emblem:"➶",passive:"Predator's Instinct",passiveDescription:"Towers deal 20% more damage to high-health enemies.",ability:"Marked Prey",abilityDescription:"Marks an elite target for 10 seconds; towers deal 60% more damage to it.",playstyle:"Eliminate elite enemies before they reach the fortress.",strength:"Excellent against tough targets",weakness:"Less specialised against groups"},
     {id:"treasurer",name:"The Treasurer",speciality:"ECONOMY",emblem:"♛",passive:"Golden Fortune",passiveDescription:"Gain 2 additional gold for every defeated enemy.",ability:"Royal Decree",abilityDescription:"Instantly grants 125 gold.",playstyle:"Turn smart spending into a lasting advantage.",strength:"Greater resource flexibility",weakness:"Limited direct combat support"},
     {id:"pyromancer",name:"The Pyromancer",speciality:"AREA DAMAGE",emblem:"♨",passive:"Eternal Flame",passiveDescription:"Tower hits have a chance to burn enemies over time.",ability:"Inferno",abilityDescription:"Deals 65 damage to every enemy and burns them for 5 seconds.",playstyle:"Break up enemy formations with burning damage.",strength:"Effective against groups",weakness:"Less specialised against single targets"},
-    {id:"necromancer",name:"The Necromancer",speciality:"SUMMONING",emblem:"☠",passive:"Soul Harvest",passiveDescription:"Defeated enemies can leave temporary spectral allies.",ability:"Raise the Fallen",abilityDescription:"Summons three spectral wraiths to fight for 12 seconds.",playstyle:"Use spectral allies to add pressure across the battlefield.",strength:"Creates extra battlefield units",weakness:"Less effective against sparse waves"}
+    {id:"necromancer",name:"The Necromancer",speciality:"SUMMONING",emblem:"♆",passive:"Soul Harvest",passiveDescription:"Defeated enemies can leave temporary spectral allies.",ability:"Raise the Fallen",abilityDescription:"Summons three spectral wraiths to fight for 12 seconds.",playstyle:"Use spectral allies to add pressure across the battlefield.",strength:"Creates extra battlefield units",weakness:"Less effective against sparse waves"}
   ];
   const commanderById = id => commanders.find(c=>c.id===id) || commanders[0];
   const storageKey="riftbound-selected-commander";
@@ -70,9 +70,32 @@
     catch(error){console.warn("Could not save selected commander:",error);}
   }
   window.setRiftboundCommanderSelection=function(id){
-    if(!commanders.some(c=>c.id===id))return;
-    selectedId=id;publishSelection();
+    if(!commanders.some(c=>c.id===id)||window.isRiftboundRunActive?.())return;
+    selectedId=id;publishSelection();refreshCommanderCards();
   };
+
+  function classProgressMarkup(id){
+    const profile=typeof window.getRiftboundClassProfile==="function"?window.getRiftboundClassProfile(id):{level:1,xp:0};
+    const level=Math.max(1,Number(profile.level)||1),xp=Math.max(0,Number(profile.xp)||0);
+    const required=Math.round(120+level*45+level*level*2);
+    const percent=level>=100?100:Math.max(0,Math.min(100,xp/required*100));
+    const progressText=level>=100?"MAX LEVEL":xp.toLocaleString()+" / "+required.toLocaleString()+" XP";
+    return '<div class="commander-class-progress" data-class-progress="'+id+'"><div class="commander-class-progress-top"><strong>CLASS LEVEL '+level+'</strong><small>'+progressText+'</small></div><div class="commander-class-progress-track"><i style="width:'+percent+'%"></i></div></div>';
+  }
+  function refreshCommanderCards(){
+    const root=document.getElementById("commander-selection");if(!root)return;
+    const locked=!!window.isRiftboundRunActive?.();
+    root.querySelectorAll("[data-commander-id]").forEach(card=>{
+      const id=card.dataset.commanderId,progress=card.querySelector("[data-class-progress]");
+      if(progress)progress.outerHTML=classProgressMarkup(id);
+      const button=card.querySelector("[data-select-commander]");
+      if(button){button.disabled=locked;button.textContent=locked?(id===selectedId?"LOCKED · IN EXPEDITION":"UNAVAILABLE DURING RUN"):(id===selectedId?"CURRENT COMMANDER":"SELECT COMMANDER");}
+    });
+    let note=root.querySelector(".commander-lock-note");
+    if(locked&&!note){note=document.createElement("p");note.className="commander-lock-note";root.querySelector(".commander-section-heading")?.after(note);}
+    if(note){note.hidden=!locked;note.textContent="Commander selection is locked during an expedition. Finish the run before changing your commander.";}
+  }
+  window.renderRiftboundCommanders=refreshCommanderCards;
 
   function renderCommanders(){
     const root=document.getElementById("commander-selection");
@@ -88,6 +111,7 @@
           <article class="commander-card" data-commander-id="${c.id}">
             <div class="commander-card-top"><span class="commander-emblem">${c.emblem}</span><span class="commander-speciality">${c.speciality}</span></div>
             <h3>${c.name}</h3>
+            ${classProgressMarkup(c.id)}
             <div class="commander-detail"><span>PASSIVE · ${c.passive}</span><p>${c.passiveDescription}</p></div>
             <div class="commander-detail"><span>ABILITY · ${c.ability}</span><p>${c.abilityDescription}</p></div>
             <p class="commander-playstyle">${c.playstyle}</p>
@@ -96,8 +120,10 @@
           </article>`).join("")}
       </div>`;
     root.querySelectorAll("[data-select-commander]").forEach(button=>button.addEventListener("click",()=>{
-      selectedId=button.dataset.selectCommander;publishSelection();
+      if(window.isRiftboundRunActive?.()){refreshCommanderCards();return;}
+      selectedId=button.dataset.selectCommander;publishSelection();refreshCommanderCards();
     }));
+    refreshCommanderCards();
   }
 
   function renderSkillTree(){
