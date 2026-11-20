@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/game.css">
     <link rel="stylesheet" href="css/devpanel.css">
     <link rel="stylesheet" href="css/commanders.css">
+    <link rel="stylesheet" href="css/progression.css">
 </head>
 <body>
 
@@ -50,7 +51,8 @@
                 <p class="hub-side-label">EXPEDITION</p>
                 <button class="hub-nav-button active" data-hub-view="home" type="button"><span>01</span> OVERVIEW</button>
                 <button class="hub-nav-button" data-hub-view="commanders" type="button"><span>02</span> COMMANDERS</button>
-                <button class="hub-nav-button" data-hub-view="skills" type="button"><span>03</span> SKILL TREE</button>
+                <button class="hub-nav-button" data-hub-view="skills" type="button"><span>03</span> CLASS SKILL TREE</button>
+                <button class="hub-nav-button" data-hub-view="traits" type="button"><span>04</span> TRAITS</button>
                 <div class="hub-sidebar-bottom"><span class="hub-status-dot"></span><span>BETA BUILD · 0.1</span></div>
             </aside>
             <main class="hub-main">
@@ -72,7 +74,7 @@
                         </article>
                         <article class="hub-feature hub-feature-skills">
                             <div class="hub-feature-icon">✧</div><div class="hub-feature-kicker">PERMANENT PROGRESSION</div>
-                            <h2>SKILL TREE</h2><p>Invest skill points in fortress health, ability cooldown, tower damage and range.</p>
+                            <h2>SKILL TREE</h2><p>Shape your equipped commander with a unique branching class skill tree.</p>
                             <button type="button" data-hub-view="skills">OPEN SKILL TREE</button>
                         </article>
                     </div>
@@ -85,6 +87,10 @@
                 <section id="hub-skills-view" class="hub-view" hidden>
                     <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
                     <div id="commander-skill-tree"></div>
+                </section>
+                <section id="hub-traits-view" class="hub-view" hidden>
+                    <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
+                    <div id="trait-collection"></div>
                 </section>
             </main>
         </div>
@@ -274,17 +280,13 @@
 
     <!-- STAGE / JOURNEY PROGRESS -->
     <div id="progress-overlay" class="game-overlay progress-overlay" hidden>
-        <div class="card-screen progress-screen">
-            <p class="prep-eyebrow">THE JOURNEY CONTINUES</p>
-            <h2>YOUR NEXT DESTINATION</h2>
+        <div class="card-screen progress-screen destination-screen">
+            <p class="prep-eyebrow">THE FRONTIER BRANCHES BEFORE YOU</p>
+            <h2>CHOOSE YOUR NEXT DESTINATION</h2>
             <p id="progress-area" class="progress-area">AREA 01 · VERDANT WOODS</p>
-            <div class="progress-grid">
-                <div><span>CAMPSITE</span><strong id="progress-campsite">CAMPSITE 1 OF 2</strong></div>
-                <div><span>STAGE</span><strong id="progress-stage">STAGE 2 OF 3</strong></div>
-            </div>
-            <p id="progress-next" class="progress-next">Next: Stage 2 of Campsite 1</p>
-            <p id="progress-wave" class="progress-wave">Waves completed in this area: 5 / 30</p>
-            <button id="progress-continue" type="button">CONTINUE JOURNEY</button>
+            <p class="destination-intro">Each path holds different dangers and rewards. Boss lairs offer greater spoils and class experience.</p>
+            <div id="destination-options" class="destination-options"></div>
+            <p id="progress-wave" class="progress-wave">Choose carefully. Your route shapes the expedition.</p>
         </div>
     </div>
 
@@ -331,17 +333,22 @@
     </section>
 
     <!-- VICTORY / DEFEAT -->
-    <div id="result-overlay" class="game-overlay" hidden>
-        <div class="overlay-panel">
+    <div id="result-overlay" class="game-overlay result-overlay" hidden>
+        <div class="overlay-panel result-panel">
             <p class="prep-eyebrow" id="result-eyebrow">THE BATTLE IS OVER</p>
             <h2 id="result-title">VICTORY</h2>
             <p id="result-description">The fortress stands.</p>
-            <button id="result-continue">CONTINUE</button>
+            <div class="result-xp"><span>CLASS EXPERIENCE EARNED</span><strong id="result-xp">+0 XP</strong><small id="result-level-summary">CLASS LEVEL 1</small></div>
+            <div id="result-levelups" class="result-levelups" hidden></div>
+            <button id="result-stats-toggle" type="button">VIEW RUN STATISTICS</button>
+            <div id="result-stats" class="result-stats" hidden></div>
+            <button id="result-continue" type="button">RETURN TO LOBBY</button>
         </div>
     </div>
 
     <script>window.RIFTBOUND_API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:3000" : "https://riftbound-auth.onrender.com";</script>
     <script src="js/commanders.js"></script>
+    <script src="js/progression.js"></script>
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>
     <script src="js/devpanel.js"></script>
