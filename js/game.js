@@ -299,7 +299,7 @@ function damageEnemy(e,dmg,applyPassive=true){
     const cardBonus=currentRun.cards.filter(c=>c==="greed").length*3;
     const commanderBonus=getRunCommanderId()==="treasurer"?2:0;
     currentRun.gold+=e.reward+cardBonus+commanderBonus;
-    if(getRunCommanderId()==="necromancer"&&Math.random()<.2){
+    if(applyPassive&&getRunCommanderId()==="necromancer"&&Math.random()<.2){
       currentRun.spectralAllies.push({life:4,cooldown:0});
       showBattleMessage("SOUL HARVESTED · A SPECTRAL ALLY JOINS THE FIGHT");
     }
