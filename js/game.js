@@ -14,6 +14,20 @@ function getSettings(){ return window.riftboundSettings || { towerRanges:false }
 const canvas = document.getElementById("battlefield");
 const ctx = canvas.getContext("2d");
 
+// Pixel-art tower sprites. Missing files safely fall back to the original canvas drawings.
+const towerSpritePaths = {
+  archer: "assets/towers/archer.png",
+  arcane: "assets/towers/arcane.png",
+  cannon: "assets/towers/cannon.png"
+};
+const towerSprites = {};
+Object.entries(towerSpritePaths).forEach(([type, source]) => {
+  const sprite = new Image();
+  sprite.onload = () => { if (currentRun) drawBattlefield(); };
+  sprite.src = source;
+  towerSprites[type] = sprite;
+});
+
 const pathPoints = [
   {x:75,y:270},{x:230,y:270},{x:230,y:130},{x:440,y:130},
   {x:440,y:405},{x:690,y:405},{x:690,y:270},{x:850,y:270}
@@ -199,9 +213,20 @@ function drawTowers(){
   currentRun.towers.forEach(t=>{
     const s=getTowerStats(t),selected=t===selectedTowerEntity;
     if(getSettings().towerRanges||selected){ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,Math.PI*2);ctx.fillStyle=selected?"rgba(185,154,232,.12)":"rgba(185,154,232,.06)";ctx.fill();ctx.strokeStyle=selected?"rgba(220,195,255,.75)":"rgba(185,154,232,.2)";ctx.lineWidth=selected?2:1;ctx.stroke();}
-    ctx.fillStyle="#241932";ctx.fillRect(t.x-16,t.y-16,32,32);ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.strokeRect(t.x-16,t.y-16,32,32);
-    ctx.fillStyle=s.color;ctx.fillRect(t.x-8,t.y-8,16,16);ctx.fillStyle="#E5DDF0";ctx.fillRect(t.x-3,t.y-3,6,6);
-    if(t.level>1){ctx.fillStyle="#F0D58A";ctx.font="11px Georgia";ctx.fillText("+"+(t.level-1),t.x+12,t.y-12);}
+    const sprite=towerSprites[t.type];
+    if(sprite&&sprite.complete&&sprite.naturalWidth>0){
+      ctx.save();
+      ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(sprite,t.x-38,t.y-84,76,88);
+      ctx.restore();
+    }else{
+      ctx.fillStyle="#241932";ctx.fillRect(t.x-16,t.y-16,32,32);ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.strokeRect(t.x-16,t.y-16,32,32);
+      ctx.fillStyle=s.color;ctx.fillRect(t.x-8,t.y-8,16,16);ctx.fillStyle="#E5DDF0";ctx.fillRect(t.x-3,t.y-3,6,6);
+    }
+    if(t.level>1){
+      ctx.fillStyle="#F0D58A";ctx.font="bold 11px Georgia";ctx.textAlign="center";
+      ctx.fillText("+"+(t.level-1),t.x+30,t.y-78);ctx.textAlign="left";
+    }
   });
 }
 function drawEnemies(){
