@@ -374,7 +374,20 @@ function canBuild(x,y,checkGold=true){
   if(currentRun.towers.some(t=>Math.hypot(x-t.x,y-t.y)<37))return false;
   return !checkGold||currentRun.gold>=towerTypes[selectedTower].cost;
 }
-function canvasPoint(e){const r=canvas.getBoundingClientRect();const scaleX=canvas.width/r.width,scaleY=canvas.height/r.height;return{x:(e.clientX-r.left)*scaleX,y:(e.clientY-r.top)*scaleY};}
+function canvasPoint(e){
+  const rect=canvas.getBoundingClientRect();
+  // Pointer coordinates must be measured from the canvas drawing area,
+  // not its outer border. The CSS border otherwise creates a visible offset.
+  const contentLeft=rect.left+canvas.clientLeft;
+  const contentTop=rect.top+canvas.clientTop;
+  const contentWidth=canvas.clientWidth;
+  const contentHeight=canvas.clientHeight;
+  if(!contentWidth||!contentHeight)return{x:0,y:0};
+  return {
+    x:(e.clientX-contentLeft)*(canvas.width/contentWidth),
+    y:(e.clientY-contentTop)*(canvas.height/contentHeight)
+  };
+}
 function handleBattlefieldClick(e){
   const p=canvasPoint(e);
   const hit=[...currentRun.towers].reverse().find(t=>Math.abs(p.x-t.x)<=20&&Math.abs(p.y-t.y)<=20);
