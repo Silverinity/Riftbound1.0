@@ -331,6 +331,11 @@ function getTowerStats(t){
   damage*=1+(bonuses.damage||0);
   range*=1+(bonuses.range||0);
   if(t.type==="arcane")range*=1+(bonuses.arcaneRange||0);
+  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  if(t.type==="archer")damage*=1+(trait.archerDamage||0);
+  if(t.type==="cannon")damage*=1+(trait.cannonDamage||0);
+  if(currentRun.castleHealth>currentRun.maxCastleHealth*.5)damage*=1+(bonuses.healthyDamage||0);
+  if(currentRun.castleHealth<currentRun.maxCastleHealth*.35)fireRate*=1+(bonuses.lowHealthSpeed||0);
   fireRate*=1+(bonuses.towerSpeed||0);
   cooldown=1/fireRate;
   if(t.type==="archer")damage+=currentRun.cards.filter(c=>c==="arrows").length*5;
@@ -635,14 +640,14 @@ function drawEnemies(){
       ctx.strokeStyle="#F0D58A";ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,(size+10)*pulse,0,Math.PI*2);ctx.stroke();
       ctx.fillStyle="#F0D58A";ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.fillText("MARKED",e.x,e.y-size-22);
     }
-    const w=e.type==="treant"?72:48,p=Math.max(0,e.health/e.maxHealth),barY=e.y-size-17;
+    const w=e.isBoss?88:(e.type==="treant"?72:48),p=Math.max(0,e.health/e.maxHealth),barY=e.y-size-17;
     ctx.fillStyle="rgba(8,6,12,.96)";ctx.fillRect(e.x-w/2-2,barY-2,w+4,12);
     ctx.strokeStyle="rgba(245,235,255,.9)";ctx.lineWidth=1;ctx.strokeRect(e.x-w/2-2,barY-2,w+4,12);
     ctx.fillStyle="#38212B";ctx.fillRect(e.x-w/2,barY,w,8);
     ctx.fillStyle=p>.6?"#69C77A":p>.3?"#E4B85C":"#E06470";ctx.fillRect(e.x-w/2,barY,w*p,8);
     ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.fillStyle="#FFFFFF";ctx.strokeStyle="#100B16";ctx.lineWidth=3;
     const hp=Math.max(0,Math.ceil(e.health))+"/"+Math.ceil(e.maxHealth);ctx.strokeText(hp,e.x,barY-3);ctx.fillText(hp,e.x,barY-3);
-    if(e.type==="treant"){ctx.font="12px Georgia";ctx.fillStyle="#F0D58A";ctx.fillText("ANCIENT TREANT",e.x,e.y-size-25);}
+    if(e.isBoss){ctx.font="bold 11px Georgia";ctx.fillStyle="#F0D58A";ctx.fillText((e.name||t.name).toUpperCase(),e.x,e.y-size-26);ctx.strokeStyle="rgba(240,213,138,.75)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,size+5,0,Math.PI*2);ctx.stroke();}
   });ctx.textAlign="left";
 }
 function drawProjectiles(){
@@ -806,9 +811,9 @@ function startWave(automatic=false){
   currentRun.spawnBatches.push({wave:currentRun.currentWave,queue:createWaveQueue(currentRun.currentWave),timer:0});
   currentRun.waveIntervalTimer=currentRun.currentWave<5?10:0;
   const total=((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave;
-  if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&currentRun.currentWave===5){
-    setWaveStatus("AREA BOSS");
-    showBattleMessage("THE ANCIENT TREANT HAS AWAKENED!");
+  if(currentRun.currentWave===5&&currentRun.encounter?.bossId){
+    setWaveStatus("BOSS ENCOUNTER");
+    showBattleMessage(currentRun.encounter.name.toUpperCase()+" HAS AWAKENED!");
   }else{
     setWaveStatus("WAVE "+total+" / 30 IN PROGRESS");
     showBattleMessage("WAVE "+total+" HAS BEGUN");
@@ -825,7 +830,7 @@ function spawnEnemy(type,waveNumber){
   const speedScale=1+progression*.002;
   const health=d.health*healthScale*(d.boss?1.12:1);
   const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
-  const enemy={type,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale,isBoss:!!d.boss};
+  const enemy={type,name:d.name,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale,isBoss:!!d.boss};
   if(trait.slowChance&&Math.random()<trait.slowChance){enemy.slowTimer=2;enemy.slowFactor=.75;}
   currentRun.enemies.push(enemy);
 }
@@ -858,6 +863,18 @@ function updateEnemies(dt){
     if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=incomingDamage;currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
   });
 }
+function getEnemyDamageMultiplier(target){
+  if(!target)return 1;
+  const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  let multiplier=1;
+  if(getRunCommanderId()==="huntmaster"&&target.maxHealth>=150)multiplier*=1.2;
+  if(target===currentRun.markedEnemy&&currentRun.markedTimer>0)multiplier*=1.6+(bonuses.markedDamage||0);
+  if(target.isBoss)multiplier*=1+(bonuses.bossDamage||0)+(trait.bossDamage||0);
+  if(target.slowTimer>0)multiplier*=1+(bonuses.slowedDamage||0)+(trait.slowedDamage||0);
+  if(target.health/target.maxHealth>.7)multiplier*=1+(bonuses.freshDamage||0);
+  if(target.health/target.maxHealth<.3)multiplier*=1+(bonuses.lowDamage||0);
+  return multiplier;
+}
 function updateTowers(dt){
   currentRun.towers.forEach(t=>{
     // Advance animated attacks and release their projectiles on the authored frame.
@@ -872,10 +889,8 @@ function updateTowers(dt){
           const dx=target.x-t.x,dy=target.y-t.y,length=Math.hypot(dx,dy)||1;
           const originX=t.x-38+78*archerAnimation.scaleX;
           const originY=t.y-84+43*archerAnimation.scaleY;
-          const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
-          const markedBonus=target===currentRun.markedEnemy&&currentRun.markedTimer>0?1.6:1;
           currentRun.projectiles.push({
-            x:originX,y:originY,target,damage:getTowerStats(t).damage*eliteBonus*markedBonus,
+            x:originX,y:originY,target,damage:getTowerStats(t).damage*getEnemyDamageMultiplier(target),
             color:"#D8C18B",speed:getTowerStats(t).projectileSpeed,towerType:"archer",
             isArrow:true,angle:Math.atan2(dy,dx)
           });
@@ -932,8 +947,7 @@ function updateTowers(dt){
     if(marked&&currentRun.enemies.includes(marked)&&Math.hypot(marked.x-t.x,marked.y-t.y)<=s.range)target=marked;
     if(!target)currentRun.enemies.forEach(e=>{if(Math.hypot(e.x-t.x,e.y-t.y)<=s.range&&e.progress>best){best=e.progress;target=e;}});
     if(!target)return;
-    const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
-    const markedBonus=target===marked?1.6:1;
+    const targetBonus=getEnemyDamageMultiplier(target);
     if(t.type==="archer"){
       t.archerAnimation={mode:"attack",elapsed:0,fired:false,target};
     }else if(t.type==="arcane"){
@@ -941,7 +955,7 @@ function updateTowers(dt){
     }else if(t.type==="cannon"){
       t.cannonAnimation={mode:"attack",elapsed:0,fired:false,target};
     }else{
-      currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*eliteBonus*markedBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});
+      currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*targetBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});
     }
     t.cooldown=s.cooldown*(currentRun.bastionTimer>0?.8:1);
   });
@@ -1056,7 +1070,7 @@ function activateCommanderAbility(){
     effect={type:"bastion",life:2.6,duration:2.6};
     showBattleMessage("IRON BASTION · THE FORTRESS IS WARDED");
   }else if(id==="arcanist"){
-    enemies.forEach(enemy=>{enemy.slowTimer=Math.max(enemy.slowTimer||0,5);damageEnemy(enemy,120,false);});
+    enemies.forEach(enemy=>{enemy.slowTimer=Math.max(enemy.slowTimer||0,5);enemy.slowFactor=.55;damageEnemy(enemy,120*(1+(currentRun.skillBonuses?.abilityDamage||0)),false);});
     effect={type:"rift",life:2.1,duration:2.1};
     showBattleMessage("RIFT SURGE · ARCANE ENERGY TEARS THROUGH THE ENEMY");
   }else if(id==="huntmaster"){
@@ -1067,25 +1081,25 @@ function activateCommanderAbility(){
     effect={type:"mark",target,life:1.8,duration:1.8};
     showBattleMessage("MARKED PREY · ALL TOWERS HUNT THE TARGET");
   }else if(id==="treasurer"){
-    currentRun.gold+=125;
+    const decreeGold=125+(currentRun.skillBonuses?.abilityGold||0);currentRun.gold+=decreeGold;
     effect={type:"gold",life:2.1,duration:2.1};
-    showBattleMessage("ROYAL DECREE · 125 GOLD HAS BEEN GRANTED");
+    showBattleMessage("ROYAL DECREE · "+decreeGold+" GOLD HAS BEEN GRANTED");
     updateGameDisplay();
   }else if(id==="pyromancer"){
-    enemies.forEach(enemy=>{enemy.burnTimer=Math.max(enemy.burnTimer||0,5);enemy.burnDamage=6;damageEnemy(enemy,65,false);});
+    enemies.forEach(enemy=>{enemy.burnTimer=Math.max(enemy.burnTimer||0,5+(currentRun.skillBonuses?.burnDuration||0));enemy.burnDamage=6+(currentRun.skillBonuses?.burnDamage||0);damageEnemy(enemy,65*(1+(currentRun.skillBonuses?.abilityDamage||0)+(currentRun.skillBonuses?.areaDamage||0)),false);});
     effect={type:"inferno",life:3,duration:3};
     showBattleMessage("INFERNO · THE BATTLEFIELD ERUPTS IN FLAME");
   }else if(id==="necromancer"){
-    for(let i=0;i<3;i++){
+    for(let i=0;i<3+(currentRun.skillBonuses?.extraWraith||0);i++){
       const angle=i*Math.PI*2/3;
-      currentRun.spectralAllies.push({life:12,cooldown:.35+i*.18,damage:18,interval:.85,
+      currentRun.spectralAllies.push({life:12+(currentRun.skillBonuses?.summonDuration||0),cooldown:.35+i*.18,damage:(18+(currentRun.skillBonuses?.summonDamage||0))*(1+(currentRun.skillBonuses?.summonDamageBonus||0)),interval:.85,
         x:895+Math.cos(angle)*24,y:270+Math.sin(angle)*18,orbitAngle:angle,attacking:0});
     }
     effect={type:"spirits",life:2.8,duration:2.8};
     showBattleMessage("RAISE THE FALLEN · THREE WRAITHS JOIN THE BATTLE");
   }
   if(effect)currentRun.abilityEffects.push(effect);
-  const cooldownReduction=currentRun.skillBonuses?.cooldown||0;
+  const cooldownReduction=(currentRun.skillBonuses?.cooldown||0)+(currentRun.skillBonuses?.cooldownReduction||0);
   currentRun.abilityCooldown=Math.max(5,ability.cooldown*(1-cooldownReduction));
   const abilityButton=document.getElementById("commander-ability-button");
   if(abilityButton){
@@ -1118,7 +1132,7 @@ function updateProjectiles(dt){
     if(p.isArcaneOrb)p.animationTime=(p.animationTime||0)+dt;
     const e=p.target;if(!currentRun.enemies.includes(e)||e.health<=0)return false;
     const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d>0)p.angle=Math.atan2(dy,dx);if(d<=p.speed*dt+8){damageEnemy(e,p.damage);
-      if(p.towerType==="cannon")currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48)damageEnemy(other,p.damage*.5);});
+      if(p.towerType==="cannon"){const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48+(trait.cannonSplash||0))damageEnemy(other,p.damage*.5);});}
       return false;
     }p.x+=dx/d*p.speed*dt;p.y+=dy/d*p.speed*dt;return true;
   });currentRun.enemies=currentRun.enemies.filter(e=>e.health>0);
