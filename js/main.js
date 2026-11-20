@@ -288,6 +288,7 @@
       byId("auth-status").textContent = "PLEASE SIGN IN WITH AN APPROVED BETA TESTER ACCOUNT";
       return;
     }
+    if (cloudSaveAvailable && !window.confirm("Starting a new expedition will replace your existing cloud save. Continue?")) return;
     openHub();
   });
   byId("hub-back").addEventListener("click", returnToMenu);
