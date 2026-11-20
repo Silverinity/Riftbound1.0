@@ -1218,7 +1218,6 @@ function upgradeAtCampsite(){
 function showCampsiteScreen(completedWaves){
   stopGameLoop();
   document.getElementById("main-menu").style.display="none";
-  document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=true;
   document.getElementById("campsite-screen").hidden=false;
   document.getElementById("result-overlay").hidden=true;
@@ -1241,7 +1240,6 @@ function continueFromCampsite(){
 function showRunCompleteScreen(){
   stopGameLoop();
   document.getElementById("main-menu").style.display="none";
-  document.getElementById("preparation-screen").hidden=true;
   document.getElementById("game-screen").hidden=true;
   document.getElementById("campsite-screen").hidden=true;
   document.getElementById("card-overlay").hidden=true;
