@@ -275,10 +275,36 @@
   });
 
   byId("continue-run").addEventListener("click", async () => {
-    if (!betaAuthenticated) return;
-    const cloud = await loadCloudSave();
-    if (cloud?.save && window.restoreRiftboundRun(cloud.save)) return;
-    byId("auth-status").textContent = "NO VALID CLOUD SAVE WAS FOUND";
+    const button = byId("continue-run");
+    if (!betaAuthenticated) {
+      byId("auth-status").textContent = "PLEASE SIGN IN WITH DISCORD BEFORE CONTINUING";
+      return;
+    }
+    button.disabled = true;
+    button.textContent = "LOADING RUN...";
+    byId("auth-status").textContent = "LOADING YOUR SAVED EXPEDITION...";
+    try {
+      const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
+      if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
+      const cloud = await response.json();
+      cloudSaveAvailable = !!cloud.hasSave;
+      if (!cloud.hasSave || !cloud.save?.run) {
+        byId("auth-status").textContent = "NO VALID CLOUD SAVE WAS FOUND";
+        return;
+      }
+      if (typeof window.restoreRiftboundRun !== "function") {
+        throw new Error("The run restoration system did not load.");
+      }
+      const restored = window.restoreRiftboundRun(cloud.save);
+      if (!restored) throw new Error("The saved expedition data could not be restored.");
+      byId("auth-status").textContent = "EXPEDITION RESTORED";
+    } catch (error) {
+      console.error("Could not continue Riftbound run:", error);
+      byId("auth-status").textContent = "COULD NOT CONTINUE RUN · " + error.message.toUpperCase();
+    } finally {
+      button.disabled = false;
+      button.textContent = "CONTINUE RUN";
+    }
   });
 
   byId("new-run").addEventListener("click", () => {
