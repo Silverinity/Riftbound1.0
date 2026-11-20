@@ -101,8 +101,8 @@
         userLabel.textContent = "SIGNED IN AS " + (data.user?.username || "DISCORD USER");
         userLabel.hidden = false;
         logout.hidden = false;
-        newRun.disabled = false;
         const cloud = await loadCloudSave();
+        newRun.disabled = false;
         if (cloud?.save?.settings) {
           window.riftboundSettings = { ...DEFAULT_SETTINGS, ...cloud.save.settings };
           persistSettings();
