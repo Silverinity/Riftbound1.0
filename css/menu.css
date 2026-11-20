@@ -181,3 +181,91 @@
     background-position: center;
   }
 }
+
+
+/* Restore Riftbound's original violet identity in the Command Sanctum. */
+.hub-screen {
+  color: #E5DDF0;
+  background: #0B0812;
+}
+.hub-topbar {
+  border-bottom-color: rgba(98,68,127,.42);
+  background: rgba(17,12,25,.97);
+}
+.hub-brand-mark {
+  border-color: #62447F;
+  color: #B99AE8;
+}
+.hub-brand small { color: #93879F; }
+.hub-topbar-right { color: #B99AE8; }
+.hub-topbar-right button,.hub-return {
+  color: #E5DDF0;
+  background: #241932;
+  border-color: #62447F;
+}
+.hub-sidebar {
+  background: linear-gradient(180deg,#171022,#0D0915);
+  border-right-color: #302044;
+}
+.hub-side-label { color: #93879F; }
+.hub-nav-button { color: #A99BB8; }
+.hub-nav-button span { color: #8F76AD; }
+.hub-nav-button:hover,.hub-nav-button.active {
+  color: #F0E8FA;
+  background: rgba(112,75,151,.17);
+  border-left-color: #B99AE8;
+}
+.hub-main {
+  background:
+    radial-gradient(ellipse at 78% 8%,rgba(112,75,151,.25),transparent 38%),
+    radial-gradient(ellipse at 12% 90%,rgba(76,43,112,.16),transparent 36%),
+    linear-gradient(135deg,#171022,#0B0812 72%);
+}
+.hub-main::before {
+  opacity: .22;
+  background:
+    linear-gradient(90deg,transparent 0 12%,rgba(185,154,232,.12) 12.05%,transparent 12.12%),
+    linear-gradient(0deg,transparent 0 82%,rgba(185,154,232,.10) 82.08%,transparent 82.16%),
+    repeating-linear-gradient(0deg,transparent 0 5px,rgba(0,0,0,.10) 6px);
+}
+.hub-eyebrow,.hub-feature-kicker { color: #B99AE8; }
+.hub-view > h1 { color: #F0E8FA; }
+.hub-intro { color: #A99BB8; }
+.hub-feature-grid {
+  border-top-color: rgba(98,68,127,.55);
+  border-bottom-color: rgba(98,68,127,.42);
+}
+.hub-feature {
+  background: linear-gradient(145deg,rgba(36,25,50,.92),rgba(19,13,29,.97));
+  border-right-color: rgba(98,68,127,.40);
+}
+.hub-feature-play {
+  background: linear-gradient(125deg,rgba(52,34,73,.96),rgba(25,17,38,.98) 72%);
+}
+.hub-feature-icon {
+  color: #CDB5EE;
+}
+.hub-feature h2 { color: #EEE6F7; }
+.hub-feature p { color: #A99BB8; }
+.hub-feature button {
+  color: #E5DDF0;
+  background: #241932;
+  border-color: #62447F;
+}
+.hub-feature button:hover {
+  background: #352348;
+  border-color: #A17AC9;
+}
+.hub-feature-play #hub-play {
+  color: #F7F0FF;
+  background: linear-gradient(135deg,#68458B,#432D5D);
+  border-color: #A17AC9;
+}
+.hub-feature-play #hub-play:hover { background: #76519B; }
+.hub-bottom-note {
+  border-top-color: rgba(98,68,127,.38);
+  color: #82748F;
+}
+@media (max-width:900px) {
+  .hub-feature { border-bottom-color: rgba(98,68,127,.34); }
+}
