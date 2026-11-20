@@ -614,7 +614,10 @@ function damageEnemy(e,dmg,applyPassive=true){
     const commanderBonus=getRunCommanderId()==="treasurer"?2:0;
     currentRun.gold+=e.reward+cardBonus+commanderBonus;
     if(applyPassive&&getRunCommanderId()==="necromancer"&&Math.random()<.2){
-      currentRun.spectralAllies.push({life:4,cooldown:0});
+      currentRun.spectralAllies.push({
+        life:4,cooldown:0,damage:18,interval:.85,
+        x:895,y:270,orbitAngle:Math.random()*Math.PI*2,attacking:0
+      });
       showBattleMessage("SOUL HARVESTED · A SPECTRAL ALLY JOINS THE FIGHT");
     }
     updateGameDisplay();
@@ -624,6 +627,12 @@ function updateSpectralAllies(dt){
   if(!currentRun.spectralAllies?.length)return;
   const center={x:895,y:270};
   currentRun.spectralAllies=currentRun.spectralAllies.filter((ally,index)=>{
+    // Keep newly spawned or older saved allies on the battlefield.
+    if(!Number.isFinite(ally.x)||!Number.isFinite(ally.y)){
+      const angle=index*Math.PI*2/3;
+      ally.x=center.x+Math.cos(angle)*24;
+      ally.y=center.y+Math.sin(angle)*18;
+    }
     ally.life-=dt;
     ally.cooldown=Math.max(0,(ally.cooldown||0)-dt);
     ally.orbitAngle=(ally.orbitAngle||index*Math.PI*2/3)+dt*(ally.attacking?.35:1.25);
