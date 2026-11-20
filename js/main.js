@@ -37,57 +37,37 @@
   const settingsOverlay = byId("settings-overlay");
   const API_BASE = (window.RIFTBOUND_API_BASE || "http://localhost:3000").replace(/\/$/, "");
   let betaAuthenticated = false;
-  let cloudSaveAvailable = false;
-
   async function loadCloudSave() {
     try {
       const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
-      if (!response.ok) throw new Error("Cloud save could not be loaded.");
+      if (!response.ok) throw new Error("Player profile could not be loaded.");
       const data = await response.json();
-      cloudSaveAvailable = !!data.save?.run && !data.save.run.completed && data.save.run.checkpoint === "campsite";
       if (data.progression && typeof window.loadRiftboundProgression === "function") window.loadRiftboundProgression(data.progression);
-      byId("continue-run").hidden = !cloudSaveAvailable;
-      if (cloudSaveAvailable) byId("auth-status").textContent = "BETA ACCESS VERIFIED · CAMPFIRE CHECKPOINT FOUND";
       return data;
     } catch (error) {
-      cloudSaveAvailable = false;
-      byId("continue-run").hidden = true;
-      console.warn("Could not load Riftbound cloud save:", error);
+      console.warn("Could not load Riftbound player profile:", error);
       return null;
     }
   }
 
-  window.riftboundCloudSave = async run => {
+  // Cloud saves contain permanent profile progression and settings only.
+  window.riftboundCloudSave = async () => {
     if (!betaAuthenticated) return;
     try {
       const response = await fetch(API_BASE + "/api/save", {
         method: "PUT", credentials: "include",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ save: { version: 1, run: run || null, settings: window.riftboundSettings, progression: typeof window.getRiftboundProgressionExport === "function" ? window.getRiftboundProgressionExport() : null } })
+        body: JSON.stringify({ save: { version: 1, run: null, settings: window.riftboundSettings, progression: typeof window.getRiftboundProgressionExport === "function" ? window.getRiftboundProgressionExport() : null } })
       });
       if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
-      cloudSaveAvailable = !!run && !run.completed && run.checkpoint === "campsite";
-      byId("continue-run").hidden = !cloudSaveAvailable;
-      byId("auth-status").textContent = run ? "BETA ACCESS VERIFIED · PROGRESS SAVED" : "BETA ACCESS VERIFIED · PROFILE SAVED";
+      byId("auth-status").textContent = "BETA ACCESS VERIFIED · PROFILE SAVED";
     } catch (error) {
-      console.error("Could not save Riftbound progress:", error);
+      console.error("Could not save Riftbound profile:", error);
       byId("auth-status").textContent = "CLOUD SAVE FAILED · CHECK BACKEND DATABASE";
     }
   };
 
-  window.riftboundCloudSaveProfile = async () => {
-    if (!betaAuthenticated) return;
-    try {
-      const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
-      if (!response.ok) throw new Error("Could not read the existing cloud save.");
-      const data = await response.json();
-      const existingRun = data.save?.run;
-      return window.riftboundCloudSave(existingRun && !existingRun.completed ? existingRun : null);
-    } catch (error) {
-      console.warn("Could not update cloud progression without a run:", error);
-      byId("auth-status").textContent = "PROFILE SAVED LOCALLY · CLOUD SYNC UNAVAILABLE";
-    }
-  };
+  window.riftboundCloudSaveProfile = async () => window.riftboundCloudSave();
 
   async function checkBetaSession() {
     const status = byId("auth-status");
@@ -139,10 +119,8 @@
         status.textContent = "SIGN IN WITH DISCORD TO ACCESS THE CLOSED BETA";
       }
       login.hidden = false;
-      byId("continue-run").hidden = true;
     } catch (error) {
       betaAuthenticated = false;
-      byId("continue-run").hidden = true;
       status.textContent = "COULD NOT REACH AUTH SERVER · CHECK CONNECTION AND RETRY";
       login.hidden = false;
       console.error("Could not check Riftbound beta access:", error);
@@ -173,7 +151,6 @@
     byId("auth-user").hidden = true;
     byId("discord-logout").hidden = true;
     byId("discord-login").hidden = false;
-    byId("continue-run").hidden = true;
   });
 
   function displaySettings() {
@@ -291,39 +268,6 @@
     }
   });
 
-  byId("continue-run").addEventListener("click", async () => {
-    const button = byId("continue-run");
-    if (!betaAuthenticated) {
-      byId("auth-status").textContent = "PLEASE SIGN IN WITH DISCORD BEFORE CONTINUING";
-      return;
-    }
-    button.disabled = true;
-    button.textContent = "LOADING RUN...";
-    byId("auth-status").textContent = "LOADING YOUR SAVED EXPEDITION...";
-    try {
-      const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
-      if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
-      const cloud = await response.json();
-      cloudSaveAvailable = !!cloud.save?.run && !cloud.save.run.completed && cloud.save.run.checkpoint === "campsite";
-      if (!cloudSaveAvailable) {
-        byId("auth-status").textContent = "NO CAMPFIRE CHECKPOINT WAS FOUND";
-        return;
-      }
-      if (typeof window.restoreRiftboundRun !== "function") {
-        throw new Error("The run restoration system did not load.");
-      }
-      const restored = window.restoreRiftboundRun(cloud.save);
-      if (!restored) throw new Error("The saved expedition data could not be restored.");
-      byId("auth-status").textContent = "EXPEDITION RESTORED";
-    } catch (error) {
-      console.error("Could not continue Riftbound run:", error);
-      byId("auth-status").textContent = "COULD NOT CONTINUE RUN · " + error.message.toUpperCase();
-    } finally {
-      button.disabled = false;
-      button.textContent = "CONTINUE RUN";
-    }
-  });
-
   byId("new-run").addEventListener("click", () => {
     if (!betaAuthenticated) {
       byId("auth-status").textContent = "PLEASE SIGN IN WITH AN APPROVED BETA TESTER ACCOUNT";
@@ -339,9 +283,8 @@
   });
   byId("hub-play").addEventListener("click", async () => {
     const activeRun=!!window.isRiftboundRunActive?.();
-    if ((cloudSaveAvailable||activeRun) && !window.confirm("Starting a new expedition will abandon your current expedition and replace your last campfire checkpoint. Continue?")) return;
+    if (activeRun && !window.confirm("Starting a new expedition will abandon your current expedition. Continue?")) return;
     try {
-      if (cloudSaveAvailable) await window.riftboundCloudSave?.(null);
       if (typeof window.startRiftboundNewRun !== "function") {
         throw new Error("The game engine did not expose the new-run function.");
       }
@@ -361,14 +304,11 @@
     button.addEventListener("click", () => selectTower(button.dataset.tower));
   });
   byId("leave-battle").addEventListener("click", () => {
-    if (window.confirm("Return to the lobby? Only progress saved at your last campfire can be continued. Progress since then will be lost if you leave the game.")) {
+    if (window.confirm("Return to the lobby? Your current expedition will be abandoned and cannot be resumed.")) {
       openHub();
     }
   });
-  byId("result-continue").addEventListener("click", async () => {
-    try { await window.riftboundCloudSave?.(null); } catch (error) { console.warn("Could not clear completed expedition:", error); }
-    openHub();
-  });
+  byId("result-continue").addEventListener("click", () => openHub());
   byId("result-stats-toggle").addEventListener("click", () => {
     const panel = byId("result-stats");
     panel.hidden = !panel.hidden;
