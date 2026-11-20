@@ -353,11 +353,12 @@ function cleanSave(body) {
       for (const key of ["everyFifthSoul","burnSpread"]) if (typeof run.skillBonuses[key] === "boolean") cleanBonuses[key] = run.skillBonuses[key];
     }
     const bossIds = new Set(["hollow-bear","rift-alpha","ash-colossus","goblin-warlord","frost-wyrm","riftbound-knight"]);
+    const encounterIsBoss = run.encounter && bossIds.has(run.encounter.bossId) && run.encounter.id === run.encounter.bossId;
     const encounter = run.encounter && routeIds.has(run.encounter.id) ? {
       id: run.encounter.id,
       name: typeof run.encounter.name === "string" ? run.encounter.name.slice(0, 70) : "Unknown destination",
-      kind: bossIds.has(run.encounter.bossId) ? "BOSS" : "ENCOUNTER",
-      bossId: bossIds.has(run.encounter.bossId) ? run.encounter.bossId : null
+      kind: encounterIsBoss ? "BOSS" : "ENCOUNTER",
+      bossId: encounterIsBoss ? run.encounter.bossId : null
     } : null;
     cleanRun = {
       gold: run.gold, castleHealth: run.castleHealth, maxCastleHealth: run.maxCastleHealth,
