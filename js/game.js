@@ -80,6 +80,27 @@ arcaneAnimation.orb.image.src = "assets/towers/arcane/arcane_orb_projectile_shee
   image.onload = () => { if (currentRun) drawBattlefield(); };
 });
 
+// Cannon Tower animation sheets and projectile use assets/towers/cannon/.
+const cannonAnimation = {
+  frameWidth: 96,
+  frameHeight: 112,
+  idle: { frames: 8, fps: 8, loop: true, image: new Image() },
+  attack: { frames: 8, fps: 12, loop: false, releaseFrame: 2, image: new Image() },
+  ball: new Image(),
+  scaleX: 76 / 96,
+  scaleY: 88 / 112,
+  projectileOriginX: 65,
+  projectileOriginY: 28,
+  projectileWidth: 20,
+  projectileHeight: 20
+};
+cannonAnimation.idle.image.src = "assets/towers/cannon/cannon_idle_sheet.png";
+cannonAnimation.attack.image.src = "assets/towers/cannon/cannon_attack_sheet.png";
+cannonAnimation.ball.src = "assets/towers/cannon/cannon_ball_projectile.png";
+[cannonAnimation.idle.image, cannonAnimation.attack.image, cannonAnimation.ball].forEach(image => {
+  image.onload = () => { if (currentRun) drawBattlefield(); };
+});
+
 // Each realm has its own route. All routes share the same portal and castle endpoints,
 // but their bends and tactical build spaces are deliberately different.
 const pathsByArea = [
@@ -440,10 +461,11 @@ function drawTowers(){
     if(getSettings().towerRanges||selected){ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,Math.PI*2);ctx.fillStyle=selected?"rgba(185,154,232,.12)":"rgba(185,154,232,.06)";ctx.fill();ctx.strokeStyle=selected?"rgba(220,195,255,.75)":"rgba(185,154,232,.2)";ctx.lineWidth=selected?2:1;ctx.stroke();}
     const archerAttack=t.type==="archer"&&t.archerAnimation?.mode==="attack";
     const arcaneAttack=t.type==="arcane"&&t.arcaneAnimation?.mode==="attack";
-    const isAnimatedTower=t.type==="archer"||t.type==="arcane";
-    const animationConfig=t.type==="archer"?archerAnimation:arcaneAnimation;
-    const activeAttack= t.type==="archer"?archerAttack:arcaneAttack;
-    const towerAnimation=t.type==="archer"?t.archerAnimation:t.arcaneAnimation;
+    const cannonAttack=t.type==="cannon"&&t.cannonAnimation?.mode==="attack";
+    const isAnimatedTower=t.type==="archer"||t.type==="arcane"||t.type==="cannon";
+    const animationConfig=t.type==="archer"?archerAnimation:t.type==="arcane"?arcaneAnimation:cannonAnimation;
+    const activeAttack=t.type==="archer"?archerAttack:t.type==="arcane"?arcaneAttack:cannonAttack;
+    const towerAnimation=t.type==="archer"?t.archerAnimation:t.type==="arcane"?t.arcaneAnimation:t.cannonAnimation;
     const animationSheet=activeAttack?animationConfig.attack.image:animationConfig.idle.image;
     const animationSheetReady=animationSheet.complete&&animationSheet.naturalWidth>0;
     const sprite=isAnimatedTower?(animationSheetReady?animationSheet:towerSprites[t.type]):towerSprites[t.type];
@@ -528,6 +550,18 @@ function drawProjectiles(){
         ctx.fillStyle="#A88BFF";ctx.beginPath();ctx.arc(p.x,p.y,7*pulse,0,Math.PI*2);ctx.fill();
         ctx.fillStyle="#E8DCFF";ctx.beginPath();ctx.arc(p.x-2,p.y-2,3,0,Math.PI*2);ctx.fill();ctx.restore();
       }
+    }else if(p.isCannonBall){
+      const ball=cannonAnimation.ball;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle||0);
+      if(ball.complete&&ball.naturalWidth>0){
+        ctx.imageSmoothingEnabled=false;
+        ctx.drawImage(ball,-cannonAnimation.projectileWidth/2,-cannonAnimation.projectileHeight/2,
+          cannonAnimation.projectileWidth,cannonAnimation.projectileHeight);
+      }else{
+        ctx.fillStyle="#D0C6B7";ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle="#75675A";ctx.lineWidth=2;ctx.stroke();
+      }
+      ctx.restore();
     }else{
       ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();
     }
@@ -727,7 +761,7 @@ function updateTowers(dt){
         anim.fired=true;
         if(anim.target&&currentRun.enemies.includes(anim.target)){
           const target=anim.target;
-          const dx=target.x-t.x,dy=target.y-t.y,length=Math.hypot(dx,dy)||1;
+          const dx=target.x-t.x,dy=target.y-t.y;
           const originX=t.x-38+arcaneAnimation.projectileOriginX*arcaneAnimation.scaleX;
           const originY=t.y-84+arcaneAnimation.projectileOriginY*arcaneAnimation.scaleY;
           const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
@@ -741,6 +775,27 @@ function updateTowers(dt){
       }
       if(anim.elapsed>=arcaneAnimation.attack.frames/arcaneAnimation.attack.fps)t.arcaneAnimation=null;
     }
+    if(t.type==="cannon"&&t.cannonAnimation?.mode==="attack"){
+      const anim=t.cannonAnimation;
+      anim.elapsed+=dt;
+      const attackFrame=Math.floor(anim.elapsed*cannonAnimation.attack.fps);
+      if(!anim.fired&&attackFrame>=cannonAnimation.attack.releaseFrame){
+        anim.fired=true;
+        if(anim.target&&currentRun.enemies.includes(anim.target)){
+          const target=anim.target;
+          const originX=t.x-38+cannonAnimation.projectileOriginX*cannonAnimation.scaleX;
+          const originY=t.y-84+cannonAnimation.projectileOriginY*cannonAnimation.scaleY;
+          const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
+          const markedBonus=target===currentRun.markedEnemy&&currentRun.markedTimer>0?1.6:1;
+          currentRun.projectiles.push({
+            x:originX,y:originY,target,damage:getTowerStats(t).damage*eliteBonus*markedBonus,
+            color:"#D0C6B7",speed:getTowerStats(t).projectileSpeed,towerType:"cannon",
+            isCannonBall:true,angle:Math.atan2(target.y-originY,target.x-originX)
+          });
+        }
+      }
+      if(anim.elapsed>=cannonAnimation.attack.frames/cannonAnimation.attack.fps)t.cannonAnimation=null;
+    }
     const s=getTowerStats(t);t.cooldown-=dt;if(t.cooldown>0)return;
     let target=null,best=-1;
     const marked=currentRun.markedTimer>0?currentRun.markedEnemy:null;
@@ -753,6 +808,8 @@ function updateTowers(dt){
       t.archerAnimation={mode:"attack",elapsed:0,fired:false,target};
     }else if(t.type==="arcane"){
       t.arcaneAnimation={mode:"attack",elapsed:0,fired:false,target};
+    }else if(t.type==="cannon"){
+      t.cannonAnimation={mode:"attack",elapsed:0,fired:false,target};
     }else{
       currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*eliteBonus*markedBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});
     }
