@@ -144,7 +144,30 @@ function getTreePositions(){return treesByArea[getAreaIndex()];}
 const areas = [
   {name:"Verdant Woods",subtitle:"The Last Fortress",boss:"",enemyScale:1},
   {name:"Ashen Wastes",subtitle:"The Scorched Crossing",boss:"",enemyScale:1.3},
-  {name:"Frostbound Kingdom",subtitle:"The Frozen Citadel",boss:"Ancient Treant",enemyScale:1.65}
+  {name:"Frostbound Kingdom",subtitle:"The Frozen Citadel",boss:"",enemyScale:1.65}
+];
+const destinationPools = [
+  [
+    {id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",icon:"♜",description:"A rugged den filled with heavy beasts and thick hides.",reward:"More gold from brute enemies"},
+    {id:"wolf-den",name:"Wolf Den",kind:"ENCOUNTER",icon:"牙",description:"A winding hunting ground where fast packs rush the fortress.",reward:"Swift enemy packs"},
+    {id:"goblin-camp",name:"Goblin Camp",kind:"ENCOUNTER",icon:"⚑",description:"A raider camp packed with stubborn scavengers.",reward:"Mixed enemy formations"},
+    {id:"hollow-bear",name:"Ursakar, the Hollow Bear",kind:"BOSS",bossId:"hollow-bear",icon:"♞",description:"A colossal guardian awakened by the Rift.",reward:"+Boss gold · bonus class XP"},
+    {id:"rift-alpha",name:"Fenrir, the Rift Alpha",kind:"BOSS",bossId:"rift-alpha",icon:"✦",description:"The alpha wolf hunts anything that enters its territory.",reward:"+Boss gold · bonus class XP"}
+  ],
+  [
+    {id:"cinder-quarry",name:"Cinder Quarry",kind:"ENCOUNTER",icon:"◆",description:"A scorched mining route patrolled by iron brutes.",reward:"Armoured enemy groups"},
+    {id:"ash-wastes",name:"Ashen Ruins",kind:"ENCOUNTER",icon:"⌂",description:"Collapsed ruins where riftwings circle overhead.",reward:"Fast aerial enemies"},
+    {id:"scavenger-crossing",name:"Scavenger Crossing",kind:"ENCOUNTER",icon:"⚑",description:"A dangerous trade road claimed by raiders.",reward:"Mixed enemy formations"},
+    {id:"ash-colossus",name:"The Ashen Colossus",kind:"BOSS",bossId:"ash-colossus",icon:"♞",description:"A molten giant rises from the quarry floor.",reward:"+Boss gold · bonus class XP"},
+    {id:"goblin-warlord",name:"Goblin Warlord",kind:"BOSS",bossId:"goblin-warlord",icon:"✦",description:"A ruthless war chief commands the largest raiding host.",reward:"+Boss gold · bonus class XP"}
+  ],
+  [
+    {id:"frozen-hollow",name:"Frozen Hollow",kind:"ENCOUNTER",icon:"❄",description:"A frozen cavern haunted by relentless riftlings.",reward:"Dense enemy waves"},
+    {id:"wraithwood",name:"Wraithwood",kind:"ENCOUNTER",icon:"♧",description:"A dead forest where spectral creatures gather.",reward:"Elite-heavy formations"},
+    {id:"shattered-keep",name:"Shattered Keep",kind:"ENCOUNTER",icon:"♜",description:"The ruins of an ancient fortress now held by the Rift.",reward:"Armoured enemy groups"},
+    {id:"frost-wyrm",name:"The Frost Wyrm",kind:"BOSS",bossId:"frost-wyrm",icon:"♞",description:"An ancient dragon coils beneath the glacier.",reward:"+Boss gold · bonus class XP"},
+    {id:"riftbound-knight",name:"The Riftbound Knight",kind:"BOSS",bossId:"riftbound-knight",icon:"✦",description:"A fallen champion guards the path to the final realm.",reward:"+Boss gold · bonus class XP"}
+  ]
 ];
 const towerTypes = {
   archer:{name:"Archer Tower",cost:50,damage:10,range:120,fireRate:1,color:"#B99AE8",projectileSpeed:330,upgradeCost:65},
@@ -155,7 +178,13 @@ const enemyTypes = {
   riftling:{name:"Riftling",health:40,speed:45,reward:8,damage:8,color:"#B68AE8",size:12},
   brute:{name:"Iron Brute",health:150,speed:22,reward:18,damage:18,color:"#A17B78",size:17},
   riftwing:{name:"Riftwing",health:65,speed:75,reward:12,damage:10,color:"#78B9D1",size:11},
-  treant:{name:"Ancient Treant",health:2000,speed:15,reward:150,damage:35,color:"#83A66C",size:27}
+  treant:{name:"Ancient Treant",health:2000,speed:15,reward:150,damage:35,color:"#83A66C",size:27,boss:true},
+  "hollow-bear":{name:"Ursakar, the Hollow Bear",health:1150,speed:13,reward:180,damage:30,color:"#A77B56",size:29,boss:true},
+  "rift-alpha":{name:"Fenrir, the Rift Alpha",health:920,speed:29,reward:175,damage:25,color:"#91A7C9",size:26,boss:true},
+  "ash-colossus":{name:"The Ashen Colossus",health:1850,speed:12,reward:260,damage:38,color:"#C56D42",size:32,boss:true},
+  "goblin-warlord":{name:"Goblin Warlord",health:1350,speed:19,reward:230,damage:34,color:"#8E9A4E",size:29,boss:true},
+  "frost-wyrm":{name:"The Frost Wyrm",health:2450,speed:14,reward:360,damage:42,color:"#79B7D5",size:34,boss:true},
+  "riftbound-knight":{name:"The Riftbound Knight",health:2100,speed:17,reward:340,damage:39,color:"#9C77C7",size:31,boss:true}
 };
 const cardPool = [
   {id:"arrows",name:"Sharpened Arrows",rarity:"COMMON",type:"TOWER",description:"Archer Towers deal +5 damage per hit.",icon:"➶"},
@@ -180,10 +209,12 @@ function createNewRun(){
   const baseHealth=commanderId==="warden"?120:100;
   const startingHealth=Math.round(baseHealth*(1+(skillBonuses.fortressHp||0)));
   return {
-    commanderId,skillBonuses,gold:100,castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
+    commanderId,skillBonuses,gold:100+(skillBonuses.startingGold||0),castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
     towers:[{type:"archer",x:300,y:280,cooldown:0,level:1,investedGold:0,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
+    encounter:{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},defeatedBosses:[],
+    stats:{damageDealt:0,damageTaken:0,goldSpent:0,enemiesKilled:0,wavesCompleted:0,bossesDefeated:0},
     devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],
     abilityCooldown:0,bastionTimer:0,markedEnemy:null,markedTimer:0,abilityEffects:[]
   };
@@ -207,7 +238,8 @@ function persistRunCheckpoint(checkpoint="battle"){
       upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
     towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
     commanderId:currentRun.commanderId||"warden",skillBonuses:currentRun.skillBonuses||{},abilityCooldown:currentRun.abilityCooldown||0,
-    campsiteRestUsed:!!currentRun.campsiteRestUsed,checkpoint
+    campsiteRestUsed:!!currentRun.campsiteRestUsed,stats:currentRun.stats||{},encounter:currentRun.encounter||null,
+    defeatedBosses:currentRun.defeatedBosses||[],checkpoint
   };
   window.riftboundCloudSave(run);
 }
@@ -225,6 +257,8 @@ window.restoreRiftboundRun=function(saved){
     investedGold:Number.isFinite(tower.investedGold)?tower.investedGold:(index===0?0:undefined)
   }));
   currentRun={...createNewRun(),...data,towers:restoredTowers,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
+    stats:{damageDealt:0,damageTaken:0,goldSpent:0,enemiesKilled:0,wavesCompleted:0,bossesDefeated:0,...(data.stats||{})},
+    encounter:data.encounter||{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},defeatedBosses:Array.isArray(data.defeatedBosses)?data.defeatedBosses:[],
     gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
   selectedTower=null;selectedTowerEntity=null;
   relocateTowersForCurrentArea();
@@ -285,13 +319,20 @@ function showBattleMessage(s){document.getElementById("battle-message").textCont
 function setWaveStatus(s){document.getElementById("wave-status").textContent=s;}
 function getTowerStats(t){
   const base=towerTypes[t.type],u=t.upgrades||{damage:0,range:0,speed:0};
+  const bonuses=currentRun.skillBonuses||{};
   let damage=base.damage*(1+(u.damage||0)*.3);
   let range=base.range+(u.range||0)*22;
   let cooldown=Math.max(.18,1/base.fireRate-(u.speed||0)*.16);
   let fireRate=1/cooldown;
   if(t.type==="arcane"&&getRunCommanderId()==="arcanist")damage*=1.25;
-  damage*=1+(currentRun.skillBonuses?.damage||0);
-  range*=1+(currentRun.skillBonuses?.range||0);
+  if(t.type==="arcane")damage*=1+(bonuses.arcaneDamage||0);
+  if(t.type==="archer")damage*=1+(bonuses.archerDamage||0);
+  if(t.type==="cannon")damage*=1+(bonuses.cannonDamage||0);
+  damage*=1+(bonuses.damage||0);
+  range*=1+(bonuses.range||0);
+  if(t.type==="arcane")range*=1+(bonuses.arcaneRange||0);
+  fireRate*=1+(bonuses.towerSpeed||0);
+  cooldown=1/fireRate;
   if(t.type==="archer")damage+=currentRun.cards.filter(c=>c==="arrows").length*5;
   if(t.type==="arcane")damage+=currentRun.cards.filter(c=>c==="arcane").length*10;
   if(t.type==="cannon")range+=currentRun.cards.filter(c=>c==="siege").length*25;
@@ -743,6 +784,7 @@ function getPathPosition(progress){
 }
 function createWaveQueue(wave){
   if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&wave===5)return ["treant"];
+  if(wave===5&&currentRun.encounter?.bossId)return [currentRun.encounter.bossId];
   const totalWave=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+wave;
   const count=5+wave*2+(currentRun.area-1)*3+Math.floor((totalWave-1)/8),queue=[];
   for(let i=0;i<count;i++){
@@ -781,8 +823,11 @@ function spawnEnemy(type,waveNumber){
   const healthScale=areaData().enemyScale*(1+progression*.022+progression*progression*.00012);
   const damageScale=1+progression*.012+progression*progression*.00005;
   const speedScale=1+progression*.002;
-  const health=d.health*healthScale;
-  currentRun.enemies.push({type,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale});
+  const health=d.health*healthScale*(d.boss?1.12:1);
+  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  const enemy={type,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale,isBoss:!!d.boss};
+  if(trait.slowChance&&Math.random()<trait.slowChance){enemy.slowTimer=2;enemy.slowFactor=.75;}
+  currentRun.enemies.push(enemy);
 }
 function updateEnemies(dt){
   currentRun.spawnBatches.forEach(batch=>{
@@ -798,17 +843,19 @@ function updateEnemies(dt){
     if(e.burnTimer>0){
       const burnStep=Math.min(dt,e.burnTimer);
       e.burnTimer-=burnStep;
-      e.health-=(e.burnDamage||3)*burnStep;
+      const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+      e.health-=(e.burnDamage||3)*(1+(trait.burnDamage||0))*burnStep;
       if(e.burnTimer<=0)e.burnDamage=3;
       if(e.health<=0&&!e.rewarded)damageEnemy(e,0,false);
     }
     if(e.slowTimer>0)e.slowTimer=Math.max(0,e.slowTimer-dt);
-    const slowFactor=e.slowTimer>0?.55:1;
+    const slowPower=currentRun.skillBonuses?.slowPower||0;
+    const slowFactor=e.slowTimer>0?Math.max(.25,(e.slowFactor||.55)-slowPower):1;
     e.progress+=(e.speed||enemyTypes[e.type].speed)*slowFactor*dt/getTotalPathLength();
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
-    if(e.progress>=1){if(!currentRun.devInvincible){const incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
+    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=incomingDamage;currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
   });
 }
 function updateTowers(dt){
@@ -902,15 +949,32 @@ function updateTowers(dt){
 function damageEnemy(e,dmg,applyPassive=true){
   if(!e||e.rewarded)return;
   e.health-=dmg;
-  if(applyPassive&&dmg>0&&getRunCommanderId()==="pyromancer"&&Math.random()<.25)e.burnTimer=Math.max(e.burnTimer||0,3);
+  const dealt=Math.max(0,Math.min(Math.max(0,e.health+dmg),dmg));
+  currentRun.stats.damageDealt+=dealt;
+  const bonuses=currentRun.skillBonuses||{},trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  if(applyPassive&&dmg>0&&Math.random()<(getRunCommanderId()==="pyromancer"?.25:0)+(bonuses.burnChance||0)) {
+    e.burnTimer=Math.max(e.burnTimer||0,3+(trait.burnDuration||0)+(bonuses.burnDuration||0));
+    e.burnDamage=3+(bonuses.burnDamage||0);
+  }
+  if(applyPassive&&dmg>0&&trait.slowChance&&Math.random()<trait.slowChance){e.slowTimer=Math.max(e.slowTimer||0,2);e.slowFactor=.75;}
   if(e.health<=0&&!e.rewarded){
-    e.rewarded=true;
+    e.rewarded=true;currentRun.stats.enemiesKilled++;
     const cardBonus=currentRun.cards.filter(c=>c==="greed").length*3;
     const commanderBonus=getRunCommanderId()==="treasurer"?2:0;
-    currentRun.gold+=e.reward+cardBonus+commanderBonus;
-    if(applyPassive&&getRunCommanderId()==="necromancer"&&Math.random()<.2){
+    const goldMultiplier=1+(bonuses.goldBonus||0)+(trait.goldBonus||0)+(e.maxHealth>=150?(bonuses.eliteGold||0):0);
+    currentRun.gold+=Math.floor((e.reward+cardBonus+commanderBonus)*goldMultiplier);
+    if(e.isBoss){
+      currentRun.stats.bossesDefeated++;
+      if(!currentRun.defeatedBosses.includes(e.type))currentRun.defeatedBosses.push(e.type);
+      const bossBonus=Math.floor((150+currentRun.area*75)*(1+(trait.bossGold||0)+(bonuses.bossGold||0)))+(bonuses.bossGoldFlat||0);
+      currentRun.gold+=bossBonus;
+      showBattleMessage("BOSS DEFEATED · "+e.name+" · BONUS "+bossBonus+" GOLD");
+    }
+    const summonChance=.2+(bonuses.summonChance||0)+(trait.summonChance||0);
+    const guaranteedSoul=bonuses.everyFifthSoul&&currentRun.stats.enemiesKilled%5===0;
+    if(applyPassive&&getRunCommanderId()==="necromancer"&&(Math.random()<summonChance||guaranteedSoul)){
       currentRun.spectralAllies.push({
-        life:4,cooldown:0,damage:18,interval:.85,
+        life:4+(bonuses.summonDuration||0)+(trait.summonDuration||0),cooldown:0,damage:(18+(bonuses.summonDamage||0))*(1+(bonuses.summonDamageBonus||0)),interval:.85,
         x:895,y:270,orbitAngle:Math.random()*Math.PI*2,attacking:0
       });
       showBattleMessage("SOUL HARVESTED · A SPECTRAL ALLY JOINS THE FIGHT");
@@ -1062,6 +1126,7 @@ function updateProjectiles(dt){
 function checkWaveCompletion(){
   if(!currentRun.waveActive||currentRun.spawnBatches.length||currentRun.enemies.length)return;
   currentRun.projectiles=[];
+  if(currentRun._lastCountedWave!==currentRun.currentWave){currentRun._lastCountedWave=currentRun.currentWave;currentRun.stats.wavesCompleted++;}
   if(currentRun.currentWave>=5){
     currentRun.waveActive=false;
     currentRun.waveIntervalTimer=0;
@@ -1073,11 +1138,37 @@ function checkWaveCompletion(){
   setWaveStatus("WAVE "+total+" CLEARED · NEXT WAVE IN "+Math.ceil(currentRun.waveIntervalTimer)+"s");
   showBattleMessage("WAVE CLEARED. THE NEXT GROUP IS APPROACHING.");
 }
+function finalizeRun(victory){
+  if(!currentRun||currentRun.finalized)return;
+  currentRun.finalized=true;
+  const stats=currentRun.stats||{},classId=currentRun.commanderId||"warden";
+  const xp=typeof window.calculateRiftboundRunXP==="function"?window.calculateRiftboundRunXP(stats,victory):stats.wavesCompleted*18+stats.enemiesKilled*2+(victory?220:0);
+  const result=typeof window.awardRiftboundClassXP==="function"?window.awardRiftboundClassXP(classId,xp):{level:1,levelsGained:0,skillPointsGained:0};
+  currentRun.xpAwarded=xp;
+  document.getElementById("result-xp").textContent="+"+xp+" XP";
+  document.getElementById("result-level-summary").textContent=classId.toUpperCase()+" · LEVEL "+result.level;
+  const levelups=document.getElementById("result-levelups");
+  if(result.levelsGained){levelups.hidden=false;levelups.textContent="LEVEL UP ×"+result.levelsGained+" · +"+result.skillPointsGained+" SKILL POINT"+(result.skillPointsGained===1?"":"S")+" EARNED";}
+  else{levelups.hidden=true;levelups.textContent="";}
+  const rows=[
+    ["TOTAL DAMAGE DEALT",Math.floor(stats.damageDealt||0).toLocaleString()],
+    ["DAMAGE TAKEN",Math.floor(stats.damageTaken||0).toLocaleString()],
+    ["GOLD SPENT",Math.floor(stats.goldSpent||0).toLocaleString()],
+    ["GOLD REMAINING",Math.floor(currentRun.gold||0).toLocaleString()],
+    ["ENEMIES DEFEATED",Math.floor(stats.enemiesKilled||0).toLocaleString()],
+    ["WAVES COMPLETED",Math.floor(stats.wavesCompleted||0).toLocaleString()],
+    ["BOSSES DEFEATED",Math.floor(stats.bossesDefeated||0).toLocaleString()]
+  ];
+  document.getElementById("result-stats").innerHTML=rows.map(([label,value])=>'<div class="result-stat-row"><span>'+label+'</span><strong>'+value+'</strong></div>').join("");
+  document.getElementById("result-stats").hidden=true;
+  document.getElementById("result-stats-toggle").textContent="VIEW RUN STATISTICS";
+  persistRunCheckpoint("results");
+}
 function endGame(){
   if(currentRun.gameOver)return;currentRun.gameOver=true;currentRun.waveActive=false;stopGameLoop();setWaveStatus("DEFEAT");showBattleMessage("THE CASTLE HAS FALLEN");
   document.getElementById("result-eyebrow").textContent="THE FORTRESS HAS FALLEN";document.getElementById("result-title").textContent="DEFEAT";
-  document.getElementById("result-description").textContent="You reached area "+currentRun.area+", wave "+currentRun.currentWave+". Your defense has ended.";
-  document.getElementById("result-continue").textContent="RETURN TO MENU";document.getElementById("result-continue").dataset.action="menu";document.getElementById("result-overlay").hidden=false;
+  document.getElementById("result-description").textContent="Your expedition ended in area "+currentRun.area+". The fortress will rise again.";
+  finalizeRun(false);document.getElementById("result-continue").textContent="RETURN TO LOBBY";document.getElementById("result-overlay").hidden=false;
 }
 function showCardSelection(){
   pendingCards=[...cardPool].sort(()=>Math.random()-.5).slice(0,3);
@@ -1091,34 +1182,70 @@ function showCardSelection(){
   document.getElementById("card-overlay").hidden=false;stopGameLoop();
 }
 function chooseCard(id){
-  if(!currentRun||!pendingCards.some(c=>c.id===id))return;
+  if(!currentRun||!pendingCards.some(card=>card.id===id))return;
   const completedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+5;
-  if(typeof window.awardRiftboundSkillPoint==="function"){
-    window.awardRiftboundSkillPoint();
-    showBattleMessage("STAGE CLEARED · 1 COMMAND SKILL POINT EARNED");
-  }
   currentRun.cards.push(id);
   if(id==="walls"){currentRun.maxCastleHealth+=20;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+20);}
   document.getElementById("card-overlay").hidden=true;
+  if(completedWaves>=90){currentRun.runFinished=true;showRunCompleteScreen();return;}
+  showDestinationSelection(completedWaves);
+}
+let pendingDestinationChoices=[];
+let pendingDestinationProgress=null;
+function nextProgressionAfterStage(){
+  let area=currentRun.area,campsite=currentRun.campsite,stage=currentRun.stage;
+  if(stage<3)stage++;
+  else if(campsite<2){campsite++;stage=1;}
+  else if(area<3){area++;campsite=1;stage=1;}
+  return {area,campsite,stage};
+}
+function showDestinationSelection(completedWaves){
+  pendingDestinationProgress=nextProgressionAfterStage();
+  const areaIndex=pendingDestinationProgress.area-1;
+  const pool=destinationPools[areaIndex];
+  const available=pool.filter(node=>node.kind!=="BOSS"||!currentRun.defeatedBosses.includes(node.bossId));
+  const shuffled=[...available].sort(()=>Math.random()-.5);
+  pendingDestinationChoices=shuffled.slice(0,3);
+  while(pendingDestinationChoices.length<3){
+    const normal=pool.filter(node=>node.kind!=="BOSS");
+    const extra=normal[Math.floor(Math.random()*normal.length)];
+    if(extra&&!pendingDestinationChoices.some(node=>node.id===extra.id))pendingDestinationChoices.push(extra);
+    else break;
+  }
+  const area=areas[areaIndex];
+  document.getElementById("progress-area").textContent="AREA 0"+pendingDestinationProgress.area+" · "+area.name.toUpperCase()+" · "+(pendingDestinationProgress.campsite===1?"FIRST":"SECOND")+" EXPEDITION";
+  const container=document.getElementById("destination-options");
+  container.innerHTML="";
+  pendingDestinationChoices.forEach(node=>{
+    const card=document.createElement("article");
+    card.className="destination-card "+(node.kind==="BOSS"?"destination-boss":"");
+    card.innerHTML='<span class="destination-kind">'+node.kind+'</span><span class="destination-icon">'+node.icon+'</span><h3>'+node.name+'</h3><p>'+node.description+'</p><small>'+node.reward+'</small><button type="button">CHOOSE ROUTE</button>';
+    card.querySelector("button").addEventListener("click",()=>chooseDestination(node.id,completedWaves));
+    container.appendChild(card);
+  });
+  document.getElementById("progress-wave").textContent="A boss lair is a dangerous optional route. Defeating its guardian grants extra gold and class XP.";
+  document.getElementById("progress-overlay").hidden=false;
+  stopGameLoop();
+}
+function chooseDestination(id,completedWaves){
+  const node=pendingDestinationChoices.find(choice=>choice.id===id);
+  if(!node||!pendingDestinationProgress)return;
   const previousArea=currentRun.area;
-  if(currentRun.stage<3)currentRun.stage++;
-  else if(currentRun.campsite<2){currentRun.campsite++;currentRun.stage=1;}
-  else if(currentRun.area<3){currentRun.area++;currentRun.campsite=1;currentRun.stage=1;}
-  else{currentRun.runFinished=true;showRunCompleteScreen();return;}
+  currentRun.area=pendingDestinationProgress.area;currentRun.campsite=pendingDestinationProgress.campsite;currentRun.stage=pendingDestinationProgress.stage;
+  currentRun.encounter={id:node.id,name:node.name,kind:node.kind,bossId:node.bossId||null};
+  if(currentRun.skillBonuses?.stageGold)currentRun.gold+=currentRun.skillBonuses.stageGold;
+  if(currentRun.skillBonuses?.stageHeal)currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+currentRun.skillBonuses.stageHeal);
   if(currentRun.area!==previousArea)relocateTowersForCurrentArea();
-  currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];currentRun.waveActive=false;currentRun.waitingForWave=false;currentRun.waveStarted=false;currentRun.waveIntervalTimer=0;
-  selectedTowerEntity=null;selectedTower=null;currentRun.campsiteRestUsed=false;
-  document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
+  currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];currentRun.waveActive=false;currentRun.waitingForWave=false;currentRun.waveStarted=false;currentRun.waveIntervalTimer=0;currentRun._lastCountedWave=0;
+  currentRun.campsiteRestUsed=false;selectedTowerEntity=null;selectedTower=null;
+  document.querySelectorAll(".tower-button").forEach(button=>button.classList.remove("selected"));
+  document.getElementById("progress-overlay").hidden=true;
   updateAreaLabels();updateGameDisplay();
   persistRunCheckpoint(completedWaves%15===0?"campsite":"battle");
   if(completedWaves%15===0){showCampsiteScreen(completedWaves);return;}
-  const next=document.getElementById("progress-overlay");
-  document.getElementById("progress-area").textContent="AREA 0"+currentRun.area+" · "+areaData().name.toUpperCase();
-  document.getElementById("progress-campsite").textContent="CAMPSITE "+currentRun.campsite+" OF 2";
-  document.getElementById("progress-stage").textContent="STAGE "+currentRun.stage+" OF 3";
-  document.getElementById("progress-next").textContent=currentRun.stage===1?"Next: Stage 1 begins at this campsite":"Next: Stage "+currentRun.stage+" of Campsite "+currentRun.campsite;
-  document.getElementById("progress-wave").textContent="Waves completed in this area: "+(((currentRun.campsite-1)*3+(currentRun.stage-1))*5)+" / 30";
-  next.hidden=false;stopGameLoop();
+  setWaveStatus("READY WHEN YOU ARE");
+  showBattleMessage(node.kind==="BOSS"?"BOSS LAIR SELECTED · "+node.name.toUpperCase():"DESTINATION SELECTED · "+node.name.toUpperCase());
+  startGameLoop();
 }
 function continueFromProgress(){document.getElementById("progress-overlay").hidden=true;setWaveStatus("READY WHEN YOU ARE");showBattleMessage("PREPARE YOUR DEFENSE, THEN PRESS START WAVE");startGameLoop();}
 function gameLoop(timestamp){
@@ -1203,7 +1330,7 @@ function handleBattlefieldClick(e){
   if(!selectedTower){selectedTowerEntity=null;updateTowerPanel();return;}
   const type=towerTypes[selectedTower];if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
   if(!canBuild(p.x,p.y)){showBattleMessage("THAT LOCATION IS BLOCKED — TRY ANOTHER OPEN AREA");return;}
-  currentRun.gold-=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,investedGold:type.cost,upgrades:{damage:0,range:0,speed:0}});
+  currentRun.gold-=type.cost;currentRun.stats.goldSpent+=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,investedGold:type.cost,upgrades:{damage:0,range:0,speed:0}});
   updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(type.name.toUpperCase()+" BUILT");
 }
 function selectTower(type){
@@ -1232,7 +1359,7 @@ function upgradeSelectedTower(stat){
   const t=selectedTowerEntity;if(!t||!currentRun)return;const cost=towerTypes[t.type].upgradeCost+(t.level-1)*35;
   if(t.level>=4){showBattleMessage("THIS TOWER IS FULLY UPGRADED");return;}
   if(currentRun.gold<cost){showBattleMessage("NOT ENOUGH GOLD FOR THIS UPGRADE");return;}
-  currentRun.gold-=cost;t.investedGold=getTowerInvestment(t)+cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
+  currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;t.investedGold=getTowerInvestment(t)+cost;t.upgrades[stat]=(t.upgrades[stat]||0)+1;t.level++;t.cooldown=0;updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(towerTypes[t.type].name.toUpperCase()+" UPGRADED");
 }
 function updateTowerPanel(){
   const panel=document.getElementById("tower-info-panel");if(!panel)return;
@@ -1266,7 +1393,7 @@ document.addEventListener("keydown",event=>{
   if(target&&(target.isContentEditable||["INPUT","TEXTAREA","SELECT"].includes(target.tagName)))return;
   event.preventDefault();activateCommanderAbility();
 });
-document.getElementById("progress-continue").addEventListener("click",continueFromProgress);
+// Destination choices now advance the expedition directly.
 document.getElementById("campsite-free-rest").addEventListener("click",restByCampfire);
 document.getElementById("campsite-heal").addEventListener("click",healAtCampsite);
 document.getElementById("campsite-upgrade").addEventListener("click",upgradeAtCampsite);
@@ -1279,8 +1406,13 @@ function updateCampsiteScreen(){
   document.getElementById("campsite-towers").textContent=currentRun.towers.length;
   document.getElementById("campsite-cards").textContent=currentRun.cards.length;
   document.getElementById("campsite-free-rest").disabled=currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth;
-  document.getElementById("campsite-heal").disabled=currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth;
-  document.getElementById("campsite-upgrade").disabled=currentRun.gold<100;
+  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
+  const healCost=Math.max(1,Math.ceil(40*(1-(trait.costReduction||0)-(currentRun.skillBonuses?.costReduction||0))));
+  const upgradeCost=Math.max(1,Math.ceil(100*(1-(trait.costReduction||0)-(currentRun.skillBonuses?.costReduction||0))));
+  document.getElementById("campsite-heal").textContent="RESTORE CASTLE · "+healCost+" G";
+  document.getElementById("campsite-upgrade").textContent="SHARPEN THE ARSENAL · "+upgradeCost+" G";
+  document.getElementById("campsite-heal").disabled=currentRun.gold<healCost||currentRun.castleHealth>=currentRun.maxCastleHealth;
+  document.getElementById("campsite-upgrade").disabled=currentRun.gold<upgradeCost;
 }
 function restByCampfire(){
   if(!currentRun||currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
@@ -1288,11 +1420,11 @@ function restByCampfire(){
 }
 function healAtCampsite(){
   if(!currentRun||currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
-  currentRun.gold-=40;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
+  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const cost=Math.max(1,Math.ceil(40*(1-(trait.costReduction||0)-(currentRun.skillBonuses?.costReduction||0))));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function upgradeAtCampsite(){
   if(!currentRun||currentRun.gold<100)return;
-  currentRun.gold-=100;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
+  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const cost=Math.max(1,Math.ceil(100*(1-(trait.costReduction||0)-(currentRun.skillBonuses?.costReduction||0))));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function showCampsiteScreen(completedWaves){
   stopGameLoop();
@@ -1325,7 +1457,8 @@ function showRunCompleteScreen(){
   document.getElementById("progress-overlay").hidden=true;
   document.getElementById("result-eyebrow").textContent="THE RIFT HAS BEEN SEALED";
   document.getElementById("result-title").textContent="EXPEDITION COMPLETE";
-  document.getElementById("result-description").textContent="You survived all 90 waves across the three areas. The fortress stands, and the realms are safe — for now.";
-  document.getElementById("result-continue").textContent="RETURN TO MENU";
+  document.getElementById("result-description").textContent="You survived the final realm and sealed the Rift.";
+  finalizeRun(true);
+  document.getElementById("result-continue").textContent="RETURN TO LOBBY";
   document.getElementById("result-overlay").hidden=false;
 }
