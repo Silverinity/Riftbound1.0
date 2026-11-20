@@ -121,6 +121,8 @@
         status.textContent = "DISCORD LOGIN CANCELLED";
       } else if (params.get("discord") === "login-error") {
         status.textContent = "DISCORD LOGIN FAILED · PLEASE TRY AGAIN";
+      } else if (params.get("discord") === "success") {
+        status.textContent = "LOGIN RETURNED, BUT THE SESSION WAS NOT RETAINED · SAFARI MAY BE BLOCKING CROSS-SITE COOKIES";
       } else {
         status.textContent = "SIGN IN WITH DISCORD TO ACCESS THE CLOSED BETA";
       }
