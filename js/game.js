@@ -47,13 +47,16 @@ const cardPool = [
   {id:"walls",name:"Reinforced Walls",rarity:"RARE",type:"DEFENSE",description:"Increase maximum castle HP by 20 and restore 20 HP.",icon:"⬟"}
 ];
 
+function getRunCommanderId(){return currentRun?.commanderId||window.riftboundCommanderId||"warden";}
 function createNewRun(){
+  const commanderId=window.riftboundCommanderId||"warden";
+  const startingHealth=commanderId==="warden"?120:100;
   return {
-    gold:100,castleHealth:100,maxCastleHealth:100,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
+    commanderId,gold:100,castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
     towers:[{type:"archer",x:330,y:200,cooldown:0,level:1,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
-    devInvincible:false,devGameSpeed:1,campsiteRestUsed:false
+    devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[]
   };
 }
 function startNewRun(){
@@ -73,6 +76,7 @@ function persistRunCheckpoint(checkpoint="battle"){
     totalWaves:currentRun.totalWaves,towers:currentRun.towers.map(t=>({type:t.type,x:t.x,y:t.y,level:t.level,
       upgrades:{damage:t.upgrades?.damage||0,range:t.upgrades?.range||0,speed:t.upgrades?.speed||0}})),
     towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
+    commanderId:currentRun.commanderId||"warden",
     campsiteRestUsed:!!currentRun.campsiteRestUsed,checkpoint
   };
   window.riftboundCloudSave(run);
@@ -82,7 +86,9 @@ window.restoreRiftboundRun=function(saved){
   if(!saved||!saved.run)return false;
   const data=saved.run;
   stopGameLoop();
-  currentRun={...createNewRun(),...data,enemies:[],projectiles:[],spawnBatches:[],waveActive:false,
+  const savedCommander=data.commanderId||window.riftboundCommanderId||"warden";
+  window.riftboundCommanderId=savedCommander;
+  currentRun={...createNewRun(),...data,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
     gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
   selectedTower=null;selectedTowerEntity=null;
   document.getElementById("main-menu").style.display="none";
@@ -121,6 +127,7 @@ function updateGameDisplay(){
   document.getElementById("wave-display").textContent=(((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave)+" / 30";
   const progress=document.getElementById("progress-summary");if(progress)progress.textContent="AREA "+currentRun.area+" · CAMPSITE "+currentRun.campsite+"/2 · STAGE "+currentRun.stage+"/3";
   const start=document.getElementById("start-wave");if(start)start.disabled=currentRun.waveActive||currentRun.gameOver||currentRun.currentWave>=5;
+  updateCommanderHud();
   updateTowerButtons();updateTowerPanel();
 }
 function updateTowerButtons(){
@@ -136,6 +143,7 @@ function getTowerStats(t){
   let range=base.range+(u.range||0)*15;
   let cooldown=Math.max(.15,1/base.fireRate-(u.speed||0)*.1);
   let fireRate=1/cooldown;
+  if(t.type==="arcane"&&getRunCommanderId()==="arcanist")damage*=1.25;
   if(t.type==="archer")damage+=currentRun.cards.filter(c=>c==="arrows").length*5;
   if(t.type==="arcane")damage+=currentRun.cards.filter(c=>c==="arcane").length*10;
   if(t.type==="cannon")range+=currentRun.cards.filter(c=>c==="siege").length*25;
@@ -259,7 +267,16 @@ function updateEnemies(dt){
     }
   });
   currentRun.spawnBatches=currentRun.spawnBatches.filter(batch=>batch.queue.length>0);
-  currentRun.enemies.forEach(e=>{e.progress+=enemyTypes[e.type].speed*dt/totalPathLength;const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;});
+  currentRun.enemies.forEach(e=>{
+    if(e.burnTimer>0){
+      const burnStep=Math.min(dt,e.burnTimer);
+      e.burnTimer-=burnStep;
+      e.health-=3*burnStep;
+      if(e.health<=0&&!e.rewarded)damageEnemy(e,0,false);
+    }
+    e.progress+=enemyTypes[e.type].speed*dt/totalPathLength;
+    const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
+  });
   currentRun.enemies=currentRun.enemies.filter(e=>{
     if(e.progress>=1){if(!currentRun.devInvincible)currentRun.castleHealth=Math.max(0,currentRun.castleHealth-e.damage);updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
   });
@@ -268,11 +285,53 @@ function updateTowers(dt){
   currentRun.towers.forEach(t=>{
     const s=getTowerStats(t);t.cooldown-=dt;if(t.cooldown>0)return;
     let target=null,best=-1;currentRun.enemies.forEach(e=>{if(Math.hypot(e.x-t.x,e.y-t.y)<=s.range&&e.progress>best){best=e.progress;target=e;}});
-    if(!target)return;currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage,color:s.color,speed:s.projectileSpeed,towerType:t.type});t.cooldown=s.cooldown;
+    if(!target)return;
+    const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
+    currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*eliteBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});t.cooldown=s.cooldown;
   });
 }
-function damageEnemy(e,dmg){
-  e.health-=dmg;if(e.health<=0&&!e.rewarded){e.rewarded=true;let bonus=currentRun.cards.filter(c=>c==="greed").length*3;currentRun.gold+=e.reward+bonus;updateGameDisplay();}
+function damageEnemy(e,dmg,applyPassive=true){
+  if(!e||e.rewarded)return;
+  e.health-=dmg;
+  if(applyPassive&&dmg>0&&getRunCommanderId()==="pyromancer"&&Math.random()<.25)e.burnTimer=Math.max(e.burnTimer||0,3);
+  if(e.health<=0&&!e.rewarded){
+    e.rewarded=true;
+    const cardBonus=currentRun.cards.filter(c=>c==="greed").length*3;
+    const commanderBonus=getRunCommanderId()==="treasurer"?2:0;
+    currentRun.gold+=e.reward+cardBonus+commanderBonus;
+    if(getRunCommanderId()==="necromancer"&&Math.random()<.2){
+      currentRun.spectralAllies.push({life:4,cooldown:0});
+      showBattleMessage("SOUL HARVESTED · A SPECTRAL ALLY JOINS THE FIGHT");
+    }
+    updateGameDisplay();
+  }
+}
+function updateSpectralAllies(dt){
+  if(!currentRun.spectralAllies?.length)return;
+  currentRun.spectralAllies=currentRun.spectralAllies.filter(ally=>{
+    ally.life-=dt;ally.cooldown-=dt;
+    if(ally.life<=0)return false;
+    if(ally.cooldown<=0){
+      const target=currentRun.enemies.filter(e=>!e.rewarded&&e.health>0).sort((a,b)=>b.progress-a.progress)[0];
+      if(target){damageEnemy(target,12,false);ally.cooldown=.8;}
+      else ally.cooldown=.2;
+    }
+    return true;
+  });
+}
+function updateCommanderHud(){
+  const hud=document.getElementById("commander-combat-hud");
+  if(!hud||!currentRun)return;
+  const details={
+    warden:["THE WARDEN","FORTIFIED DEFENCES · +20 STARTING CASTLE HP"],
+    arcanist:["THE ARCANIST","ARCANE MASTERY · +25% WIZARD TOWER DAMAGE"],
+    huntmaster:["THE HUNTMASTER","PREDATOR'S INSTINCT · +20% DAMAGE TO ELITES"],
+    treasurer:["THE TREASURER","GOLDEN FORTUNE · +2 GOLD PER DEFEAT"],
+    pyromancer:["THE PYROMANCER","ETERNAL FLAME · 25% CHANCE TO BURN ON HIT"],
+    necromancer:["THE NECROMANCER","SOUL HARVEST · 20% CHANCE TO SUMMON A SPECTRAL ALLY"]
+  };
+  const entry=details[getRunCommanderId()]||details.warden;
+  hud.innerHTML="<strong>"+entry[0]+"</strong><span>"+entry[1]+"</span>";
 }
 function updateProjectiles(dt){
   currentRun.projectiles=currentRun.projectiles.filter(p=>{
@@ -348,6 +407,7 @@ function gameLoop(timestamp){
     updateEnemies(dt);
     updateTowers(dt);
     updateProjectiles(dt);
+    updateSpectralAllies(dt);
     if(currentRun.currentWave<5){
       currentRun.waveIntervalTimer-=dt;
       if(currentRun.waveIntervalTimer<=0){
