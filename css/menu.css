@@ -86,3 +86,98 @@
   .hub-bottom-note { flex-direction:column; }
 }
 @media (prefers-reduced-motion:reduce) { .menu-buttons button { transition:none; } .menu-buttons button:hover { transform:none; } }
+
+
+/* COMMAND SANCTUM — grounded environment and quieter, less card-heavy layout */
+.hub-main {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(90deg, rgba(10,9,8,.94) 0%, rgba(10,9,8,.78) 48%, rgba(10,9,8,.84) 100%),
+    linear-gradient(0deg, rgba(8,8,8,.82), transparent 48%, rgba(8,8,8,.42)),
+    url("../assets/maps/verdant-reach/background.png") center / cover no-repeat;
+}
+.hub-main::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  opacity: .36;
+  background:
+    linear-gradient(90deg, transparent 0 12%, rgba(190,157,111,.10) 12.05%, transparent 12.12%),
+    linear-gradient(0deg, transparent 0 82%, rgba(190,157,111,.10) 82.08%, transparent 82.16%),
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(0,0,0,.10) 6px);
+}
+.hub-view { position: relative; z-index: 1; }
+.hub-sidebar {
+  background: #0c0b0a;
+  border-right-color: rgba(176,142,105,.14);
+}
+.hub-nav-button {
+  border: 0;
+  border-left: 2px solid transparent;
+  padding-left: 14px;
+}
+.hub-nav-button:hover,
+.hub-nav-button.active {
+  color: #F0E5D5;
+  background: rgba(139,105,72,.09);
+  border-color: transparent;
+  border-left-color: #A7865D;
+}
+.hub-main > .hub-view > h1 {
+  max-width: 760px;
+  text-shadow: 0 3px 22px rgba(0,0,0,.7);
+}
+.hub-intro { color: #C0B4A5; }
+.hub-feature-grid {
+  gap: 0;
+  border-top: 1px solid rgba(190,157,111,.30);
+  border-bottom: 1px solid rgba(190,157,111,.24);
+}
+.hub-feature {
+  min-height: 250px;
+  padding: 25px 23px;
+  background: rgba(12,11,10,.68);
+  border: 0;
+  border-right: 1px solid rgba(190,157,111,.22);
+  backdrop-filter: blur(2px);
+}
+.hub-feature:last-child { border-right: 0; }
+.hub-feature::after { display: none; }
+.hub-feature-play {
+  background: rgba(35,26,19,.78);
+  border: 0;
+}
+.hub-feature-icon {
+  width: auto;
+  height: auto;
+  margin-bottom: 17px;
+  padding: 0;
+  color: #C3A47F;
+  background: transparent;
+  border: 0;
+  font-size: 29px;
+}
+.hub-feature-kicker { color: #C1A17A; }
+.hub-feature p { color: #B9AEA1; }
+.hub-feature button {
+  background: #2A211A;
+  border-color: #756047;
+}
+.hub-feature-play #hub-play {
+  background: #745438;
+  border-color: #B99A78;
+}
+.hub-feature-play #hub-play:hover { background: #896747; }
+@media (max-width: 900px) {
+  .hub-feature { border-bottom: 1px solid rgba(190,157,111,.20); }
+  .hub-feature:nth-child(2) { border-right: 0; }
+}
+@media (max-width: 620px) {
+  .hub-feature { border-right: 0; }
+  .hub-main {
+    background-position: center;
+  }
+}
