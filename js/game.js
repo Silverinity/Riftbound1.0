@@ -222,8 +222,8 @@ function getTowerStats(t){
   return {...base,damage,range,fireRate,cooldown};
 }
 function environmentPalette(){
-  if(currentRun.area===2)return {ground:"#302B2A",textureA:"#403634",textureB:"#211F20",pathDark:"#29201F",path:"#665047",pathEdge:"#9A7965",treeDark:"#211C1B",tree:"#49403A",treeLight:"#6A5B50",trunk:"#554137"};
-  if(currentRun.area===3)return {ground:"#26313C",textureA:"#344352",textureB:"#1D2935",pathDark:"#222832",path:"#586675",pathEdge:"#9AAEC0",treeDark:"#1A2730",tree:"#344B5A",treeLight:"#607D91",trunk:"#52616D"};
+  if(currentRun.area===2)return {ground:"#302B2A",textureA:"#403634",textureB:"#211F20",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#211C1B",tree:"#49403A",treeLight:"#6A5B50",trunk:"#554137"};
+  if(currentRun.area===3)return {ground:"#26313C",textureA:"#344352",textureB:"#1D2935",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#1A2730",tree:"#344B5A",treeLight:"#607D91",trunk:"#52616D"};
   return {ground:"#263B2B",textureA:"#304632",textureB:"#203326",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#17251B",tree:"#315438",treeLight:"#426443",trunk:"#64472F"};
 }
 function drawBattlefield(){
@@ -294,10 +294,10 @@ function drawPath(){
   ctx.strokeStyle=palette.pathDark;ctx.lineWidth=24;ctx.stroke();
   ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=20;ctx.stroke();
   ctx.strokeStyle=palette.path;ctx.lineWidth=16;ctx.stroke();
-  ctx.strokeStyle=currentRun.area===2?"rgba(35,25,23,.42)":currentRun.area===3?"rgba(206,228,243,.22)":"rgba(42,34,25,.32)";
+  ctx.strokeStyle="rgba(42,34,25,.32)";
   ctx.lineWidth=1;ctx.setLineDash([2,9]);ctx.stroke();ctx.setLineDash([]);
   // Fine, intermittent highlights define the road without adding bulky borders.
-  ctx.strokeStyle=currentRun.area===2?"rgba(255,174,104,.34)":currentRun.area===3?"rgba(205,235,255,.46)":"rgba(218,190,132,.38)";
+  ctx.strokeStyle="rgba(218,190,132,.38)";
   ctx.lineWidth=1;ctx.setLineDash([3,22]);ctx.stroke();ctx.setLineDash([]);
   for(let i=0;i<points.length-1;i++){
     const a=points[i],b=points[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.floor(len/22);
@@ -305,10 +305,10 @@ function drawPath(){
       const t=j/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
       const seed=(i*97+j*31+currentRun.area*53)%11;
       if(seed<4){
-        ctx.fillStyle=currentRun.area===2?"rgba(35,25,22,.42)":currentRun.area===3?"rgba(210,231,246,.34)":"rgba(42,35,28,.36)";
+        ctx.fillStyle="rgba(42,35,28,.36)";
         ctx.fillRect(Math.round(x)-2,Math.round(y)-1,3,2);
       }else if(seed===8){
-        ctx.fillStyle=currentRun.area===2?"rgba(255,153,91,.38)":currentRun.area===3?"rgba(235,248,255,.42)":"rgba(222,202,153,.4)";
+        ctx.fillStyle="rgba(222,202,153,.4)";
         ctx.fillRect(Math.round(x),Math.round(y),2,1);
       }
     }
