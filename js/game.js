@@ -240,7 +240,10 @@ function persistRunCheckpoint(checkpoint="battle"){
     towerDamageBonus:currentRun.towerDamageBonus,cards:[...currentRun.cards],
     commanderId:currentRun.commanderId||"warden",skillBonuses:currentRun.skillBonuses||{},abilityCooldown:currentRun.abilityCooldown||0,
     campsiteRestUsed:!!currentRun.campsiteRestUsed,stats:currentRun.stats||{},encounter:currentRun.encounter||null,
-    defeatedBosses:currentRun.defeatedBosses||[],completed:!!currentRun.finalized,checkpoint
+    defeatedBosses:currentRun.defeatedBosses||[],completed:!!currentRun.finalized,
+    pendingCardSelection:!!currentRun.pendingCardSelection,pendingRoute:!!currentRun.pendingRoute,
+    pendingCompletedWaves:currentRun.pendingCompletedWaves||0,
+    waveInProgress:!!(currentRun.waveActive&&(currentRun.spawnBatches.length||currentRun.enemies.length)),checkpoint
   };
   window.riftboundCloudSave(run);
 }
@@ -260,7 +263,9 @@ window.restoreRiftboundRun=function(saved){
   currentRun={...createNewRun(),...data,towers:restoredTowers,commanderId:savedCommander,enemies:[],projectiles:[],spawnBatches:[],spectralAllies:[],waveActive:false,
     stats:{damageDealt:0,damageTaken:0,goldSpent:0,enemiesKilled:0,wavesCompleted:0,bossesDefeated:0,...(data.stats||{})},
     encounter:data.encounter||{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},defeatedBosses:Array.isArray(data.defeatedBosses)?data.defeatedBosses:[],
+    pendingCardSelection:!!data.pendingCardSelection,pendingRoute:!!data.pendingRoute,pendingCompletedWaves:Number(data.pendingCompletedWaves)||0,
     gameOver:false,waveStarted:false,waveIntervalTimer:0,waitingForWave:false,devInvincible:false,devGameSpeed:1};
+  if(data.waveInProgress&&!currentRun.pendingCardSelection&&!currentRun.pendingRoute)currentRun.currentWave=Math.max(0,(Number(data.currentWave)||1)-1);
   selectedTower=null;selectedTowerEntity=null;
   relocateTowersForCurrentArea();
   document.getElementById("main-menu").style.display="none";
@@ -272,6 +277,8 @@ window.restoreRiftboundRun=function(saved){
     showCampsiteScreen(((currentRun.area-1)*30)+((currentRun.campsite-1)*15));
   }else{
     initBattlefield();
+    if(currentRun.pendingCardSelection)showCardSelection();
+    else if(currentRun.pendingRoute)showDestinationSelection(currentRun.pendingCompletedWaves);
   }
   return true;
 };
@@ -1147,7 +1154,11 @@ function checkWaveCompletion(){
   if(currentRun.currentWave>=5){
     currentRun.waveActive=false;
     currentRun.waveIntervalTimer=0;
+    currentRun.pendingCardSelection=true;
+    currentRun.pendingCompletedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+5;
+    currentRun.currentWave=0;
     updateGameDisplay();
+    persistRunCheckpoint("reward");
     showCardSelection();
     return;
   }
@@ -1204,7 +1215,10 @@ function chooseCard(id){
   currentRun.cards.push(id);
   if(id==="walls"){currentRun.maxCastleHealth+=20;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+20);}
   document.getElementById("card-overlay").hidden=true;
+  currentRun.pendingCardSelection=false;
   if(completedWaves>=90){currentRun.runFinished=true;showRunCompleteScreen();return;}
+  currentRun.pendingRoute=true;currentRun.pendingCompletedWaves=completedWaves;currentRun.currentWave=0;
+  persistRunCheckpoint("destination");
   showDestinationSelection(completedWaves);
 }
 let pendingDestinationChoices=[];
@@ -1254,6 +1268,7 @@ function chooseDestination(id,completedWaves){
   if(currentRun.skillBonuses?.stageHeal)currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+currentRun.skillBonuses.stageHeal);
   if(currentRun.area!==previousArea)relocateTowersForCurrentArea();
   currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];currentRun.waveActive=false;currentRun.waitingForWave=false;currentRun.waveStarted=false;currentRun.waveIntervalTimer=0;currentRun._lastCountedWave=0;
+  currentRun.pendingRoute=false;currentRun.pendingCardSelection=false;currentRun.pendingCompletedWaves=0;
   currentRun.campsiteRestUsed=false;selectedTowerEntity=null;selectedTower=null;
   document.querySelectorAll(".tower-button").forEach(button=>button.classList.remove("selected"));
   document.getElementById("progress-overlay").hidden=true;
