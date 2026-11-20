@@ -760,9 +760,8 @@ button:disabled {
 button, input, select { touch-action: manipulation; }
 button { min-height: 42px; }
 #battlefield { width: 100%; height: auto; aspect-ratio: 16 / 9; touch-action: none; -webkit-user-select: none; user-select: none; }
-.battlefield-area { grid-template-columns: minmax(0, 1fr); align-items: start; }
-#battlefield { grid-row: 1; }
-.tower-info-panel { grid-row: 2; min-height: 0; max-height: 230px; }
+.battlefield-area { align-items: start; }
+.tower-info-panel { min-height: 0; max-height: 230px; }
 .tower-panel-empty { min-height: 95px; }
 .tower-upgrade-button { min-height: 42px; }
 .tower-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
