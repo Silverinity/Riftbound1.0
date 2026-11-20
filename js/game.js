@@ -28,15 +28,33 @@ Object.entries(towerSpritePaths).forEach(([type, source]) => {
   towerSprites[type] = sprite;
 });
 
-const pathPoints = [
-  {x:75,y:270},{x:230,y:270},{x:230,y:130},{x:440,y:130},
-  {x:440,y:405},{x:690,y:405},{x:690,y:270},{x:850,y:270}
+// Each realm has its own route. All routes share the same portal and castle endpoints,
+// but their bends and tactical build spaces are deliberately different.
+const pathsByArea = [
+  [
+    {x:75,y:270},{x:190,y:270},{x:190,y:115},{x:365,y:115},
+    {x:365,y:330},{x:555,y:330},{x:555,y:185},{x:735,y:185},
+    {x:735,y:390},{x:850,y:390},{x:850,y:270}
+  ],
+  [
+    {x:75,y:270},{x:75,y:115},{x:255,y:115},{x:255,y:390},
+    {x:435,y:390},{x:435,y:175},{x:615,y:175},{x:615,y:425},
+    {x:800,y:425},{x:800,y:270},{x:850,y:270}
+  ],
+  [
+    {x:75,y:270},{x:205,y:270},{x:205,y:420},{x:380,y:420},
+    {x:380,y:105},{x:555,y:105},{x:555,y:300},{x:715,y:300},
+    {x:715,y:145},{x:850,y:145},{x:850,y:270}
+  ]
 ];
-const treePositions = [
-  [70,70],[145,90],[90,170],[330,55],[390,65],[520,70],[610,90],[780,75],[900,80],
-  [100,390],[150,465],[320,470],[540,490],[800,450],[900,400],[560,230],[820,170],
-  [350,330],[110,330],[760,340],[920,180]
+const treesByArea = [
+  [[65,75],[145,75],[290,65],[420,65],[515,75],[650,70],[820,75],[920,80],[110,445],[285,480],[490,475],[650,475],[910,455],[115,185],[310,220],[470,245],[640,235],[805,225],[900,185]],
+  [[145,65],[345,65],[535,65],[735,70],[910,75],[155,475],[340,480],[520,485],[710,485],[910,475],[175,220],[345,245],[530,300],[720,245],[900,185]],
+  [[65,70],[145,75],[300,65],[475,65],[650,65],[805,70],[920,80],[115,475],[285,480],[485,480],[650,475],[900,475],[115,180],[315,220],[500,230],[655,205],[805,230],[910,185]]
 ];
+function getAreaIndex(){return Math.max(0,Math.min(2,(currentRun?.area||1)-1));}
+function getPathPoints(){return pathsByArea[getAreaIndex()];}
+function getTreePositions(){return treesByArea[getAreaIndex()];}
 const areas = [
   {name:"Verdant Woods",subtitle:"The Last Fortress",boss:"",enemyScale:1},
   {name:"Ashen Wastes",subtitle:"The Scorched Crossing",boss:"",enemyScale:1.3},
@@ -180,23 +198,92 @@ function environmentPalette(){
   return {ground:"#263B2B",textureA:"#304632",textureB:"#203326",pathDark:"#382C29",path:"#776047",pathEdge:"#9B8060",treeDark:"#17251B",tree:"#315438",treeLight:"#426443",trunk:"#64472F"};
 }
 function drawBattlefield(){
-  const palette=environmentPalette();ctx.fillStyle=palette.ground;ctx.fillRect(0,0,960,540);drawGroundTexture();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawSpectralAllies();drawCommanderEffects();drawPlacementPreview();
+  const palette=environmentPalette();ctx.fillStyle=palette.ground;ctx.fillRect(0,0,960,540);drawGroundTexture();drawMapLandmarks();drawPath();drawTrees();drawPortal();drawCastle();drawTowers();drawEnemies();drawProjectiles();drawSpectralAllies();drawCommanderEffects();drawPlacementPreview();
 }
 function drawGroundTexture(){
   const p=environmentPalette();
-  for(let x=0;x<960;x+=32)for(let y=0;y<540;y+=32){const v=(x*7+y*13)%5;if(v===0){ctx.fillStyle=p.textureA;ctx.fillRect(x,y,16,16);}else if(v===1){ctx.fillStyle=p.textureB;ctx.fillRect(x+12,y+8,12,12);}}
+  for(let x=0;x<960;x+=24)for(let y=0;y<540;y+=24){
+    const seed=(x*17+y*29+getAreaIndex()*11)%11;
+    if(seed<3){ctx.fillStyle=seed===0?p.textureA:p.textureB;ctx.globalAlpha=seed===0?.42:.24;ctx.fillRect(x+seed*3,y+(seed%2)*5,5+seed*3,4+seed*2);ctx.globalAlpha=1;}
+    if(currentRun.area===2&&seed===4){ctx.strokeStyle="rgba(226,112,58,.22)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+8,y+5);ctx.lineTo(x+14,y+2);ctx.stroke();}
+    if(currentRun.area===3&&seed===5){ctx.fillStyle="rgba(174,213,239,.22)";ctx.beginPath();ctx.moveTo(x+5,y);ctx.lineTo(x+10,y+8);ctx.lineTo(x+4,y+14);ctx.closePath();ctx.fill();}
+  }
 }
 function drawPath(){
-  const palette=environmentPalette();ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=68;ctx.stroke();ctx.strokeStyle=palette.path;ctx.lineWidth=54;ctx.stroke();
-  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=2;ctx.setLineDash([12,15]);ctx.stroke();ctx.setLineDash([]);
+  const palette=environmentPalette(),points=getPathPoints();
+  ctx.save();ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();
+  points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.strokeStyle="rgba(0,0,0,.34)";ctx.lineWidth=78;ctx.stroke();
+  ctx.strokeStyle=palette.pathDark;ctx.lineWidth=70;ctx.stroke();
+  ctx.strokeStyle=palette.path;ctx.lineWidth=56;ctx.stroke();
+  ctx.strokeStyle=palette.pathEdge;ctx.lineWidth=3;ctx.stroke();
+  ctx.strokeStyle=currentRun.area===2?"rgba(255,174,104,.32)":currentRun.area===3?"rgba(205,235,255,.48)":"rgba(218,190,132,.38)";
+  ctx.lineWidth=2;ctx.setLineDash([3,13]);ctx.stroke();ctx.setLineDash([]);
+  // Small embedded stones make the road read as a finished game-map surface.
+  for(let i=0;i<points.length-1;i++){
+    const a=points[i],b=points[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.floor(len/34);
+    for(let j=1;j<steps;j++){
+      const t=j/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+      ctx.fillStyle=currentRun.area===2?"rgba(35,25,22,.32)":currentRun.area===3?"rgba(210,231,246,.22)":"rgba(42,35,28,.25)";
+      ctx.fillRect(x-3,y-2,6,4);
+    }
+  }
+  ctx.restore();
 }
 function drawTrees(){
   const p=environmentPalette();
-  treePositions.forEach(([x,y])=>{
-    ctx.fillStyle=p.treeDark;ctx.fillRect(x-15,y-12,38,34);ctx.fillStyle=p.trunk;ctx.fillRect(x-5,y+5,10,15);
-    ctx.fillStyle=p.tree;ctx.fillRect(x-18,y-25,36,35);ctx.fillStyle=p.treeLight;ctx.fillRect(x-12,y-30,25,25);ctx.fillStyle=p.tree;ctx.fillRect(x-5,y-25,12,12);
+  getTreePositions().forEach(([x,y],index)=>{
+    ctx.save();
+    if(currentRun.area===3){
+      ctx.fillStyle="rgba(5,12,20,.35)";ctx.beginPath();ctx.ellipse(x,y+8,23,10,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.treeDark;ctx.beginPath();ctx.moveTo(x,y-42);ctx.lineTo(x-22,y+12);ctx.lineTo(x+22,y+12);ctx.closePath();ctx.fill();
+      ctx.fillStyle=p.tree;ctx.beginPath();ctx.moveTo(x,y-36);ctx.lineTo(x-17,y+5);ctx.lineTo(x+17,y+5);ctx.closePath();ctx.fill();
+      ctx.fillStyle=p.treeLight;ctx.beginPath();ctx.moveTo(x,y-30);ctx.lineTo(x-10,y-2);ctx.lineTo(x+10,y-2);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#B7DDF4";ctx.fillRect(x-2,y-20,3,9);
+    }else if(currentRun.area===2){
+      ctx.fillStyle="rgba(5,3,3,.35)";ctx.beginPath();ctx.ellipse(x,y+8,23,9,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.trunk;ctx.fillRect(x-4,y-3,8,18);
+      ctx.fillStyle=p.treeDark;ctx.beginPath();ctx.moveTo(x,y-34);ctx.lineTo(x-24,y+5);ctx.lineTo(x+22,y+5);ctx.closePath();ctx.fill();
+      ctx.fillStyle=p.tree;ctx.beginPath();ctx.moveTo(x-3,y-29);ctx.lineTo(x-18,y-1);ctx.lineTo(x+17,y-1);ctx.closePath();ctx.fill();
+      ctx.fillStyle=p.treeLight;ctx.fillRect(x-3,y-22,6,5);
+    }else{
+      ctx.fillStyle="rgba(4,12,7,.35)";ctx.beginPath();ctx.ellipse(x,y+8,24,10,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.trunk;ctx.fillRect(x-5,y-2,10,20);
+      ctx.fillStyle=p.treeDark;ctx.beginPath();ctx.arc(x,y-17,24,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.tree;ctx.beginPath();ctx.arc(x-8,y-23,16,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+9,y-19,17,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.treeLight;ctx.beginPath();ctx.arc(x-7,y-29,8,0,Math.PI*2);ctx.fill();
+      if(index%3===0){ctx.fillStyle="rgba(180,120,220,.65)";ctx.fillRect(x+9,y-12,3,3);}
+    }
+    ctx.restore();
   });
+}
+function drawMapLandmarks(){
+  const area=currentRun.area,now=performance.now();
+  if(area===1){
+    // Ancient mossy standing stones and luminous forest pools.
+    [[300,455],[485,65],[805,465]].forEach(([x,y],i)=>{
+      ctx.fillStyle="rgba(7,16,10,.35)";ctx.beginPath();ctx.ellipse(x,y+12,25,8,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#394B3A";ctx.fillRect(x-8,y-25,16,36);ctx.fillStyle="#65785A";ctx.fillRect(x-5,y-22,5,25);
+      ctx.strokeStyle="rgba(173,132,218,.55)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y-8,12+Math.sin(now/420+i)*2,0,Math.PI*2);ctx.stroke();
+    });
+    [[115,115],[480,470],[790,95]].forEach(([x,y])=>{ctx.fillStyle="rgba(133,89,177,.18)";ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.fill();ctx.fillStyle="#A78BC4";ctx.fillRect(x-3,y-3,6,6);});
+  }else if(area===2){
+    // Obsidian outcrops and glowing fissures.
+    [[170,185],[365,455],[550,70],[760,105],[910,360]].forEach(([x,y],i)=>{
+      ctx.fillStyle="#171718";ctx.beginPath();ctx.moveTo(x-20,y+12);ctx.lineTo(x-11,y-15-(i%2)*8);ctx.lineTo(x+3,y-23);ctx.lineTo(x+21,y+12);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#5B4036";ctx.fillRect(x-5,y-7,4,14);
+      ctx.strokeStyle="rgba(255,116,55,.55)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-12,y+7);ctx.lineTo(x-2,y);ctx.lineTo(x+5,y+6);ctx.lineTo(x+13,y-4);ctx.stroke();
+    });
+    [[310,80],[690,455]].forEach(([x,y])=>{ctx.fillStyle="rgba(238,91,39,.16)";ctx.beginPath();ctx.ellipse(x,y,30,13,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#D96D3D";ctx.fillRect(x-12,y-2,24,4);});
+  }else{
+    // Ice spires, frozen pools and frost-lit ruins.
+    [[155,85],[330,475],[635,65],[800,455],[915,190]].forEach(([x,y],i)=>{
+      ctx.fillStyle="rgba(4,13,23,.32)";ctx.beginPath();ctx.ellipse(x,y+14,22,8,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#63849A";ctx.beginPath();ctx.moveTo(x,y-34-(i%2)*10);ctx.lineTo(x-12,y+12);ctx.lineTo(x+12,y+12);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#B7DDF4";ctx.beginPath();ctx.moveTo(x-2,y-27);ctx.lineTo(x-5,y+5);ctx.lineTo(x+3,y+7);ctx.closePath();ctx.fill();
+    });
+    [[280,75],[745,470]].forEach(([x,y])=>{ctx.fillStyle="rgba(153,208,245,.16)";ctx.beginPath();ctx.arc(x,y,25,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(191,229,255,.55)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,17,0,Math.PI*2);ctx.stroke();});
+  }
 }
 function drawPortal(){
   const p=1+Math.sin(performance.now()/300)*.12;ctx.fillStyle="rgba(129,85,184,.15)";ctx.beginPath();ctx.arc(75,270,48*p,0,Math.PI*2);ctx.fill();
@@ -300,11 +387,11 @@ function drawCommanderEffects(){
     }else if(effect.type==="rift"){
       ctx.strokeStyle="rgba(190,135,255,"+(0.95*alpha)+")";ctx.lineWidth=9;
       ctx.shadowColor="#B99AE8";ctx.shadowBlur=24;ctx.beginPath();
-      pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+      getPathPoints().forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
       ctx.shadowBlur=0;
-      pathPoints.forEach((p,i)=>{const radius=9+Math.sin(now/70+i)*4;ctx.fillStyle="rgba(216,192,255,"+alpha+")";ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();});
+      getPathPoints().forEach((p,i)=>{const radius=9+Math.sin(now/70+i)*4;ctx.fillStyle="rgba(216,192,255,"+alpha+")";ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();});
       ctx.strokeStyle="rgba(238,220,255,"+alpha+")";ctx.lineWidth=2;
-      for(let i=0;i<5;i++){const p=pathPoints[(Math.floor(now/130)+i)%pathPoints.length];ctx.beginPath();ctx.arc(p.x,p.y,16+i*5,0,Math.PI*2);ctx.stroke();}
+      for(let i=0;i<5;i++){const p=getPathPoints()[(Math.floor(now/130)+i)%getPathPoints().length];ctx.beginPath();ctx.arc(p.x,p.y,16+i*5,0,Math.PI*2);ctx.stroke();}
     }else if(effect.type==="mark"&&effect.target){
       const radius=30+Math.sin(now/75)*7;
       ctx.strokeStyle="#F0D58A";ctx.lineWidth=4;ctx.shadowColor="#F0D58A";ctx.shadowBlur=18;
@@ -342,10 +429,11 @@ function drawPlacementPreview(){
   ctx.strokeStyle=valid?"rgba(185,154,232,.65)":"rgba(214,107,117,.8)";ctx.lineWidth=2;ctx.stroke();
   ctx.globalAlpha=.65;ctx.fillStyle=valid?s.color:"#D66B75";ctx.fillRect(pointerWorld.x-14,pointerWorld.y-14,28,28);ctx.globalAlpha=1;
 }
-function getTotalPathLength(){let n=0;for(let i=0;i<pathPoints.length-1;i++)n+=Math.hypot(pathPoints[i+1].x-pathPoints[i].x,pathPoints[i+1].y-pathPoints[i].y);return n;}
-const totalPathLength=getTotalPathLength();
+function getTotalPathLength(){const points=getPathPoints();let n=0;for(let i=0;i<points.length-1;i++)n+=Math.hypot(points[i+1].x-points[i].x,points[i+1].y-points[i].y);return n;}
 function getPathPosition(progress){
-  let d=progress*totalPathLength;for(let i=0;i<pathPoints.length-1;i++){const a=pathPoints[i],b=pathPoints[i+1],len=Math.hypot(b.x-a.x,b.y-a.y);if(d<=len){const t=d/len;return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}d-=len;}return pathPoints[pathPoints.length-1];
+  const points=getPathPoints();let d=progress*getTotalPathLength();
+  for(let i=0;i<points.length-1;i++){const a=points[i],b=points[i+1],len=Math.hypot(b.x-a.x,b.y-a.y);if(d<=len){const t=d/len;return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}d-=len;}
+  return points[points.length-1];
 }
 function createWaveQueue(wave){
   if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&wave===5)return ["treant"];
@@ -388,7 +476,7 @@ function spawnEnemy(type,waveNumber){
   const damageScale=1+progression*.012+progression*progression*.00005;
   const speedScale=1+progression*.002;
   const health=d.health*healthScale;
-  currentRun.enemies.push({type,x:pathPoints[0].x,y:pathPoints[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale});
+  currentRun.enemies.push({type,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale});
 }
 function updateEnemies(dt){
   currentRun.spawnBatches.forEach(batch=>{
@@ -410,7 +498,7 @@ function updateEnemies(dt){
     }
     if(e.slowTimer>0)e.slowTimer=Math.max(0,e.slowTimer-dt);
     const slowFactor=e.slowTimer>0?.55:1;
-    e.progress+=(e.speed||enemyTypes[e.type].speed)*slowFactor*dt/totalPathLength;
+    e.progress+=(e.speed||enemyTypes[e.type].speed)*slowFactor*dt/getTotalPathLength();
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
@@ -664,12 +752,12 @@ function gameLoop(timestamp){
 function startGameLoop(){stopGameLoop();gameRunning=true;lastFrameTime=performance.now();animationFrame=requestAnimationFrame(gameLoop);}
 function stopGameLoop(){gameRunning=false;if(animationFrame!==null){cancelAnimationFrame(animationFrame);animationFrame=null;}}
 function isOnPath(x,y){
-  for(let i=0;i<pathPoints.length-1;i++){const a=pathPoints[i],b=pathPoints[i+1],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;let t=((x-a.x)*dx+(y-a.y)*dy)/l;t=Math.max(0,Math.min(1,t));if(Math.hypot(x-(a.x+t*dx),y-(a.y+t*dy))<38)return true;}return false;
+  for(let i=0;i<getPathPoints().length-1;i++){const a=getPathPoints()[i],b=getPathPoints()[i+1],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;let t=((x-a.x)*dx+(y-a.y)*dy)/l;t=Math.max(0,Math.min(1,t));if(Math.hypot(x-(a.x+t*dx),y-(a.y+t*dy))<38)return true;}return false;
 }
 function canBuild(x,y,checkGold=true){
   if(!Number.isFinite(x)||!Number.isFinite(y))return false;
   if(x<22||x>938||y<22||y>518||isOnPath(x,y)||Math.hypot(x-75,y-270)<62||(x>830&&y>200&&y<340))return false;
-  if(treePositions.some(([tx,ty])=>Math.abs(x-tx)<34&&y>ty-46&&y<ty+26))return false;
+  if(getTreePositions().some(([tx,ty])=>Math.abs(x-tx)<34&&y>ty-46&&y<ty+26))return false;
   if(currentRun.towers.some(t=>Math.hypot(x-t.x,y-t.y)<37))return false;
   return !checkGold||currentRun.gold>=towerTypes[selectedTower].cost;
 }
