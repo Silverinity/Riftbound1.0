@@ -11,7 +11,6 @@
     screenShake: true,
     damageNumbers: true,
     towerRanges: false,
-    difficulty: "normal",
     developerMode: false
   };
 
@@ -170,7 +169,6 @@
     byId("screen-shake").checked = s.screenShake;
     byId("damage-numbers").checked = s.damageNumbers;
     byId("tower-ranges").checked = s.towerRanges;
-    byId("difficulty").value = s.difficulty;
     byId("developer-mode").checked = !!s.developerMode;
     updateVolumeLabels();
   }
@@ -189,7 +187,6 @@
       screenShake: byId("screen-shake").checked,
       damageNumbers: byId("damage-numbers").checked,
       towerRanges: byId("tower-ranges").checked,
-      difficulty: byId("difficulty").value,
       developerMode: byId("developer-mode").checked
     };
   }
