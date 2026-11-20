@@ -300,8 +300,8 @@ function updateAreaLabels(){
 
   const details=document.querySelectorAll(".region-details span");
   if(details[0])details[0].textContent="30 WAVES · 2 CAMPSITES";
-  if(details[1])details[1].textContent=currentRun.area===3?"ANCIENT TREANT BOSS":"BOSS THREAT UNKNOWN";
-  if(details[2])details[2].textContent=currentRun.area===1?"UNKNOWN THREATS":currentRun.area===2?"THREATS INTENSIFY":"FINAL REALM · EXTREME THREATS";
+  if(details[1])details[1].textContent="2 OPTIONAL BOSS ROUTES";
+  if(details[2])details[2].textContent=currentRun.area===1?"BEAR CAVE · WOLF DEN · GOBLIN CAMP":currentRun.area===2?"CINDER QUARRY · ASHEN RUINS · SCAVENGER CROSSING":"FROZEN HOLLOW · WRAITHWOOD · SHATTERED KEEP";
 }
 function initBattlefield(){
   if(!currentRun)startNewRun();
