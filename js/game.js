@@ -419,22 +419,19 @@ function drawTowers(){
   currentRun.towers.forEach(t=>{
     const s=getTowerStats(t),selected=t===selectedTowerEntity;
     if(getSettings().towerRanges||selected){ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,Math.PI*2);ctx.fillStyle=selected?"rgba(185,154,232,.12)":"rgba(185,154,232,.06)";ctx.fill();ctx.strokeStyle=selected?"rgba(220,195,255,.75)":"rgba(185,154,232,.2)";ctx.lineWidth=selected?2:1;ctx.stroke();}
-    const sprite=t.type==="archer"&&archerAnimation.idle.image.complete&&archerAnimation.idle.image.naturalWidth>0
-      ? archerAnimation.idle.image : towerSprites[t.type];
-    if(t.type==="archer"&&sprite&&sprite.complete&&sprite.naturalWidth>0){
+    const archerAttack=t.type==="archer"&&t.archerAnimation?.mode==="attack";
+    const archerSheet=archerAttack?archerAnimation.attack.image:archerAnimation.idle.image;
+    const archerSheetReady=archerSheet.complete&&archerSheet.naturalWidth>0;
+    const sprite=t.type==="archer"?(archerSheetReady?archerSheet:towerSprites.archer):towerSprites[t.type];
+    if(t.type==="archer"&&archerSheetReady){
       const anim=t.archerAnimation;
-      let frame=0;
-      if(anim&&anim.mode==="attack"){
-        frame=Math.min(archerAnimation.attack.frames-1,Math.floor(anim.elapsed*archerAnimation.attack.fps));
-      }else{
-        frame=Math.floor(performance.now()/1000*archerAnimation.idle.fps)%archerAnimation.idle.frames;
-      }
-      const sheet=anim&&anim.mode==="attack"?archerAnimation.attack:archerAnimation.idle;
-      const frameWidth=archerAnimation.frameWidth,frameHeight=archerAnimation.frameHeight;
+      const frame=archerAttack
+        ?Math.min(archerAnimation.attack.frames-1,Math.floor(anim.elapsed*archerAnimation.attack.fps))
+        :Math.floor(performance.now()/1000*archerAnimation.idle.fps)%archerAnimation.idle.frames;
       ctx.save();
       ctx.imageSmoothingEnabled=false;
-      ctx.drawImage(sprite===archerAnimation.idle.image&&anim&&anim.mode==="attack"?archerAnimation.attack.image:sprite,
-        frame*frameWidth,0,frameWidth,frameHeight,t.x-38,t.y-84,76,88);
+      ctx.drawImage(archerSheet,frame*archerAnimation.frameWidth,0,
+        archerAnimation.frameWidth,archerAnimation.frameHeight,t.x-38,t.y-84,76,88);
       ctx.restore();
     }else if(sprite&&sprite.complete&&sprite.naturalWidth>0){
       ctx.save();
