@@ -1,0 +1,21 @@
+{
+  "frame_width": 96,
+  "frame_height": 112,
+  "idle": {
+    "frames": 8,
+    "fps": 8,
+    "loop": true,
+    "file": "archer_idle_sheet.png"
+  },
+  "attack": {
+    "frames": 8,
+    "fps": 12,
+    "loop": false,
+    "release_frame": 4,
+    "projectile_origin_px": [
+      78,
+      43
+    ],
+    "file": "archer_attack_sheet.png"
+  }
+}

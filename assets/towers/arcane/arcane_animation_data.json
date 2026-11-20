@@ -1,0 +1,31 @@
+{
+  "frame_width": 96,
+  "frame_height": 112,
+  "idle": {
+    "frames": 8,
+    "fps": 8,
+    "loop": true,
+    "file": "arcane_idle_sheet.png"
+  },
+  "attack": {
+    "frames": 8,
+    "fps": 12,
+    "loop": false,
+    "release_frame": 4,
+    "projectile_origin_px": [
+      47,
+      20
+    ],
+    "file": "arcane_attack_sheet.png"
+  },
+  "projectile_orb": {
+    "frames": 4,
+    "fps": 12,
+    "loop": true,
+    "frame_size": [
+      16,
+      16
+    ],
+    "file": "arcane_orb_projectile_sheet.png"
+  }
+}
