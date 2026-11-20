@@ -1544,6 +1544,7 @@ window.devRiftboundForceCampfire=function(){
   if(!currentRun||currentRun.finalized)return false;
   currentRun.stage=3;
   const completedWaves=(currentRun.area-1)*30+(currentRun.campsite-1)*15+15;
+  if(completedWaves>=90)return false;
   arriveAtCampfire(completedWaves);
   return true;
 };
