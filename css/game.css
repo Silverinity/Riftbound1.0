@@ -259,7 +259,9 @@
     max-width: 1200px;
     height: auto;
     max-height: 65vh;
-    border: 2px solid #49335F;
+    border: 0;
+    outline: 2px solid #49335F;
+    outline-offset: 0;
     background: #18251B;
     image-rendering: pixelated;
     cursor: default;
