@@ -61,6 +61,25 @@ archerAnimation.arrow.src = "assets/towers/archer/archer_arrow_projectile.png";
   image.onload = () => { if (currentRun) drawBattlefield(); };
 });
 
+// Arcane Tower animation sheets use the layout in assets/towers/arcane/animation.json.
+const arcaneAnimation = {
+  frameWidth: 96,
+  frameHeight: 112,
+  idle: { frames: 8, fps: 8, loop: true, image: new Image() },
+  attack: { frames: 8, fps: 12, loop: false, releaseFrame: 4, image: new Image() },
+  orb: { frames: 4, fps: 12, loop: true, frameWidth: 16, frameHeight: 16, image: new Image() },
+  scaleX: 76 / 96,
+  scaleY: 88 / 112,
+  projectileOriginX: 47,
+  projectileOriginY: 20
+};
+arcaneAnimation.idle.image.src = "assets/towers/arcane/arcane_idle_sheet.png";
+arcaneAnimation.attack.image.src = "assets/towers/arcane/arcane_attack_sheet.png";
+arcaneAnimation.orb.image.src = "assets/towers/arcane/arcane_orb_projectile_sheet.png";
+[arcaneAnimation.idle.image, arcaneAnimation.attack.image, arcaneAnimation.orb.image].forEach(image => {
+  image.onload = () => { if (currentRun) drawBattlefield(); };
+});
+
 // Each realm has its own route. All routes share the same portal and castle endpoints,
 // but their bends and tactical build spaces are deliberately different.
 const pathsByArea = [
@@ -420,18 +439,22 @@ function drawTowers(){
     const s=getTowerStats(t),selected=t===selectedTowerEntity;
     if(getSettings().towerRanges||selected){ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,Math.PI*2);ctx.fillStyle=selected?"rgba(185,154,232,.12)":"rgba(185,154,232,.06)";ctx.fill();ctx.strokeStyle=selected?"rgba(220,195,255,.75)":"rgba(185,154,232,.2)";ctx.lineWidth=selected?2:1;ctx.stroke();}
     const archerAttack=t.type==="archer"&&t.archerAnimation?.mode==="attack";
-    const archerSheet=archerAttack?archerAnimation.attack.image:archerAnimation.idle.image;
-    const archerSheetReady=archerSheet.complete&&archerSheet.naturalWidth>0;
-    const sprite=t.type==="archer"?(archerSheetReady?archerSheet:towerSprites.archer):towerSprites[t.type];
-    if(t.type==="archer"&&archerSheetReady){
-      const anim=t.archerAnimation;
-      const frame=archerAttack
-        ?Math.min(archerAnimation.attack.frames-1,Math.floor(anim.elapsed*archerAnimation.attack.fps))
-        :Math.floor(performance.now()/1000*archerAnimation.idle.fps)%archerAnimation.idle.frames;
+    const arcaneAttack=t.type==="arcane"&&t.arcaneAnimation?.mode==="attack";
+    const isAnimatedTower=t.type==="archer"||t.type==="arcane";
+    const animationConfig=t.type==="archer"?archerAnimation:arcaneAnimation;
+    const activeAttack= t.type==="archer"?archerAttack:arcaneAttack;
+    const towerAnimation=t.type==="archer"?t.archerAnimation:t.arcaneAnimation;
+    const animationSheet=activeAttack?animationConfig.attack.image:animationConfig.idle.image;
+    const animationSheetReady=animationSheet.complete&&animationSheet.naturalWidth>0;
+    const sprite=isAnimatedTower?(animationSheetReady?animationSheet:towerSprites[t.type]):towerSprites[t.type];
+    if(isAnimatedTower&&animationSheetReady){
+      const frame=activeAttack
+        ?Math.min(animationConfig.attack.frames-1,Math.floor(towerAnimation.elapsed*animationConfig.attack.fps))
+        :Math.floor(performance.now()/1000*animationConfig.idle.fps)%animationConfig.idle.frames;
       ctx.save();
       ctx.imageSmoothingEnabled=false;
-      ctx.drawImage(archerSheet,frame*archerAnimation.frameWidth,0,
-        archerAnimation.frameWidth,archerAnimation.frameHeight,t.x-38,t.y-84,76,88);
+      ctx.drawImage(animationSheet,frame*animationConfig.frameWidth,0,
+        animationConfig.frameWidth,animationConfig.frameHeight,t.x-38,t.y-84,76,88);
       ctx.restore();
     }else if(sprite&&sprite.complete&&sprite.naturalWidth>0){
       ctx.save();
@@ -491,6 +514,20 @@ function drawProjectiles(){
         ctx.strokeStyle="#8A6845";ctx.beginPath();ctx.moveTo(-10,0);ctx.lineTo(-14,-4);ctx.moveTo(-10,0);ctx.lineTo(-14,4);ctx.stroke();
       }
       ctx.restore();
+    }else if(p.isArcaneOrb){
+      const orb=arcaneAnimation.orb.image;
+      if(orb.complete&&orb.naturalWidth>0){
+        const frame=Math.floor((p.animationTime||0)*arcaneAnimation.orb.fps)%arcaneAnimation.orb.frames;
+        ctx.save();ctx.imageSmoothingEnabled=false;
+        ctx.drawImage(orb,frame*arcaneAnimation.orb.frameWidth,0,
+          arcaneAnimation.orb.frameWidth,arcaneAnimation.orb.frameHeight,p.x-13,p.y-13,26,26);
+        ctx.restore();
+      }else{
+        const pulse=1+Math.sin((p.animationTime||0)*12)*.12;
+        ctx.save();ctx.shadowColor="#8C70FF";ctx.shadowBlur=16;
+        ctx.fillStyle="#A88BFF";ctx.beginPath();ctx.arc(p.x,p.y,7*pulse,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle="#E8DCFF";ctx.beginPath();ctx.arc(p.x-2,p.y-2,3,0,Math.PI*2);ctx.fill();ctx.restore();
+      }
     }else{
       ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();
     }
@@ -659,7 +696,7 @@ function updateEnemies(dt){
 }
 function updateTowers(dt){
   currentRun.towers.forEach(t=>{
-    // Advance an active Archer attack and release its arrow on the authored frame.
+    // Advance animated attacks and release their projectiles on the authored frame.
     if(t.type==="archer"&&t.archerAnimation?.mode==="attack"){
       const anim=t.archerAnimation;
       anim.elapsed+=dt;
@@ -682,6 +719,28 @@ function updateTowers(dt){
       }
       if(anim.elapsed>=archerAnimation.attack.frames/archerAnimation.attack.fps)t.archerAnimation=null;
     }
+    if(t.type==="arcane"&&t.arcaneAnimation?.mode==="attack"){
+      const anim=t.arcaneAnimation;
+      anim.elapsed+=dt;
+      const attackFrame=Math.floor(anim.elapsed*arcaneAnimation.attack.fps);
+      if(!anim.fired&&attackFrame>=arcaneAnimation.attack.releaseFrame){
+        anim.fired=true;
+        if(anim.target&&currentRun.enemies.includes(anim.target)){
+          const target=anim.target;
+          const dx=target.x-t.x,dy=target.y-t.y,length=Math.hypot(dx,dy)||1;
+          const originX=t.x-38+arcaneAnimation.projectileOriginX*arcaneAnimation.scaleX;
+          const originY=t.y-84+arcaneAnimation.projectileOriginY*arcaneAnimation.scaleY;
+          const eliteBonus=getRunCommanderId()==="huntmaster"&&target.maxHealth>=150?1.2:1;
+          const markedBonus=target===currentRun.markedEnemy&&currentRun.markedTimer>0?1.6:1;
+          currentRun.projectiles.push({
+            x:originX,y:originY,target,damage:getTowerStats(t).damage*eliteBonus*markedBonus,
+            color:"#A88BFF",speed:getTowerStats(t).projectileSpeed,towerType:"arcane",
+            isArcaneOrb:true,animationTime:0,angle:Math.atan2(dy,dx)
+          });
+        }
+      }
+      if(anim.elapsed>=arcaneAnimation.attack.frames/arcaneAnimation.attack.fps)t.arcaneAnimation=null;
+    }
     const s=getTowerStats(t);t.cooldown-=dt;if(t.cooldown>0)return;
     let target=null,best=-1;
     const marked=currentRun.markedTimer>0?currentRun.markedEnemy:null;
@@ -692,6 +751,8 @@ function updateTowers(dt){
     const markedBonus=target===marked?1.6:1;
     if(t.type==="archer"){
       t.archerAnimation={mode:"attack",elapsed:0,fired:false,target};
+    }else if(t.type==="arcane"){
+      t.arcaneAnimation={mode:"attack",elapsed:0,fired:false,target};
     }else{
       currentRun.projectiles.push({x:t.x,y:t.y,target,damage:s.damage*eliteBonus*markedBonus,color:s.color,speed:s.projectileSpeed,towerType:t.type});
     }
@@ -849,6 +910,7 @@ function updateCommanderHud(){
 }
 function updateProjectiles(dt){
   currentRun.projectiles=currentRun.projectiles.filter(p=>{
+    if(p.isArcaneOrb)p.animationTime=(p.animationTime||0)+dt;
     const e=p.target;if(!currentRun.enemies.includes(e)||e.health<=0)return false;
     const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d>0)p.angle=Math.atan2(dy,dx);if(d<=p.speed*dt+8){damageEnemy(e,p.damage);
       if(p.towerType==="cannon")currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<48)damageEnemy(other,p.damage*.5);});
