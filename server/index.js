@@ -351,8 +351,12 @@ function cleanSave(body) {
       area: run.area, campsite: run.campsite, stage: run.stage, currentWave: run.currentWave,
       totalWaves: run.totalWaves,
       towers: run.towers.map(t => ({ type: t.type, x: t.x, y: t.y, level: t.level,
+        investedGold: Number.isFinite(t.investedGold) ? t.investedGold : 0,
         upgrades: { damage: t.upgrades.damage, range: t.upgrades.range, speed: t.upgrades.speed } })),
       towerDamageBonus: run.towerDamageBonus, cards: run.cards,
+      commanderId: typeof run.commanderId === "string" ? run.commanderId : "warden",
+      skillBonuses: run.skillBonuses && typeof run.skillBonuses === "object" ? run.skillBonuses : {},
+      abilityCooldown: Number.isFinite(run.abilityCooldown) ? Math.max(0, run.abilityCooldown) : 0,
       campsiteRestUsed: Boolean(run.campsiteRestUsed),
       checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle"
     },
