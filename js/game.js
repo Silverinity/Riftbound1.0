@@ -195,6 +195,7 @@ const cardPool = [
 ];
 
 function getRunCommanderId(){return currentRun?.commanderId||window.riftboundCommanderId||"warden";}
+window.grantRiftboundImmediateGold=function(amount){if(!currentRun||!Number.isFinite(amount)||amount<=0)return;currentRun.gold+=Math.floor(amount);updateGameDisplay();persistRunCheckpoint("battle");};
 const commanderAbilities={
   warden:{name:"IRON BASTION",cooldown:45,description:"Raise a fortress ward for 12 seconds: halve incoming castle damage and make towers fire 25% faster.",requiresEnemies:false},
   arcanist:{name:"RIFT SURGE",cooldown:40,description:"Unleash a rift pulse dealing 120 damage to every enemy and slowing them by 45% for 5 seconds.",requiresEnemies:true},
@@ -206,7 +207,7 @@ const commanderAbilities={
 function createNewRun(){
   const commanderId=window.riftboundCommanderId||"warden";
   const skillBonuses=typeof window.getRiftboundSkillBonuses==="function"?window.getRiftboundSkillBonuses(commanderId):{};
-  const baseHealth=commanderId==="warden"?120:100;
+  const baseHealth=(commanderId==="warden"?120:100)+(skillBonuses.flatHealth||0);
   const startingHealth=Math.round(baseHealth*(1+(skillBonuses.fortressHp||0)));
   return {
     commanderId,skillBonuses,gold:100+(skillBonuses.startingGold||0),castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
@@ -788,7 +789,6 @@ function getPathPosition(progress){
   return points[points.length-1];
 }
 function createWaveQueue(wave){
-  if(currentRun.area===3&&currentRun.campsite===2&&currentRun.stage===3&&wave===5)return ["treant"];
   if(wave===5&&currentRun.encounter?.bossId)return [currentRun.encounter.bossId];
   const totalWave=(currentRun.area-1)*30+(currentRun.campsite-1)*15+(currentRun.stage-1)*5+wave;
   const count=5+wave*2+(currentRun.area-1)*3+Math.floor((totalWave-1)/8),queue=[];
@@ -981,8 +981,9 @@ function damageEnemy(e,dmg,applyPassive=true){
       if(!currentRun.defeatedBosses.includes(e.type))currentRun.defeatedBosses.push(e.type);
       const bossBonus=Math.floor((150+currentRun.area*75)*(1+(trait.bossGold||0)+(bonuses.bossGold||0)))+(bonuses.bossGoldFlat||0);
       currentRun.gold+=bossBonus;
-      showBattleMessage("BOSS DEFEATED · "+e.name+" · BONUS "+bossBonus+" GOLD");
+      showBattleMessage("BOSS DEFEATED · "+(e.name||enemyTypes[e.type].name)+" · BONUS "+bossBonus+" GOLD");
     }
+    if(bonuses.burnSpread&&e.burnTimer>0){currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<58){other.burnTimer=Math.max(other.burnTimer||0,2);other.burnDamage=Math.max(other.burnDamage||0,2);}});}
     const summonChance=.2+(bonuses.summonChance||0)+(trait.summonChance||0);
     const guaranteedSoul=bonuses.everyFifthSoul&&currentRun.stats.enemiesKilled%5===0;
     if(applyPassive&&getRunCommanderId()==="necromancer"&&(Math.random()<summonChance||guaranteedSoul)){
@@ -1027,7 +1028,9 @@ function updateSpectralAllies(dt){
     }
     ally.attacking=Math.max(0,(ally.attacking||0)-dt);
     if(target&&Math.hypot(target.x-ally.x,target.y-ally.y)<25&&ally.cooldown<=0){
-      damageEnemy(target,ally.damage||18,false);
+      const summonBossBonus=target.isBoss?(currentRun.skillBonuses?.summonBossDamage||0):0;
+      damageEnemy(target,(ally.damage||18)*(1+summonBossBonus),false);
+      if(currentRun.skillBonuses?.wraithSlow){target.slowTimer=Math.max(target.slowTimer||0,2);target.slowFactor=.8;}
       ally.cooldown=ally.interval||.85;
       ally.attacking=.22;
       currentRun.abilityEffects.push({type:"wraith-strike",life:.28,duration:.28,x:target.x,y:target.y});
@@ -1069,7 +1072,7 @@ function activateCommanderAbility(){
     effect={type:"bastion",life:2.6,duration:2.6};
     showBattleMessage("IRON BASTION · THE FORTRESS IS WARDED");
   }else if(id==="arcanist"){
-    enemies.forEach(enemy=>{enemy.slowTimer=Math.max(enemy.slowTimer||0,5);enemy.slowFactor=.55;damageEnemy(enemy,120*(1+(currentRun.skillBonuses?.abilityDamage||0)),false);});
+    enemies.forEach(enemy=>{enemy.slowTimer=Math.max(enemy.slowTimer||0,5+(currentRun.skillBonuses?.slowDuration||0));enemy.slowFactor=.55;const amount=120*(1+(currentRun.skillBonuses?.abilityDamage||0));damageEnemy(enemy,amount,false);if(currentRun.skillBonuses?.abilityEcho)damageEnemy(enemy,amount*currentRun.skillBonuses.abilityEcho,false);});
     effect={type:"rift",life:2.1,duration:2.1};
     showBattleMessage("RIFT SURGE · ARCANE ENERGY TEARS THROUGH THE ENEMY");
   }else if(id==="huntmaster"){
@@ -1420,8 +1423,9 @@ function updateCampsiteScreen(){
   document.getElementById("campsite-cards").textContent=currentRun.cards.length;
   document.getElementById("campsite-free-rest").disabled=currentRun.campsiteRestUsed||currentRun.castleHealth>=currentRun.maxCastleHealth;
   const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};
-  const healCost=Math.max(1,Math.ceil(40*(1-(trait.costReduction||0)-(currentRun.skillBonuses?.costReduction||0))));
-  const upgradeCost=Math.max(1,Math.ceil(100*(1-(trait.costReduction||0)-(currentRun.skillBonuses?.costReduction||0))));
+  const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));
+  const healCost=Math.max(1,Math.ceil(40*(1-reduction)));
+  const upgradeCost=Math.max(1,Math.ceil(100*(1-reduction)));
   document.getElementById("campsite-heal").textContent="RESTORE CASTLE · "+healCost+" G";
   document.getElementById("campsite-upgrade").textContent="SHARPEN THE ARSENAL · "+upgradeCost+" G";
   document.getElementById("campsite-heal").disabled=currentRun.gold<healCost||currentRun.castleHealth>=currentRun.maxCastleHealth;
@@ -1433,11 +1437,11 @@ function restByCampfire(){
 }
 function healAtCampsite(){
   if(!currentRun||currentRun.gold<40||currentRun.castleHealth>=currentRun.maxCastleHealth)return;
-  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const cost=Math.max(1,Math.ceil(40*(1-(trait.costReduction||0)-(currentRun.skillBonuses?.costReduction||0))));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
+  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));const cost=Math.max(1,Math.ceil(40*(1-reduction)));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+30);updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function upgradeAtCampsite(){
   if(!currentRun||currentRun.gold<100)return;
-  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const cost=Math.max(1,Math.ceil(100*(1-(trait.costReduction||0)-(currentRun.skillBonuses?.costReduction||0))));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
+  const trait=typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects():{};const reduction=Math.min(.6,(trait.costReduction||0)+(currentRun.skillBonuses?.costReduction||0));const cost=Math.max(1,Math.ceil(100*(1-reduction)));if(currentRun.gold<cost)return;currentRun.gold-=cost;currentRun.stats.goldSpent+=cost;currentRun.towerDamageBonus+=10;updateCampsiteScreen();persistRunCheckpoint("campsite");
 }
 function showCampsiteScreen(completedWaves){
   stopGameLoop();
