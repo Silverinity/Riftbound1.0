@@ -345,6 +345,7 @@ function cleanSave(body) {
     }
     const routeIds = new Set(["bear-cave","wolf-den","goblin-camp","hollow-bear","rift-alpha","cinder-quarry","ash-wastes","scavenger-crossing","ash-colossus","goblin-warlord","frozen-hollow","wraithwood","shattered-keep","frost-wyrm","riftbound-knight"]);
     const commanderIds = new Set(["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"]);
+    const validTraitIds = new Set(["bulwarks-oath","hawks-eye","coin-scent","frost-sigil","ember-heart","soul-conduit","siege-savant","rift-tactician","golden-forge","worldbreaker"]);
     const bonusKeys = ["fortressHp","cooldown","damage","range","damageReduction","towerSpeed","arcaneDamage","slowPower","abilityDamage","eliteDamage","eliteGold","goldBonus","costReduction","startingGold","archerDamage","cannonDamage","burnDamage","burnChance","areaDamage","summonChance","summonDamage","summonDuration","bossDamage","slowDuration","stageHeal","flatHealth","healthyDamage","lowHealthSpeed","bossReduction","arcaneRange","markedDamage","stageGold","abilityGold","bossGold","bossGoldFlat","burnDamageBonus","burnDuration","burnSlow","extraWraith","summonDamageBonus","summonBossDamage","slowedDamage","freshDamage","lowDamage","cannonSplash","abilityEcho","wraithSlow"];
     const cleanBonuses = {};
     if (run.skillBonuses && typeof run.skillBonuses === "object") {
@@ -367,6 +368,7 @@ function cleanSave(body) {
         upgrades: { damage: t.upgrades.damage, range: t.upgrades.range, speed: t.upgrades.speed } })),
       towerDamageBonus: run.towerDamageBonus, cards: run.cards,
       commanderId: commanderIds.has(run.commanderId) ? run.commanderId : "warden",
+      traitId: validTraitIds.has(run.traitId) ? run.traitId : "bulwarks-oath",
       skillBonuses: cleanBonuses,
       abilityCooldown: Number.isFinite(run.abilityCooldown) ? Math.max(0, run.abilityCooldown) : 0,
       campsiteRestUsed: Boolean(run.campsiteRestUsed), checkpoint: run.checkpoint === "campsite" ? "campsite" : "battle",
