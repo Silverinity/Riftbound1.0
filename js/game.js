@@ -196,7 +196,6 @@ const cardPool = [
 
 function getRunCommanderId(){return currentRun?.commanderId||window.riftboundCommanderId||"warden";}
 function getRunTraitEffects(){return typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects(currentRun?.traitId):{};}
-window.grantRiftboundImmediateGold=function(amount){if(!currentRun||!Number.isFinite(amount)||amount<=0)return;currentRun.gold+=Math.floor(amount);updateGameDisplay();persistRunCheckpoint("battle");};
 const commanderAbilities={
   warden:{name:"IRON BASTION",cooldown:45,description:"Raise a fortress ward for 12 seconds: halve incoming castle damage and make towers fire 25% faster.",requiresEnemies:false},
   arcanist:{name:"RIFT SURGE",cooldown:40,description:"Unleash a rift pulse dealing 120 damage to every enemy and slowing them by 45% for 5 seconds.",requiresEnemies:true},
