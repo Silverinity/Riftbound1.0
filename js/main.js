@@ -101,6 +101,9 @@
   };
   document.addEventListener("pointerdown", unlockAudio, { once: true, capture: true });
   document.addEventListener("keydown", unlockAudio, { once: true, capture: true });
+  document.addEventListener("click", event => {
+    if (event.target.closest("button")) window.riftboundPlaySfx("click");
+  });
 
   const byId = id => document.getElementById(id);
   const mainMenu = byId("main-menu");
