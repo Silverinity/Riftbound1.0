@@ -316,6 +316,7 @@ function getTowerStats(t){
   if(t.type==="archer")damage*=1+(trait.archerDamage||0);
   damage*=1+(trait.towerDamage||0);
   range*=1+(trait.towerRange||0);
+  fireRate*=1+(trait.towerSpeed||0);
   if(t.type==="cannon")damage*=1+(trait.cannonDamage||0)+(bonuses.areaDamage||0);
   if(currentRun.castleHealth>currentRun.maxCastleHealth*.5)damage*=1+(bonuses.healthyDamage||0);
   if(currentRun.castleHealth<currentRun.maxCastleHealth*.35)fireRate*=1+(bonuses.lowHealthSpeed||0);
@@ -1177,6 +1178,16 @@ function damageEnemy(e,dmg,applyPassive=true){
   e.health-=dmg;
   const dealt=Math.max(0,Math.min(Math.max(0,e.health+dmg),dmg));
   currentRun.stats.damageDealt+=dealt;
+  if(applyPassive&&dealt>0&&trait.worldbreaker&&e.isBoss){
+    e.worldbreakerCharge=(e.worldbreakerCharge||0)+dealt;
+    while(e.worldbreakerCharge>=400&&e.health>0){
+      e.worldbreakerCharge-=400;
+      const fracture=Math.min(60,e.health);
+      e.health-=fracture;
+      currentRun.stats.damageDealt+=fracture;
+      showBattleMessage("WORLDBREAKER · FRACTURE STRIKE");
+    }
+  }
   if(applyPassive&&dmg>0&&Math.random()<Math.min(.9,(getRunCommanderId()==="pyromancer"?.25:0)+(bonuses.burnChance||0)+(trait.burnChance||0))) {
     e.burnTimer=Math.max(e.burnTimer||0,3+(trait.burnDuration||0)+(bonuses.burnDuration||0));
     e.burnDamage=3+(bonuses.burnDamage||0);
@@ -1195,11 +1206,7 @@ function damageEnemy(e,dmg,applyPassive=true){
       currentRun.gold+=bossBonus;
       showBattleMessage("BOSS DEFEATED · "+(e.name||enemyTypes[e.type].name)+" · BONUS "+bossBonus+" GOLD");
     }
-    if((bonuses.burnSpread||trait.burnSpread)&&e.burnTimer>0){currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<75){other.burnTimer=Math.max(other.burnTimer||0,3+(trait.burnDuration||0));other.burnDamage=Math.max(other.burnDamage||0,2);}});}
-    if(applyPassive&&trait.worldbreaker&&e.isBoss){
-      e.worldbreakerCharge=(e.worldbreakerCharge||0)+dealt;
-      if(e.worldbreakerCharge>=250){e.worldbreakerCharge-=250;const fracture=Math.min(100,e.health);e.health-=fracture;currentRun.stats.damageDealt+=fracture;showBattleMessage("WORLDBREAKER · FRACTURE STRIKE");if(e.health<=0&&!e.rewarded)damageEnemy(e,0,false);}
-    }
+    if((bonuses.burnSpread||trait.burnSpread)&&e.burnTimer>0){currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<75){other.burnTimer=Math.max(other.burnTimer||0,1.5+(trait.burnDuration||0)*0.5);other.burnDamage=Math.max(other.burnDamage||0,1);}});}
     const summonChance=(getRunCommanderId()==="necromancer"?.2:0)+(bonuses.summonChance||0)+(trait.summonChance||0);
     const guaranteedSoul=bonuses.everyFifthSoul&&currentRun.stats.enemiesKilled%5===0;
     if(applyPassive&&(Math.random()<summonChance||guaranteedSoul)){
