@@ -6,16 +6,21 @@
   const STORAGE_KEY="riftbound-class-progression-v1";
   const legacyBonuses=window.getRiftboundSkillBonuses;
   const traitList=[
-    {index:"01",id:"bulwarks-oath",name:"Bulwark's Oath",rarity:"COMMON",icon:"⬡",description:"The fortress begins each expedition with 10% more maximum health.",synergy:"The Warden",good:["warden"],effects:{fortressHp:.10}},
-    {index:"02",id:"hawks-eye",name:"Hawk's Eye",rarity:"COMMON",icon:"➶",description:"Archer Towers deal 12% more damage.",synergy:"The Huntmaster",good:["huntmaster"],effects:{archerDamage:.12}},
-    {index:"03",id:"coin-scent",name:"Coin Scent",rarity:"COMMON",icon:"◈",description:"Defeated enemies drop 10% more gold.",synergy:"The Treasurer",good:["treasurer"],effects:{goldBonus:.10}},
-    {index:"04",id:"frost-sigil",name:"Frost Sigil",rarity:"RARE",icon:"❄",description:"Tower hits have a 12% chance to slow an enemy for 2 seconds.",synergy:"The Arcanist",good:["arcanist"],effects:{slowChance:.12}},
-    {index:"05",id:"ember-heart",name:"Ember Heart",rarity:"RARE",icon:"♨",description:"Burn effects deal 25% more damage and last 1 second longer.",synergy:"The Pyromancer",good:["pyromancer"],effects:{burnDamage:.25,burnDuration:1}},
-    {index:"06",id:"soul-conduit",name:"Soul Conduit",rarity:"EPIC",icon:"☠",description:"Spectral allies are summoned 50% more often and remain for 2 extra seconds.",synergy:"The Necromancer",good:["necromancer"],effects:{summonChance:.10,summonDuration:2}},
-    {index:"07",id:"siege-savant",name:"Siege Savant",rarity:"EPIC",icon:"◆",description:"Cannon Towers deal 18% more damage and their splash radius is increased.",synergy:"The Treasurer or Warden",good:["treasurer","warden"],effects:{cannonDamage:.18,cannonSplash:18}},
-    {index:"08",id:"rift-tactician",name:"Rift Tactician",rarity:"LEGENDARY",icon:"✧",description:"Towers deal 20% more damage to slowed enemies.",synergy:"The Arcanist",good:["arcanist"],effects:{slowedDamage:.20}},
-    {index:"09",id:"golden-forge",name:"Golden Forge",rarity:"LEGENDARY",icon:"♛",description:"Tower upgrades and campsite services cost 15% less gold.",synergy:"The Treasurer",good:["treasurer"],effects:{costReduction:.15}},
-    {index:"10",id:"worldbreaker",name:"Worldbreaker",rarity:"MYTHIC",icon:"✹",description:"Deal 25% more damage to bosses and earn 20% more boss gold.",synergy:"The Huntmaster or Pyromancer",good:["huntmaster","pyromancer"],effects:{bossDamage:.25,bossGold:.20}}
+    {index:"01",id:"bulwarks-oath",name:"Bulwark's Oath",rarity:"COMMON",icon:"⬡",description:"The fortress begins each expedition with greater resilience.",synergy:"The Warden",good:["warden"],stats:["+10% maximum fortress health"],effects:{"fortressHp":0.1}},
+    {index:"02",id:"hawks-eye",name:"Hawk's Eye",rarity:"COMMON",icon:"➶",description:"Archer towers strike with greater precision and force.",synergy:"The Huntmaster",good:["huntmaster"],stats:["+12% Archer Tower damage"],effects:{"archerDamage":0.12}},
+    {index:"03",id:"coin-scent",name:"Coin Scent",rarity:"COMMON",icon:"◈",description:"A faint golden aura draws extra coin from defeated foes.",synergy:"The Treasurer",good:["treasurer"],stats:["+10% gold from enemies"],effects:{"goldBonus":0.1}},
+    {index:"04",id:"stonebound",name:"Stonebound Core",rarity:"COMMON",icon:"⬟",description:"Ancient runes reinforce the fortress foundations.",synergy:"The Warden",good:["warden"],stats:["+6% maximum fortress health"],effects:{"fortressHp":0.06}},
+    {index:"05",id:"frost-sigil",name:"Frost Sigil",rarity:"RARE",icon:"❄",description:"Tower strikes can briefly bind enemies in glacial magic.",synergy:"The Arcanist",good:["arcanist"],stats:["+12% chance for tower hits to slow for 2 seconds"],effects:{"slowChance":0.12}},
+    {index:"06",id:"ember-heart",name:"Ember Heart",rarity:"RARE",icon:"♨",description:"A living coal strengthens every lingering burn.",synergy:"The Pyromancer",good:["pyromancer"],stats:["+25% burn damage","+1 second burn duration"],effects:{"burnDamage":0.25,"burnDuration":1}},
+    {index:"07",id:"soul-conduit",name:"Soul Conduit",rarity:"RARE",icon:"☠",description:"A spectral channel calls allies more frequently and sustains them longer.",synergy:"The Necromancer",good:["necromancer"],stats:["+10 percentage points spectral summon chance","+2 seconds spectral ally duration"],effects:{"summonChance":0.1,"summonDuration":2}},
+    {index:"08",id:"siege-savant",name:"Siege Savant",rarity:"RARE",icon:"◆",description:"Cannon engineers discover a more devastating blast pattern.",synergy:"The Warden or Treasurer",good:["warden","treasurer"],stats:["+18% Cannon Tower damage","+18 splash radius"],effects:{"cannonDamage":0.18,"cannonSplash":18}},
+    {index:"09",id:"rift-tactician",name:"Rift Tactician",rarity:"EPIC",icon:"✧",description:"Exploit the fractures left by slowing magic to punish vulnerable targets.",synergy:"The Arcanist",good:["arcanist"],stats:["+20% damage against slowed enemies"],effects:{"slowedDamage":0.2}},
+    {index:"10",id:"golden-forge",name:"Golden Forge",rarity:"EPIC",icon:"♛",description:"A masterwork royal seal lowers the cost of upgrades and campsite services.",synergy:"The Treasurer",good:["treasurer"],stats:["-15% tower upgrade and campsite service costs"],effects:{"costReduction":0.15}},
+    {index:"11",id:"ashen-covenant",name:"Ashen Covenant",rarity:"EPIC",icon:"♧",description:"The ash remembers every flame and feeds it new strength.",synergy:"The Pyromancer",good:["pyromancer"],stats:["+18% burn damage","+2 seconds burn duration"],effects:{"burnDamage":0.18,"burnDuration":2}},
+    {index:"12",id:"worldbreaker",name:"Worldbreaker",rarity:"LEGENDARY",icon:"✹",description:"A relic forged at the edge of the Rift empowers attacks against great foes.",synergy:"The Huntmaster or Pyromancer",good:["huntmaster","pyromancer"],stats:["+25% damage against bosses","+20% boss gold rewards"],effects:{"bossDamage":0.25,"bossGold":0.2}},
+    {index:"13",id:"crown-of-embers",name:"Crown of Embers",rarity:"LEGENDARY",icon:"♨",description:"A crown of eternal cinders magnifies the Pyromancer's battlefield control.",synergy:"The Pyromancer",good:["pyromancer"],stats:["+30% burn damage","+3 seconds burn duration"],effects:{"burnDamage":0.3,"burnDuration":3}},
+    {index:"14",id:"eclipse-engine",name:"Eclipse Engine",rarity:"MYTHIC",icon:"◉",description:"A forbidden celestial engine turns every weakness into an opening.",synergy:"The Arcanist or Huntmaster",good:["arcanist","huntmaster"],stats:["+35% damage against slowed enemies","+20% damage against bosses"],effects:{"slowedDamage":0.35,"bossDamage":0.2}},
+    {index:"15",id:"soul-of-the-kingdom",name:"Soul of the Kingdom",rarity:"MYTHIC",icon:"✥",description:"The fortress itself answers the call, strengthening its walls and its treasury.",synergy:"The Warden or Treasurer",good:["warden","treasurer"],stats:["+20% maximum fortress health","+25% gold from enemies"],effects:{"fortressHp":0.2,"goldBonus":0.25}}
   ];
   const coreTrees={
     warden:{title:"BASTION ROOT",tagline:"Turn the fortress into an unbreakable anchor.",nodes:[
@@ -76,7 +81,12 @@
   let profile={classes:{},equippedTrait:"bulwarks-oath"};
   function blankClass(){return {xp:0,level:1,skillPoints:0,spentPoints:0,nodes:{},choices:{},totalXp:0};}
   function normalizeProfile(raw){
-    const next={classes:{},equippedTrait:traitList.some(t=>t.id===raw?.equippedTrait)?raw.equippedTrait:"bulwarks-oath"};
+    const equippedTrait=traitList.some(t=>t.id===raw?.equippedTrait)?raw.equippedTrait:"bulwarks-oath";
+    const oldTraits=raw?.traits&&typeof raw.traits==="object"?raw.traits:{};
+    const owned=oldTraits.owned&&typeof oldTraits.owned==="object"?{...oldTraits.owned}:{};
+    if(!owned[equippedTrait])owned[equippedTrait]=1;
+    Object.keys(owned).forEach(id=>{if(!traitList.some(t=>t.id===id)||Number(owned[id])<=0)delete owned[id];else owned[id]=Math.max(1,Math.floor(Number(owned[id])||1));});
+    const next={classes:{},equippedTrait,traits:{rolls:Math.max(0,Math.floor(Number(oldTraits.rolls)||0)),pityLegendary:Math.max(0,Math.min(49,Math.floor(Number(oldTraits.pityLegendary)||0))),pityMythic:Math.max(0,Math.min(1499,Math.floor(Number(oldTraits.pityMythic)||0))),totalRolls:Math.max(0,Math.floor(Number(oldTraits.totalRolls)||0)),owned,redeemedCodes:Array.isArray(oldTraits.redeemedCodes)?oldTraits.redeemedCodes.filter(x=>typeof x==="string").slice(0,50):[]}};
     CLASS_IDS.forEach(id=>{
       const c=raw?.classes?.[id]||{};
       const tree=coreTrees[id],rawChoices=c.choices&&typeof c.choices==="object"?c.choices:{},choices={};
