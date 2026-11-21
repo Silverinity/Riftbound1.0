@@ -104,8 +104,7 @@
   function save(){
     profile=normalizeProfile(profile);
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch(e){console.warn("Could not save class progression:",e);}
-    const savedRun=typeof window.persistRiftboundCheckpoint==="function"?window.persistRiftboundCheckpoint("battle"):false;
-    if(savedRun===false&&typeof window.riftboundCloudSaveProfile==="function")window.riftboundCloudSaveProfile();
+    if(typeof window.riftboundCloudSaveProfile==="function")window.riftboundCloudSaveProfile();
     renderSkillTree();renderTraits();window.renderRiftboundCommanders?.();
   }
   function classData(id=window.riftboundCommanderId||"warden"){return profile.classes[CLASS_IDS.includes(id)?id:"warden"];}
@@ -228,14 +227,25 @@
     performTraitRoll();
   }
   window.riftboundGetTraitState=()=>JSON.parse(JSON.stringify(profile.traits));
-  window.riftboundRedeemTraitCode=function(code){
+  window.riftboundRedeemTraitCode=async function(code){
     const normalized=String(code||"").trim().toUpperCase();
-    const rewards={"RIFTBOUND-ROLLTEST":100,"TESTING":25};
-    if(!Object.prototype.hasOwnProperty.call(rewards,normalized))return {ok:false,message:"INVALID CODE"};
-    if(profile.traits.redeemedCodes.includes(normalized))return {ok:false,message:"THIS CODE HAS ALREADY BEEN REDEEMED"};
-    const rolls=rewards[normalized];
-    profile.traits.redeemedCodes.push(normalized);profile.traits.rolls+=rolls;save();
-    return {ok:true,message:"CODE ACCEPTED · +"+rolls+" TRAIT ROLLS"};
+    if(!normalized)return {ok:false,message:"ENTER A CODE"};
+    const api=(window.RIFTBOUND_API_BASE||"").replace(/\\/$/,"");
+    if(!api)return {ok:false,message:"CODE REDEMPTION REQUIRES THE SERVER"};
+    try{
+      const response=await fetch(api+"/api/traits/redeem",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({code:normalized})});
+      const data=await response.json().catch(()=>({}));
+      if(response.status===409)return {ok:false,message:"THIS DISCORD ACCOUNT HAS ALREADY REDEEMED THIS CODE"};
+      if(response.status===400)return {ok:false,message:"INVALID CODE"};
+      if(!response.ok)throw new Error(data.error||"Code redemption failed.");
+      profile.traits.rolls+=Math.max(0,Math.floor(Number(data.rollsGranted)||0));
+      if(!profile.traits.redeemedCodes.includes(normalized))profile.traits.redeemedCodes.push(normalized);
+      save();
+      return {ok:true,message:data.message||"CODE ACCEPTED"};
+    }catch(error){
+      console.error("Trait code redemption failed:",error);
+      return {ok:false,message:"COULD NOT REDEEM CODE · CHECK YOUR CONNECTION"};
+    }
   };
   function renderTraits(showLastRoll=false){
     const root=document.getElementById("trait-collection");if(!root)return;
