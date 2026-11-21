@@ -78,15 +78,20 @@
         [["Grave Sovereign","Bosses take 20% more damage from spectral allies.",{summonBossDamage:.20}],["Army of Ash","Summon one additional wraith with Raise the Fallen.",{extraWraith:1}]],
         [["Lich's Dominion","Every fifth kill guarantees a spectral ally.",{everyFifthSoul:true}],["Eternal Legion","Spectral ally damage and duration increase by 30%.",{summonDamageBonus:.30,summonDuration:4}]]]}
   };
-  let profile={classes:{},equippedTrait:"bulwarks-oath"};
+  let profile={classes:{},equippedTrait:null};
   function blankClass(){return {xp:0,level:1,skillPoints:0,spentPoints:0,nodes:{},choices:{},totalXp:0};}
   function normalizeProfile(raw){
-    const equippedTrait=traitList.some(t=>t.id===raw?.equippedTrait)?raw.equippedTrait:"bulwarks-oath";
     const oldTraits=raw?.traits&&typeof raw.traits==="object"?raw.traits:{};
     const owned=oldTraits.owned&&typeof oldTraits.owned==="object"?{...oldTraits.owned}:{};
-    if(!owned[equippedTrait])owned[equippedTrait]=1;
     Object.keys(owned).forEach(id=>{if(!traitList.some(t=>t.id===id)||Number(owned[id])<=0)delete owned[id];else owned[id]=Math.max(1,Math.floor(Number(owned[id])||1));});
-    const next={classes:{},equippedTrait,traits:{rolls:Math.max(0,Math.floor(Number(oldTraits.rolls)||0)),pityLegendary:Math.max(0,Math.min(49,Math.floor(Number(oldTraits.pityLegendary)||0))),pityMythic:Math.max(0,Math.min(1499,Math.floor(Number(oldTraits.pityMythic)||0))),totalRolls:Math.max(0,Math.floor(Number(oldTraits.totalRolls)||0)),owned,redeemedCodes:Array.isArray(oldTraits.redeemedCodes)?oldTraits.redeemedCodes.filter(x=>typeof x==="string").slice(0,50):[]}};
+    const totalRolls=Math.max(0,Math.floor(Number(oldTraits.totalRolls)||0));
+    let equippedTrait=traitList.some(t=>t.id===raw?.equippedTrait)?raw.equippedTrait:null;
+    // Older profiles automatically received Bulwark's Oath. Remove that free starter relic during migration.
+    if(equippedTrait==="bulwarks-oath"&&totalRolls===0&&Object.keys(owned).every(id=>id==="bulwarks-oath")){
+      equippedTrait=null;
+      delete owned["bulwarks-oath"];
+    }
+    const next={classes:{},equippedTrait,traits:{rolls:Math.max(0,Math.floor(Number(oldTraits.rolls)||0)),pityLegendary:Math.max(0,Math.min(49,Math.floor(Number(oldTraits.pityLegendary)||0))),pityMythic:Math.max(0,Math.min(1499,Math.floor(Number(oldTraits.pityMythic)||0))),totalRolls,owned,redeemedCodes:Array.isArray(oldTraits.redeemedCodes)?oldTraits.redeemedCodes.filter(x=>typeof x==="string").slice(0,50):[]}};
     CLASS_IDS.forEach(id=>{
       const c=raw?.classes?.[id]||{};
       const tree=coreTrees[id],rawChoices=c.choices&&typeof c.choices==="object"?c.choices:{},choices={};
@@ -105,7 +110,8 @@
   }
   function classData(id=window.riftboundCommanderId||"warden"){return profile.classes[CLASS_IDS.includes(id)?id:"warden"];}
   function xpForNext(level){return Math.round(120+level*45+level*level*2);}
-  function getTrait(id=profile.equippedTrait){return traitList.find(t=>t.id===id)||traitList[0];}
+  const NO_TRAIT={id:null,name:"No Trait Equipped",rarity:"NONE",icon:"—",description:"No relic is equipped. Your expedition receives no trait bonuses.",synergy:"None",good:[],stats:["No additional stat bonuses"],effects:{}};
+  function getTrait(id=profile.equippedTrait){return traitList.find(t=>t.id===id)||NO_TRAIT;}
   function getTraitEffects(id=profile.equippedTrait){return {...getTrait(id).effects};}
   window.getRiftboundTraitEffects=getTraitEffects;
   window.getRiftboundTrait=function(){return {...getTrait()};};
