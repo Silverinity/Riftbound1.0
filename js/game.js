@@ -819,6 +819,7 @@ function startWave(automatic=false){
   currentRun.waveIntervalTimer=currentRun.currentWave<5?10:0;
   const total=((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave;
   if(currentRun.currentWave===5&&currentRun.encounter?.bossId){
+    window.riftboundSetMusicTrack?.("boss");
     setWaveStatus("BOSS ENCOUNTER");
     showBattleMessage(currentRun.encounter.name.toUpperCase()+" HAS AWAKENED!");
   }else{
@@ -1510,6 +1511,7 @@ window.devRiftboundForceCampfire=function(){
   return true;
 };
 function showCampsiteScreen(completedWaves){
+  window.riftboundSetMusicTrack?.("campfire");
   stopGameLoop();
   document.getElementById("main-menu").style.display="none";
   document.getElementById("game-screen").hidden=true;
@@ -1523,6 +1525,7 @@ function showCampsiteScreen(completedWaves){
   updateCampsiteScreen();
 }
 function continueFromCampsite(){
+  window.riftboundSetMusicTrack?.("battle");
   document.getElementById("campsite-screen").hidden=true;
   document.getElementById("game-screen").hidden=false;
   updateGameDisplay();
