@@ -222,6 +222,7 @@ function createNewRun(){
   const startingHealth=Math.round(baseHealth*(1+(skillBonuses.fortressHp||0)));
   return {
     commanderId,traitId,skillBonuses,gold:100+(skillBonuses.startingGold||0),castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
+    traitRevivalUsed:false,kingdomWardTimer:0,revivalAnimation:0,eclipsePulseTimer:18,
     towers:[{type:"archer",x:300,y:280,cooldown:0,level:1,investedGold:0,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
@@ -313,6 +314,8 @@ function getTowerStats(t){
   if(t.type==="arcane")range*=1+(bonuses.arcaneRange||0);
   const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   if(t.type==="archer")damage*=1+(trait.archerDamage||0);
+  damage*=1+(trait.towerDamage||0);
+  range*=1+(trait.towerRange||0);
   if(t.type==="cannon")damage*=1+(trait.cannonDamage||0)+(bonuses.areaDamage||0);
   if(currentRun.castleHealth>currentRun.maxCastleHealth*.5)damage*=1+(bonuses.healthyDamage||0);
   if(currentRun.castleHealth<currentRun.maxCastleHealth*.35)fireRate*=1+(bonuses.lowHealthSpeed||0);
@@ -550,6 +553,19 @@ function drawCastle(){
   ctx.fillStyle="rgba(185,154,232,.22)";
   ctx.fillRect(858,224,11,2);ctx.fillRect(922,224,11,2);
   ctx.restore();
+  if(currentRun.revivalAnimation>0){
+    const progress=1-currentRun.revivalAnimation/2.4;
+    const pulse=1+Math.sin(performance.now()/75)*.12;
+    const radius=42+progress*48;
+    ctx.save();ctx.globalAlpha=Math.max(0,1-progress*.8);
+    const glow=ctx.createRadialGradient(896,266,8,896,266,radius);
+    glow.addColorStop(0,"rgba(255,231,145,.42)");glow.addColorStop(1,"rgba(255,190,75,0)");
+    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(896,266,radius*pulse,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="rgba(255,224,137,.9)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(896,266,radius*pulse,0,Math.PI*2);ctx.stroke();
+    for(let i=0;i<8;i++){const angle=i*Math.PI/4+performance.now()/500;const distance=22+progress*35;const sx=896+Math.cos(angle)*distance,sy=266+Math.sin(angle)*distance;ctx.fillStyle="#FFE9A6";ctx.beginPath();ctx.arc(sx,sy,2.5,0,Math.PI*2);ctx.fill();}
+    ctx.restore();
+  }
+  if(currentRun.kingdomWardTimer>0){ctx.save();ctx.strokeStyle="rgba(255,220,130,.75)";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(896,266,58,62,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
 
   const hpRatio=Math.max(0,Math.min(1,currentRun.castleHealth/currentRun.maxCastleHealth));
   const barX=846,barY=198,barW=104,barH=12;
@@ -1001,7 +1017,33 @@ function spawnEnemy(type,waveNumber){
 
   currentRun.enemies.push(enemy);
 }
+function trySoulKingdomRevival(){
+  const trait=getRunTraitEffects();
+  if(!trait.reviveOnce||currentRun.traitRevivalUsed)return false;
+  currentRun.traitRevivalUsed=true;
+  currentRun.castleHealth=Math.max(1,Math.ceil(currentRun.maxCastleHealth*.1));
+  currentRun.kingdomWardTimer=8;
+  currentRun.revivalAnimation=2.4;
+  updateGameDisplay();
+  showBattleMessage("SOUL OF THE KINGDOM · THE FORTRESS IS REBORN");
+  return true;
+}
 function updateEnemies(dt){
+  const activeTrait=getRunTraitEffects();
+  if(currentRun.kingdomWardTimer>0)currentRun.kingdomWardTimer=Math.max(0,currentRun.kingdomWardTimer-dt);
+  if(currentRun.revivalAnimation>0)currentRun.revivalAnimation=Math.max(0,currentRun.revivalAnimation-dt);
+  if(activeTrait.eclipsePulse){
+    currentRun.eclipsePulseTimer=(currentRun.eclipsePulseTimer??18)-dt;
+    if(currentRun.eclipsePulseTimer<=0){
+      currentRun.eclipsePulseTimer=18;
+      [...currentRun.enemies].forEach(enemy=>{
+        if(enemy.rewarded||enemy.health<=0)return;
+        enemy.slowTimer=Math.max(enemy.slowTimer||0,2.5);enemy.slowFactor=.55;
+        damageEnemy(enemy,Math.min(100,enemy.maxHealth*.04),false);
+      });
+      showBattleMessage("ECLIPSE ENGINE · RIFT PULSE");
+    }
+  }
   currentRun.spawnBatches.forEach(batch=>{
     if(!batch.queue.length)return;
     batch.timer-=dt;
@@ -1032,7 +1074,7 @@ function updateEnemies(dt){
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
-    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=Math.min(currentRun.castleHealth,incomingDamage);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
+    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1)*(currentRun.kingdomWardTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=Math.min(currentRun.castleHealth,incomingDamage);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0&&!trySoulKingdomRevival())endGame();return false;}return e.health>0;
   });
 }
 function getEnemyDamageMultiplier(target){
@@ -1135,7 +1177,7 @@ function damageEnemy(e,dmg,applyPassive=true){
   e.health-=dmg;
   const dealt=Math.max(0,Math.min(Math.max(0,e.health+dmg),dmg));
   currentRun.stats.damageDealt+=dealt;
-  if(applyPassive&&dmg>0&&Math.random()<(getRunCommanderId()==="pyromancer"?.25:0)+(bonuses.burnChance||0)) {
+  if(applyPassive&&dmg>0&&Math.random()<Math.min(.9,(getRunCommanderId()==="pyromancer"?.25:0)+(bonuses.burnChance||0)+(trait.burnChance||0))) {
     e.burnTimer=Math.max(e.burnTimer||0,3+(trait.burnDuration||0)+(bonuses.burnDuration||0));
     e.burnDamage=3+(bonuses.burnDamage||0);
   }
@@ -1153,12 +1195,16 @@ function damageEnemy(e,dmg,applyPassive=true){
       currentRun.gold+=bossBonus;
       showBattleMessage("BOSS DEFEATED · "+(e.name||enemyTypes[e.type].name)+" · BONUS "+bossBonus+" GOLD");
     }
-    if(bonuses.burnSpread&&e.burnTimer>0){currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<58){other.burnTimer=Math.max(other.burnTimer||0,2);other.burnDamage=Math.max(other.burnDamage||0,2);}});}
-    const summonChance=.2+(bonuses.summonChance||0)+(trait.summonChance||0);
+    if((bonuses.burnSpread||trait.burnSpread)&&e.burnTimer>0){currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<75){other.burnTimer=Math.max(other.burnTimer||0,3+(trait.burnDuration||0));other.burnDamage=Math.max(other.burnDamage||0,2);}});}
+    if(applyPassive&&trait.worldbreaker&&e.isBoss){
+      e.worldbreakerCharge=(e.worldbreakerCharge||0)+dealt;
+      if(e.worldbreakerCharge>=250){e.worldbreakerCharge-=250;const fracture=Math.min(100,e.health);e.health-=fracture;currentRun.stats.damageDealt+=fracture;showBattleMessage("WORLDBREAKER · FRACTURE STRIKE");if(e.health<=0&&!e.rewarded)damageEnemy(e,0,false);}
+    }
+    const summonChance=(getRunCommanderId()==="necromancer"?.2:0)+(bonuses.summonChance||0)+(trait.summonChance||0);
     const guaranteedSoul=bonuses.everyFifthSoul&&currentRun.stats.enemiesKilled%5===0;
-    if(applyPassive&&getRunCommanderId()==="necromancer"&&(Math.random()<summonChance||guaranteedSoul)){
+    if(applyPassive&&(Math.random()<summonChance||guaranteedSoul)){
       currentRun.spectralAllies.push({
-        life:4+(bonuses.summonDuration||0)+(trait.summonDuration||0),cooldown:0,damage:(18+(bonuses.summonDamage||0))*(1+(bonuses.summonDamageBonus||0)),interval:.85,
+        life:4+(bonuses.summonDuration||0)+(trait.summonDuration||0),cooldown:0,damage:(18+(bonuses.summonDamage||0))*(1+(bonuses.summonDamageBonus||0)+(trait.summonDamageBonus||0)),interval:.85,
         x:895,y:270,orbitAngle:Math.random()*Math.PI*2,attacking:0
       });
       showBattleMessage("SOUL HARVESTED · A SPECTRAL ALLY JOINS THE FIGHT");
