@@ -203,10 +203,12 @@
   window.riftboundGetTraitState=()=>JSON.parse(JSON.stringify(profile.traits));
   window.riftboundRedeemTraitCode=function(code){
     const normalized=String(code||"").trim().toUpperCase();
-    if(normalized!=="RIFTBOUND-ROLLTEST")return {ok:false,message:"INVALID CODE"};
+    const rewards={"RIFTBOUND-ROLLTEST":100,"TESTING":25};
+    if(!Object.prototype.hasOwnProperty.call(rewards,normalized))return {ok:false,message:"INVALID CODE"};
     if(profile.traits.redeemedCodes.includes(normalized))return {ok:false,message:"THIS CODE HAS ALREADY BEEN REDEEMED"};
-    profile.traits.redeemedCodes.push(normalized);profile.traits.rolls+=100;save();
-    return {ok:true,message:"CODE ACCEPTED · +100 TRAIT ROLLS"};
+    const rolls=rewards[normalized];
+    profile.traits.redeemedCodes.push(normalized);profile.traits.rolls+=rolls;save();
+    return {ok:true,message:"CODE ACCEPTED · +"+rolls+" TRAIT ROLLS"};
   };
   function renderTraits(){
     const root=document.getElementById("trait-collection");if(!root)return;
