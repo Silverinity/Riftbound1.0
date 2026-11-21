@@ -28,6 +28,40 @@
 
   window.riftboundSettings = loadSettings();
 
+  // Main menu / Command Sanctum background music.
+  const menuMusic = new Audio("assets/audio/music/tavern.wav");
+  menuMusic.loop = true;
+  menuMusic.preload = "auto";
+
+  function updateMusicVolume() {
+    const settings = window.riftboundSettings || DEFAULT_SETTINGS;
+    menuMusic.volume = Math.max(0, Math.min(1,
+      (Number(settings.masterVolume) / 100) * (Number(settings.musicVolume) / 100)
+    ));
+  }
+
+  function playMenuMusic() {
+    updateMusicVolume();
+    if (menuMusic.volume <= 0) {
+      menuMusic.pause();
+      return;
+    }
+    if (menuMusic.paused) {
+      menuMusic.play().catch(error => {
+        // Browsers may block playback until the player interacts with the page.
+        console.info("Menu music will start after the next interaction:", error);
+      });
+    }
+  }
+
+  function stopMenuMusic() {
+    menuMusic.pause();
+  }
+
+  // Browsers require a user gesture before starting audio.
+  document.addEventListener("pointerdown", playMenuMusic, { once: true, capture: true });
+  document.addEventListener("keydown", playMenuMusic, { once: true, capture: true });
+
   const byId = id => document.getElementById(id);
   const mainMenu = byId("main-menu");
   const hubScreen = byId("hub-screen");
@@ -208,6 +242,7 @@
 
   function returnToMenu() {
     if (typeof stopGameLoop === "function") stopGameLoop();
+    playMenuMusic();
     hideScreens();
     mainMenu.style.display = "flex";
     if (hubScreen) hubScreen.hidden = true;
@@ -229,6 +264,7 @@
 
   function openHub() {
     if (typeof stopGameLoop === "function") stopGameLoop();
+    playMenuMusic();
     hideScreens();
     hubScreen.hidden = false;
     showHubView("home");
@@ -243,12 +279,14 @@
   byId("close-settings").addEventListener("click", closeSettings);
   byId("save-settings").addEventListener("click", () => {
     window.riftboundSettings = readSettings();
+    updateMusicVolume();
     persistSettings();
     if (typeof updateDeveloperModeUI === "function") updateDeveloperModeUI();
     closeSettings();
   });
   byId("reset-settings").addEventListener("click", () => {
     window.riftboundSettings = { ...DEFAULT_SETTINGS };
+    updateMusicVolume();
     displaySettings();
     persistSettings();
     if (typeof updateDeveloperModeUI === "function") updateDeveloperModeUI();
@@ -257,7 +295,10 @@
     if (event.target === settingsOverlay) closeSettings();
   });
   ["master-volume", "music-volume", "sfx-volume"].forEach(id => {
-    byId(id).addEventListener("input", updateVolumeLabels);
+    byId(id).addEventListener("input", () => {
+      updateVolumeLabels();
+      updateMusicVolume();
+    });
   });
   byId("fullscreen-button").addEventListener("click", async () => {
     try {
@@ -288,6 +329,7 @@
       if (typeof window.startRiftboundNewRun !== "function") {
         throw new Error("The game engine did not expose the new-run function.");
       }
+      stopMenuMusic();
       window.startRiftboundNewRun();
       hideScreens();
       gameScreen.hidden = false;
