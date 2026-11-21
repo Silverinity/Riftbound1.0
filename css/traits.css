@@ -28,3 +28,10 @@
 @media(max-width:900px){.trait-summon-layout{grid-template-columns:1fr}.trait-roll-panel{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.trait-roll-panel>.prep-eyebrow,.trait-roll-panel>h3,.trait-roll-count,#trait-roll-button,.trait-roll-lock,.trait-roll-total{grid-column:1/-1}.trait-pity-block{margin-top:12px}.trait-index-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.trait-summon-stage{padding:15px}.trait-roll-panel{display:block}.trait-index-grid{grid-template-columns:1fr}.trait-index-heading{align-items:flex-start;flex-direction:column}.trait-roll-result{flex-wrap:wrap}.trait-roll-result button{margin-left:auto}}
 .settings-panel .code-menu-group{padding:16px;background:rgba(31,22,42,.7);border:1px solid rgba(164,125,197,.35)}
+
+/* Legendary / Mythic auto-equip confirmation */
+.trait-confirm-overlay{position:fixed;z-index:120;inset:0;display:grid;place-items:center;padding:18px;background:rgba(4,3,8,.9);backdrop-filter:blur(9px)}
+.trait-confirm-card{width:min(440px,100%);padding:28px;text-align:center;background:linear-gradient(155deg,#2B2038,#100D17);border:1px solid var(--trait-color);box-shadow:0 25px 80px rgba(0,0,0,.75),0 0 36px color-mix(in srgb,var(--trait-color) 22%,transparent)}
+.trait-confirm-card .trait-art-large{margin:14px auto}.trait-confirm-card h2{margin:8px 0;color:#F7EDFF;font-size:24px}.trait-confirm-card>p:not(.prep-eyebrow):not(.trait-detail-rarity){color:#C7B8D2;font-size:11px;line-height:1.7}
+.trait-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:22px}.trait-confirm-actions button{min-height:44px;padding:10px;background:#211929;border:1px solid #82649A;color:#F0E6F8;font-size:9px;font-weight:700;letter-spacing:.7px;cursor:pointer}.trait-confirm-actions .trait-confirm-equip{background:#49315F;border-color:var(--trait-color)}
+@media(max-width:420px){.trait-confirm-actions{grid-template-columns:1fr}}
