@@ -29,7 +29,7 @@
   window.riftboundSettings = loadSettings();
 
   // Main menu / Command Sanctum background music.
-  const menuMusic = new Audio("assets/audio/music/tavern.wav");
+  const menuMusic = new Audio("assets/audio/music/menu.mp3");
   menuMusic.loop = true;
   menuMusic.preload = "auto";
 
