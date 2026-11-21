@@ -197,6 +197,14 @@ const cardPool = [
 
 function getRunCommanderId(){return currentRun?.commanderId||window.riftboundCommanderId||"warden";}
 window.isRiftboundRunActive=()=>!!currentRun&&!currentRun.finalized&&!currentRun.runFinished;
+// Leaving an active expedition permanently abandons it and unlocks commander selection.
+window.abandonRiftboundRun=function(){
+  if(!currentRun||currentRun.finalized||currentRun.runFinished)return false;
+  currentRun.runFinished=true;
+  currentRun.waveActive=false;
+  stopGameLoop();
+  return true;
+};
 function getRunTraitEffects(){return typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects(currentRun?.traitId):{};}
 const commanderAbilities={
   warden:{name:"IRON BASTION",cooldown:45,description:"Raise a fortress ward for 12 seconds: halve incoming castle damage and make towers fire 25% faster.",requiresEnemies:false},
@@ -214,6 +222,7 @@ function createNewRun(){
   const startingHealth=Math.round(baseHealth*(1+(skillBonuses.fortressHp||0)));
   return {
     commanderId,traitId,skillBonuses,gold:100+(skillBonuses.startingGold||0),castleHealth:startingHealth,maxCastleHealth:startingHealth,area:1,campsite:1,stage:1,currentWave:0,totalWaves:30,
+    traitRevivalUsed:false,kingdomWardTimer:0,revivalAnimation:0,eclipsePulseTimer:18,
     towers:[{type:"archer",x:300,y:280,cooldown:0,level:1,investedGold:0,upgrades:{damage:0,range:0,speed:0}}],
     enemies:[],projectiles:[],spawnBatches:[],waveActive:false,gameOver:false,waveStarted:false,waveIntervalTimer:0,
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
@@ -305,6 +314,9 @@ function getTowerStats(t){
   if(t.type==="arcane")range*=1+(bonuses.arcaneRange||0);
   const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   if(t.type==="archer")damage*=1+(trait.archerDamage||0);
+  damage*=1+(trait.towerDamage||0);
+  range*=1+(trait.towerRange||0);
+  fireRate*=1+(trait.towerSpeed||0);
   if(t.type==="cannon")damage*=1+(trait.cannonDamage||0)+(bonuses.areaDamage||0);
   if(currentRun.castleHealth>currentRun.maxCastleHealth*.5)damage*=1+(bonuses.healthyDamage||0);
   if(currentRun.castleHealth<currentRun.maxCastleHealth*.35)fireRate*=1+(bonuses.lowHealthSpeed||0);
@@ -542,6 +554,19 @@ function drawCastle(){
   ctx.fillStyle="rgba(185,154,232,.22)";
   ctx.fillRect(858,224,11,2);ctx.fillRect(922,224,11,2);
   ctx.restore();
+  if(currentRun.revivalAnimation>0){
+    const progress=1-currentRun.revivalAnimation/2.4;
+    const pulse=1+Math.sin(performance.now()/75)*.12;
+    const radius=42+progress*48;
+    ctx.save();ctx.globalAlpha=Math.max(0,1-progress*.8);
+    const glow=ctx.createRadialGradient(896,266,8,896,266,radius);
+    glow.addColorStop(0,"rgba(255,231,145,.42)");glow.addColorStop(1,"rgba(255,190,75,0)");
+    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(896,266,radius*pulse,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="rgba(255,224,137,.9)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(896,266,radius*pulse,0,Math.PI*2);ctx.stroke();
+    for(let i=0;i<8;i++){const angle=i*Math.PI/4+performance.now()/500;const distance=22+progress*35;const sx=896+Math.cos(angle)*distance,sy=266+Math.sin(angle)*distance;ctx.fillStyle="#FFE9A6";ctx.beginPath();ctx.arc(sx,sy,2.5,0,Math.PI*2);ctx.fill();}
+    ctx.restore();
+  }
+  if(currentRun.kingdomWardTimer>0){ctx.save();ctx.strokeStyle="rgba(255,220,130,.75)";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(896,266,58,62,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
 
   const hpRatio=Math.max(0,Math.min(1,currentRun.castleHealth/currentRun.maxCastleHealth));
   const barX=846,barY=198,barW=104,barH=12;
@@ -717,59 +742,209 @@ function drawSpectralAllies(){
 function drawCommanderEffects(){
   if(!currentRun)return;
   const now=performance.now();
-  if(currentRun.bastionTimer>0){
-    const shieldAlpha=.24+.12*Math.sin(now/160);
-    ctx.save();ctx.strokeStyle="rgba(130,205,255,"+shieldAlpha+")";ctx.lineWidth=4;ctx.shadowColor="#75B8E8";ctx.shadowBlur=20;
-    ctx.beginPath();ctx.arc(895,270,58+Math.sin(now/190)*3,0,Math.PI*2);ctx.stroke();ctx.restore();
-  }
-  currentRun.abilityEffects=(currentRun.abilityEffects||[]).filter(effect=>{
-    const progress=1-effect.life/effect.duration;
-    const alpha=Math.max(0,1-progress);
-    ctx.save();
-    if(effect.type==="bastion"){
-      const pulse=1+Math.sin(now/110)*.06;
-      ctx.strokeStyle="rgba(116,190,255,"+(0.95*alpha)+")";ctx.lineWidth=5;
-      ctx.shadowColor="#75B8E8";ctx.shadowBlur=20;
-      ctx.beginPath();ctx.arc(895,270,58*pulse,0,Math.PI*2);ctx.stroke();
-      ctx.fillStyle="rgba(116,190,255,.14)";ctx.beginPath();ctx.arc(895,270,54*pulse,0,Math.PI*2);ctx.fill();
-      for(let i=0;i<8;i++){const a=now/350+i*Math.PI/4;ctx.fillStyle="rgba(170,220,255,"+alpha+")";ctx.fillRect(895+Math.cos(a)*60-2,270+Math.sin(a)*60-2,4,4);}
-    }else if(effect.type==="rift"){
-      ctx.strokeStyle="rgba(190,135,255,"+(0.95*alpha)+")";ctx.lineWidth=9;
-      ctx.shadowColor="#B99AE8";ctx.shadowBlur=24;ctx.beginPath();
-      getPathPoints().forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
-      ctx.shadowBlur=0;
-      getPathPoints().forEach((p,i)=>{const radius=9+Math.sin(now/70+i)*4;ctx.fillStyle="rgba(216,192,255,"+alpha+")";ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();});
-      ctx.strokeStyle="rgba(238,220,255,"+alpha+")";ctx.lineWidth=2;
-      for(let i=0;i<5;i++){const p=getPathPoints()[(Math.floor(now/130)+i)%getPathPoints().length];ctx.beginPath();ctx.arc(p.x,p.y,16+i*5,0,Math.PI*2);ctx.stroke();}
-    }else if(effect.type==="mark"&&effect.target){
-      const radius=30+Math.sin(now/75)*7;
-      ctx.strokeStyle="#F0D58A";ctx.lineWidth=4;ctx.shadowColor="#F0D58A";ctx.shadowBlur=18;
-      ctx.beginPath();ctx.arc(effect.target.x,effect.target.y,radius,0,Math.PI*2);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(effect.target.x-19,effect.target.y);ctx.lineTo(effect.target.x+19,effect.target.y);ctx.moveTo(effect.target.x,effect.target.y-19);ctx.lineTo(effect.target.x,effect.target.y+19);ctx.stroke();
-    }else if(effect.type==="gold"){
-      ctx.textAlign="center";ctx.font="bold 28px Georgia";ctx.fillStyle="rgba(255,225,150,"+alpha+")";ctx.shadowColor="#F0D58A";ctx.shadowBlur=18;ctx.fillText("+125 GOLD",895,190-progress*55);
-      for(let i=0;i<14;i++){const angle=now/180+i*Math.PI*2/14;const radius=25+progress*60;const x=895+Math.cos(angle)*radius,y=270+Math.sin(angle)*radius;ctx.fillStyle="#F0D58A";ctx.beginPath();ctx.arc(x,y,3+Math.sin(now/70+i)*1.5,0,Math.PI*2);ctx.fill();}
-    }else if(effect.type==="inferno"){
-      currentRun.enemies.forEach((enemy,i)=>{const radius=22+Math.sin(now/65+i)*7;ctx.fillStyle="rgba(255,104,35,"+(0.32*alpha)+")";ctx.beginPath();ctx.arc(enemy.x,enemy.y,radius,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,207,112,"+(0.95*alpha)+")";ctx.lineWidth=3;ctx.stroke();});
-    }else if(effect.type==="spirits"){
-      const pulse=1+Math.sin(now/90)*.12;
-      ctx.strokeStyle="rgba(196,155,255,"+alpha+")";ctx.lineWidth=5;ctx.shadowColor="#B99AE8";ctx.shadowBlur=24;
-      ctx.beginPath();ctx.ellipse(895,270,52*pulse,30*pulse,0,0,Math.PI*2);ctx.stroke();
-      for(let i=0;i<3;i++){
-        const angle=now/210+i*Math.PI*2/3;
-        const x=895+Math.cos(angle)*(38+progress*25),y=270+Math.sin(angle)*(24+progress*15);
-        ctx.fillStyle="rgba(207,180,255,"+alpha+")";ctx.beginPath();ctx.arc(x,y,11,0,Math.PI*2);ctx.fill();
-        ctx.strokeStyle="rgba(245,230,255,"+alpha+")";ctx.lineWidth=2;ctx.stroke();
-      }
-    }else if(effect.type==="wraith-strike"){
-      ctx.strokeStyle="rgba(225,205,255,"+alpha+")";ctx.lineWidth=4;ctx.shadowColor="#B99AE8";ctx.shadowBlur=14;
-      ctx.beginPath();ctx.arc(effect.x,effect.y,10+progress*22,0,Math.PI*2);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(effect.x-12,effect.y);ctx.lineTo(effect.x+12,effect.y);ctx.moveTo(effect.x,effect.y-12);ctx.lineTo(effect.x,effect.y+12);ctx.stroke();
+  const fortress={x:895,y:270};
+  const path=getPathPoints();
+  const pulse=(speed,phase=0)=>.5+.5*Math.sin(now/speed+phase);
+  const glow=(x,y,r,color,alpha=1)=>{
+    const g=ctx.createRadialGradient(x,y,0,x,y,r);
+    g.addColorStop(0,color.replace("ALPHA",String(.34*alpha)));
+    g.addColorStop(.48,color.replace("ALPHA",String(.12*alpha)));
+    g.addColorStop(1,color.replace("ALPHA","0"));
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  };
+  const runeRing=(x,y,r,rotation,color,alpha=1,segments=12)=>{
+    ctx.save();ctx.translate(x,y);ctx.rotate(rotation);ctx.globalAlpha=alpha;
+    ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.shadowColor=color;ctx.shadowBlur=12;
+    ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(0,0,r*.83,0,Math.PI*2);ctx.stroke();
+    for(let i=0;i<segments;i++){
+      const a=i*Math.PI*2/segments;
+      ctx.save();ctx.rotate(a);ctx.beginPath();ctx.moveTo(r*.84,0);ctx.lineTo(r,0);
+      ctx.moveTo(r*.91,-4);ctx.lineTo(r*.96,0);ctx.lineTo(r*.91,4);ctx.stroke();ctx.restore();
     }
+    ctx.restore();
+  };
+  const burst=(x,y,r,color,alpha,spokes=12)=>{
+    ctx.save();ctx.translate(x,y);ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=2;
+    ctx.shadowColor=color;ctx.shadowBlur=14;
+    for(let i=0;i<spokes;i++){
+      const a=i*Math.PI*2/spokes+now/900;
+      const inner=r*.25,outer=r*(.75+.18*pulse(95,i));
+      ctx.beginPath();ctx.moveTo(Math.cos(a)*inner,Math.sin(a)*inner);ctx.lineTo(Math.cos(a)*outer,Math.sin(a)*outer);ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  if(currentRun.bastionTimer>0){
+    const active=.55+.22*pulse(170);
+    ctx.save();ctx.globalAlpha=active;ctx.strokeStyle="#91D8FF";ctx.lineWidth=3;
+    ctx.shadowColor="#66BFFF";ctx.shadowBlur=22;
+    ctx.beginPath();ctx.arc(fortress.x,fortress.y,64+Math.sin(now/180)*3,0,Math.PI*2);ctx.stroke();
+    ctx.setLineDash([9,7]);ctx.lineDashOffset=-now/22;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(fortress.x,fortress.y,73,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();
+    for(let i=0;i<6;i++){const a=-Math.PI/2+i*Math.PI/3;const x=fortress.x+Math.cos(a)*60,y=fortress.y+Math.sin(a)*60;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+    ctx.closePath();ctx.stroke();
+    for(let i=0;i<6;i++){
+      const a=now/700+i*Math.PI/3,x=fortress.x+Math.cos(a)*68,y=fortress.y+Math.sin(a)*68;
+      glow(x,y,13,"rgba(146,220,255,ALPHA)",1);
+      ctx.fillStyle="#E6FAFF";ctx.beginPath();ctx.moveTo(x,y-5);ctx.lineTo(x+4,y);ctx.lineTo(x,y+5);ctx.lineTo(x-4,y);ctx.closePath();ctx.fill();
+    }
+    runeRing(fortress.x,fortress.y,83,-now/1600,"#83CFFF",.42,18);
+    ctx.restore();
+  }
+
+  currentRun.abilityEffects=(currentRun.abilityEffects||[]).filter(effect=>{
+    const progress=Math.max(0,Math.min(1,1-effect.life/effect.duration));
+    const fade=Math.min(1,(1-progress)*5,Math.max(0,(1-progress)*0+effect.life*1.7));
+    const appear=Math.min(1,progress*7);
+    ctx.save();
+
+    if(effect.type==="bastion"){
+      const radius=70+progress*52;
+      glow(fortress.x,fortress.y,118,"rgba(105,190,255,ALPHA)",fade);
+      runeRing(fortress.x,fortress.y,54+progress*30,now/900,"#B9E9FF",fade*.9,12);
+      runeRing(fortress.x,fortress.y,radius,-now/1200,"#6BBEFF",fade*.75,18);
+      burst(fortress.x,fortress.y,90+progress*55,"#DDF7FF",fade*.8,16);
+      ctx.strokeStyle="rgba(210,244,255,"+(fade*.8)+")";ctx.lineWidth=2;
+      for(let i=0;i<6;i++){
+        const a=i*Math.PI/3+now/1300;
+        const x=fortress.x+Math.cos(a)*62,y=fortress.y+Math.sin(a)*62;
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*24,y+Math.sin(a)*24);ctx.stroke();
+      }
+      ctx.fillStyle="rgba(175,225,255,"+(fade*.12)+")";ctx.beginPath();ctx.arc(fortress.x,fortress.y,56,0,Math.PI*2);ctx.fill();
+
+    }else if(effect.type==="rift"){
+      const waveRadius=25+progress*120;
+      ctx.save();ctx.globalAlpha=fade;ctx.lineCap="round";ctx.lineJoin="round";
+      ctx.shadowColor="#B98CFF";ctx.shadowBlur=24;
+      ctx.strokeStyle="rgba(135,83,220,.42)";ctx.lineWidth=22;
+      ctx.beginPath();path.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+      ctx.strokeStyle="#B88AFF";ctx.lineWidth=8;ctx.setLineDash([22,13]);ctx.lineDashOffset=-now/18;
+      ctx.beginPath();path.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+      ctx.setLineDash([]);ctx.strokeStyle="#F0DFFF";ctx.lineWidth=2.5;
+      ctx.beginPath();path.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+      ctx.restore();
+      path.forEach((p,i)=>{
+        const a=now/260+i*1.7,r=waveRadius*(.35+.65*pulse(300,i));
+        glow(p.x,p.y,32,"rgba(183,130,255,ALPHA)",fade);
+        ctx.strokeStyle="rgba(231,206,255,"+(fade*.85)+")";ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(p.x,p.y,r*.35,0,Math.PI*2);ctx.stroke();
+        for(let k=0;k<3;k++){
+          const angle=a+k*Math.PI*2/3,x=p.x+Math.cos(angle)*r*.38,y=p.y+Math.sin(angle)*r*.38;
+          ctx.fillStyle="rgba(244,226,255,"+(fade*.9)+")";ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fill();
+        }
+      });
+      currentRun.enemies.forEach((enemy,i)=>{
+        const r=18+progress*48;
+        ctx.strokeStyle="rgba(213,176,255,"+(fade*.65)+")";ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(enemy.x,enemy.y,r,0,Math.PI*2);ctx.stroke();
+        glow(enemy.x,enemy.y,28,"rgba(180,110,255,ALPHA)",fade*.65);
+      });
+
+    }else if(effect.type==="mark"&&effect.target){
+      const target=effect.target,x=target.x,y=target.y;
+      const r=32+Math.sin(now/85)*4+progress*14;
+      glow(x,y,66,"rgba(255,202,93,ALPHA)",fade);
+      runeRing(x,y,r,now/550,"#F8D27D",fade,8);
+      ctx.save();ctx.translate(x,y);ctx.rotate(-now/700);ctx.strokeStyle="#FFF0BD";ctx.lineWidth=3;ctx.shadowColor="#FFC95F";ctx.shadowBlur=18;
+      const arm=22+progress*8,gap=11;
+      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sy])=>{
+        ctx.beginPath();ctx.moveTo(sx*gap,sy*(arm+7));ctx.lineTo(sx*arm,sy*(arm+7));ctx.lineTo(sx*arm,sy*gap);ctx.stroke();
+      });
+      ctx.beginPath();ctx.arc(0,0,9,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(5,0);ctx.moveTo(0,-5);ctx.lineTo(0,5);ctx.stroke();
+      ctx.restore();
+      currentRun.towers.forEach((tower,i)=>{
+        if(i%2!==0)return;
+        ctx.strokeStyle="rgba(255,218,139,"+(fade*.18)+")";ctx.lineWidth=1;
+        ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(tower.x,tower.y-12);ctx.lineTo(x,y);ctx.stroke();ctx.setLineDash([]);
+      });
+
+    }else if(effect.type==="gold"){
+      const x=fortress.x,y=fortress.y-10;
+      glow(x,y,125,"rgba(255,205,83,ALPHA)",fade);
+      runeRing(x,y,35+progress*50,now/800,"#FFD979",fade,12);
+      runeRing(x,y,66+progress*28,-now/1050,"#E7A83C",fade*.7,16);
+      ctx.save();ctx.translate(x,y-4-progress*15);ctx.globalAlpha=fade;ctx.shadowColor="#FFD46C";ctx.shadowBlur=22;
+      ctx.fillStyle="#FFF0B4";ctx.strokeStyle="#A96822";ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(-28,8);ctx.lineTo(-24,-15);ctx.lineTo(-8,-3);ctx.lineTo(0,-25);ctx.lineTo(9,-3);ctx.lineTo(25,-15);ctx.lineTo(28,8);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle="#F4BD4D";ctx.fillRect(-24,10,48,5);
+      ctx.restore();
+      for(let i=0;i<18;i++){
+        const a=now/460+i*Math.PI*2/18,orbit=32+progress*70+Math.sin(now/180+i)*5;
+        const cx=x+Math.cos(a)*orbit,cy=y+Math.sin(a)*orbit*.58;
+        ctx.save();ctx.translate(cx,cy);ctx.rotate(a+now/500);ctx.globalAlpha=fade;
+        ctx.fillStyle=i%3===0?"#FFF0AE":"#E8AD42";ctx.strokeStyle="#8B5B22";ctx.lineWidth=1;
+        ctx.beginPath();ctx.ellipse(0,0,4,7,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.restore();
+      }
+      ctx.globalAlpha=fade;ctx.textAlign="center";ctx.font="bold 21px Georgia";ctx.fillStyle="#FFF1B9";ctx.shadowColor="#E7A83C";ctx.shadowBlur=16;
+      ctx.fillText("+"+(125+(currentRun.skillBonuses?.abilityGold||0))+" GOLD",x,y-55-progress*18);
+
+    }else if(effect.type==="inferno"){
+      currentRun.enemies.forEach((enemy,i)=>{
+        const x=enemy.x,y=enemy.y;
+        const rise=progress*32;
+        glow(x,y,54,"rgba(255,92,24,ALPHA)",fade);
+        ctx.save();ctx.globalAlpha=fade;ctx.translate(x,y);
+        ctx.strokeStyle="#FF9B42";ctx.lineWidth=2.5;ctx.shadowColor="#FF4B16";ctx.shadowBlur=18;
+        const ring=18+progress*43;
+        ctx.beginPath();ctx.ellipse(0,5,ring,ring*.48,0,0,Math.PI*2);ctx.stroke();
+        ctx.strokeStyle="#FFD17A";ctx.lineWidth=2;
+        for(let f=0;f<4;f++){
+          const offset=(f-1.5)*9,flameH=25+12*pulse(90,i+f);
+          ctx.beginPath();ctx.moveTo(offset-5,8);
+          ctx.bezierCurveTo(offset-17,-flameH*.25,offset+9,-flameH*.65,offset+Math.sin(now/80+f)*4,-flameH-rise);
+          ctx.bezierCurveTo(offset+13,-flameH*.4,offset+12,-flameH*.15,offset+5,8);ctx.stroke();
+        }
+        ctx.fillStyle="rgba(255,194,87,.7)";ctx.beginPath();ctx.arc(0,-8-rise*.25,5+2*pulse(70,i),0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      });
+      for(let i=0;i<24;i++){
+        const enemy=currentRun.enemies[i%Math.max(1,currentRun.enemies.length)];
+        if(!enemy)break;
+        const a=now/320+i*2.399,r=16+(i%5)*7+progress*26;
+        const x=enemy.x+Math.cos(a)*r,y=enemy.y+Math.sin(a)*r-(now/18+i*11)%42;
+        ctx.fillStyle="rgba(255,"+(110+i%4*28)+",45,"+(fade*.78)+")";ctx.shadowColor="#FF6B25";ctx.shadowBlur=10;
+        ctx.beginPath();ctx.arc(x,y,1.5+(i%3),0,Math.PI*2);ctx.fill();
+      }
+
+    }else if(effect.type==="spirits"){
+      glow(fortress.x,fortress.y,138,"rgba(165,119,255,ALPHA)",fade);
+      runeRing(fortress.x,fortress.y,42+progress*36,now/1200,"#D5B6FF",fade,12);
+      runeRing(fortress.x,fortress.y,78+progress*25,-now/1600,"#9164D5",fade*.8,18);
+      ctx.strokeStyle="rgba(220,198,255,"+(fade*.65)+")";ctx.lineWidth=2;
+      for(let i=0;i<3;i++){
+        const a=now/500+i*Math.PI*2/3;
+        const x=fortress.x+Math.cos(a)*54,y=fortress.y+Math.sin(a)*31;
+        ctx.beginPath();ctx.moveTo(fortress.x,fortress.y);ctx.quadraticCurveTo(x+Math.cos(a+1)*20,y-26,x,y);ctx.stroke();
+        glow(x,y,26,"rgba(194,157,255,ALPHA)",fade);
+        ctx.save();ctx.translate(x,y+Math.sin(now/100+i)*4);ctx.globalAlpha=fade;
+        ctx.fillStyle="rgba(191,160,255,.75)";ctx.shadowColor="#C7A5FF";ctx.shadowBlur=20;
+        ctx.beginPath();ctx.moveTo(0,-15);ctx.quadraticCurveTo(15,-11,12,5);ctx.quadraticCurveTo(8,19,0,23);ctx.quadraticCurveTo(-12,12,-12,3);ctx.quadraticCurveTo(-15,-10,0,-15);ctx.fill();
+        ctx.fillStyle="#F4E8FF";ctx.fillRect(-5,-6,3,4);ctx.fillRect(3,-6,3,4);
+        ctx.strokeStyle="#E9D8FF";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,2,18,0,Math.PI*2);ctx.stroke();
+        ctx.restore();
+      }
+      for(let i=0;i<12;i++){
+        const a=now/700+i*Math.PI/6,r=95+Math.sin(now/160+i)*8;
+        const x=fortress.x+Math.cos(a)*r,y=fortress.y+Math.sin(a)*r*.52;
+        ctx.fillStyle="rgba(226,208,255,"+(fade*.8)+")";ctx.beginPath();ctx.arc(x,y,2+(i%3),0,Math.PI*2);ctx.fill();
+      }
+
+    }else if(effect.type==="wraith-strike"){
+      const x=effect.x,y=effect.y,r=10+progress*32;
+      glow(x,y,42,"rgba(194,151,255,ALPHA)",fade);
+      runeRing(x,y,r,now/300,"#E4CEFF",fade,8);
+      burst(x,y,r*1.4,"#F1E4FF",fade,10);
+    }
+
     ctx.restore();
     return effect.life>0;
   });
 }
+
 function drawPlacementPreview(){
   if(!pointerWorld||!currentRun||!selectedTower)return;
   const s=towerTypes[selectedTower];const valid=canBuild(pointerWorld.x,pointerWorld.y,false);
@@ -812,6 +987,7 @@ function startWave(automatic=false){
   if(!currentRun||currentRun.gameOver||currentRun.currentWave>=5)return;
   if(currentRun.waveActive&&!automatic)return;
   currentRun.currentWave++;
+  window.riftboundPlaySfx?.("wave");
   currentRun.waveActive=true;
   currentRun.waitingForWave=false;
   currentRun.waveStarted=true;
@@ -819,6 +995,7 @@ function startWave(automatic=false){
   currentRun.waveIntervalTimer=currentRun.currentWave<5?10:0;
   const total=((currentRun.campsite-1)*3+(currentRun.stage-1))*5+currentRun.currentWave;
   if(currentRun.currentWave===5&&currentRun.encounter?.bossId){
+    window.riftboundSetMusicTrack?.("boss");
     setWaveStatus("BOSS ENCOUNTER");
     showBattleMessage(currentRun.encounter.name.toUpperCase()+" HAS AWAKENED!");
   }else{
@@ -838,10 +1015,36 @@ function spawnEnemy(type,waveNumber){
   const health=d.health*healthScale*(d.boss?1.12:1);
   const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   const enemy={type,name:d.name,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale,isBoss:!!d.boss};
-  if(trait.slowChance&&Math.random()<trait.slowChance){enemy.slowTimer=2;enemy.slowFactor=.75;}
+
   currentRun.enemies.push(enemy);
 }
+function trySoulKingdomRevival(){
+  const trait=getRunTraitEffects();
+  if(!trait.reviveOnce||currentRun.traitRevivalUsed)return false;
+  currentRun.traitRevivalUsed=true;
+  currentRun.castleHealth=Math.max(1,Math.ceil(currentRun.maxCastleHealth*.1));
+  currentRun.kingdomWardTimer=8;
+  currentRun.revivalAnimation=2.4;
+  updateGameDisplay();
+  showBattleMessage("SOUL OF THE KINGDOM · THE FORTRESS IS REBORN");
+  return true;
+}
 function updateEnemies(dt){
+  const activeTrait=getRunTraitEffects();
+  if(currentRun.kingdomWardTimer>0)currentRun.kingdomWardTimer=Math.max(0,currentRun.kingdomWardTimer-dt);
+  if(currentRun.revivalAnimation>0)currentRun.revivalAnimation=Math.max(0,currentRun.revivalAnimation-dt);
+  if(activeTrait.eclipsePulse){
+    currentRun.eclipsePulseTimer=(currentRun.eclipsePulseTimer??18)-dt;
+    if(currentRun.eclipsePulseTimer<=0){
+      currentRun.eclipsePulseTimer=18;
+      [...currentRun.enemies].forEach(enemy=>{
+        if(enemy.rewarded||enemy.health<=0)return;
+        enemy.slowTimer=Math.max(enemy.slowTimer||0,2.5);enemy.slowFactor=.55;
+        damageEnemy(enemy,Math.min(100,enemy.maxHealth*.04),false);
+      });
+      showBattleMessage("ECLIPSE ENGINE · RIFT PULSE");
+    }
+  }
   currentRun.spawnBatches.forEach(batch=>{
     if(!batch.queue.length)return;
     batch.timer-=dt;
@@ -872,7 +1075,7 @@ function updateEnemies(dt){
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
-    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=Math.min(currentRun.castleHealth,incomingDamage);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0)endGame();return false;}return e.health>0;
+    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1)*(currentRun.kingdomWardTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=Math.min(currentRun.castleHealth,incomingDamage);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0&&!trySoulKingdomRevival())endGame();return false;}return e.health>0;
   });
 }
 function getEnemyDamageMultiplier(target){
@@ -975,7 +1178,17 @@ function damageEnemy(e,dmg,applyPassive=true){
   e.health-=dmg;
   const dealt=Math.max(0,Math.min(Math.max(0,e.health+dmg),dmg));
   currentRun.stats.damageDealt+=dealt;
-  if(applyPassive&&dmg>0&&Math.random()<(getRunCommanderId()==="pyromancer"?.25:0)+(bonuses.burnChance||0)) {
+  if(applyPassive&&dealt>0&&trait.worldbreaker&&e.isBoss){
+    e.worldbreakerCharge=(e.worldbreakerCharge||0)+dealt;
+    while(e.worldbreakerCharge>=400&&e.health>0){
+      e.worldbreakerCharge-=400;
+      const fracture=Math.min(60,e.health);
+      e.health-=fracture;
+      currentRun.stats.damageDealt+=fracture;
+      showBattleMessage("WORLDBREAKER · FRACTURE STRIKE");
+    }
+  }
+  if(applyPassive&&dmg>0&&Math.random()<Math.min(.9,(getRunCommanderId()==="pyromancer"?.25:0)+(bonuses.burnChance||0)+(trait.burnChance||0))) {
     e.burnTimer=Math.max(e.burnTimer||0,3+(trait.burnDuration||0)+(bonuses.burnDuration||0));
     e.burnDamage=3+(bonuses.burnDamage||0);
   }
@@ -993,12 +1206,12 @@ function damageEnemy(e,dmg,applyPassive=true){
       currentRun.gold+=bossBonus;
       showBattleMessage("BOSS DEFEATED · "+(e.name||enemyTypes[e.type].name)+" · BONUS "+bossBonus+" GOLD");
     }
-    if(bonuses.burnSpread&&e.burnTimer>0){currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<58){other.burnTimer=Math.max(other.burnTimer||0,2);other.burnDamage=Math.max(other.burnDamage||0,2);}});}
-    const summonChance=.2+(bonuses.summonChance||0)+(trait.summonChance||0);
+    if((bonuses.burnSpread||trait.burnSpread)&&e.burnTimer>0){const spreadDuration=trait.burnSpread?1.5+(trait.burnDuration||0)*0.5:3+(bonuses.burnDuration||0);const spreadDamage=trait.burnSpread?1:2;currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<75){other.burnTimer=Math.max(other.burnTimer||0,spreadDuration);other.burnDamage=Math.max(other.burnDamage||0,spreadDamage);}});}
+    const summonChance=(getRunCommanderId()==="necromancer"?.2:0)+(bonuses.summonChance||0)+(trait.summonChance||0);
     const guaranteedSoul=bonuses.everyFifthSoul&&currentRun.stats.enemiesKilled%5===0;
-    if(applyPassive&&getRunCommanderId()==="necromancer"&&(Math.random()<summonChance||guaranteedSoul)){
+    if(applyPassive&&(Math.random()<summonChance||guaranteedSoul)){
       currentRun.spectralAllies.push({
-        life:4+(bonuses.summonDuration||0)+(trait.summonDuration||0),cooldown:0,damage:(18+(bonuses.summonDamage||0))*(1+(bonuses.summonDamageBonus||0)),interval:.85,
+        life:4+(bonuses.summonDuration||0)+(trait.summonDuration||0),cooldown:0,damage:(18+(bonuses.summonDamage||0))*(1+(bonuses.summonDamageBonus||0)+(trait.summonDamageBonus||0)),interval:.85,
         x:895,y:270,orbitAngle:Math.random()*Math.PI*2,attacking:0
       });
       showBattleMessage("SOUL HARVESTED · A SPECTRAL ALLY JOINS THE FIGHT");
@@ -1113,6 +1326,7 @@ function activateCommanderAbility(){
     showBattleMessage("RAISE THE FALLEN · THREE WRAITHS JOIN THE BATTLE");
   }
   if(effect)currentRun.abilityEffects.push(effect);
+  if(window.riftboundPlayCommanderSfx)window.riftboundPlayCommanderSfx(id);
   const cooldownReduction=currentRun.skillBonuses?.cooldown||0;
   currentRun.abilityCooldown=Math.max(5,ability.cooldown*(1-cooldownReduction));
   const abilityButton=document.getElementById("commander-ability-button");
@@ -1400,6 +1614,7 @@ function handleBattlefieldClick(e){
   if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
   if(!canBuild(p.x,p.y)){showBattleMessage("THAT LOCATION IS BLOCKED — TRY ANOTHER OPEN AREA");return;}
   currentRun.gold-=type.cost;currentRun.stats.goldSpent+=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,investedGold:type.cost,upgrades:{damage:0,range:0,speed:0}});
+  window.riftboundPlaySfx?.("build");
   updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(type.name.toUpperCase()+" BUILT");
 }
 function selectTower(type){
@@ -1510,6 +1725,7 @@ window.devRiftboundForceCampfire=function(){
   return true;
 };
 function showCampsiteScreen(completedWaves){
+  window.riftboundSetMusicTrack?.("campfire");
   stopGameLoop();
   document.getElementById("main-menu").style.display="none";
   document.getElementById("game-screen").hidden=true;
@@ -1523,6 +1739,7 @@ function showCampsiteScreen(completedWaves){
   updateCampsiteScreen();
 }
 function continueFromCampsite(){
+  window.riftboundSetMusicTrack?.("battle");
   document.getElementById("campsite-screen").hidden=true;
   document.getElementById("game-screen").hidden=false;
   updateGameDisplay();

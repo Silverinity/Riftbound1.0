@@ -28,6 +28,83 @@
 
   window.riftboundSettings = loadSettings();
 
+  // Central audio manager. All tracks are local WAV files in assets/audio.
+  const musicTracks = {
+    menu: new Audio("assets/audio/music/menu.wav"),
+    battle: new Audio("assets/audio/music/battle.wav"),
+    boss: new Audio("assets/audio/music/boss.wav"),
+    campfire: new Audio("assets/audio/music/campfire.wav")
+  };
+  Object.values(musicTracks).forEach(track => {
+    track.loop = true;
+    track.preload = "auto";
+  });
+  const soundEffects = {
+    click: new Audio("assets/audio/sfx/ui-click.wav"),
+    build: new Audio("assets/audio/sfx/tower-build.wav"),
+    defeat: new Audio("assets/audio/sfx/enemy-defeat.wav"),
+    impact: new Audio("assets/audio/sfx/heavy-impact.wav"),
+    wave: new Audio("assets/audio/sfx/wave-start.wav")
+  };
+  let activeMusicName = "menu";
+  let audioUnlocked = false;
+
+  function updateMusicVolume() {
+    const settings = window.riftboundSettings || DEFAULT_SETTINGS;
+    const volume = Math.max(0, Math.min(1,
+      (Number(settings.masterVolume) / 100) * (Number(settings.musicVolume) / 100)
+    ));
+    Object.values(musicTracks).forEach(track => { track.volume = volume; });
+    Object.values(soundEffects).forEach(sound => {
+      sound.volume = Math.max(0, Math.min(1,
+        (Number(settings.masterVolume) / 100) * (Number(settings.sfxVolume) / 100)
+      ));
+    });
+    if (volume <= 0) Object.values(musicTracks).forEach(track => track.pause());
+  }
+
+  function setMusicTrack(name) {
+    if (!musicTracks[name]) return;
+    activeMusicName = name;
+    updateMusicVolume();
+    Object.entries(musicTracks).forEach(([key, track]) => {
+      if (key !== name) track.pause();
+    });
+    const selected = musicTracks[name];
+    if (selected.volume <= 0) return;
+    if (selected.paused) selected.play().catch(error => {
+      console.info("Riftbound music awaits a browser interaction:", error);
+    });
+  }
+
+  function playMenuMusic() { setMusicTrack("menu"); }
+  function stopMenuMusic() {
+    Object.values(musicTracks).forEach(track => track.pause());
+  }
+  window.riftboundSetMusicTrack = setMusicTrack;
+  window.riftboundPlaySfx = function(name) {
+    const sound = soundEffects[name];
+    if (!sound) return;
+    const settings = window.riftboundSettings || DEFAULT_SETTINGS;
+    sound.volume = Math.max(0, Math.min(1,
+      (Number(settings.masterVolume) / 100) * (Number(settings.sfxVolume) / 100)
+    ));
+    if (sound.volume <= 0) return;
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+  };
+
+  // Browsers require a user gesture before starting audio.
+  const unlockAudio = () => {
+    audioUnlocked = true;
+    setMusicTrack(activeMusicName);
+  };
+  document.addEventListener("pointerdown", unlockAudio, { once: true, capture: true });
+  document.addEventListener("keydown", unlockAudio, { once: true, capture: true });
+  document.addEventListener("click", event => {
+    if (event.target.closest("button")) window.riftboundPlaySfx("click");
+  });
+
   const byId = id => document.getElementById(id);
   const mainMenu = byId("main-menu");
   const hubScreen = byId("hub-screen");
@@ -43,6 +120,7 @@
       if (!response.ok) throw new Error("Player profile could not be loaded.");
       const data = await response.json();
       if (data.progression && typeof window.loadRiftboundProgression === "function") window.loadRiftboundProgression(data.progression);
+      else if (typeof window.riftboundCloudSaveProfile === "function") window.riftboundCloudSaveProfile();
       return data;
     } catch (error) {
       console.warn("Could not load Riftbound player profile:", error);
@@ -208,6 +286,7 @@
 
   function returnToMenu() {
     if (typeof stopGameLoop === "function") stopGameLoop();
+    playMenuMusic();
     hideScreens();
     mainMenu.style.display = "flex";
     if (hubScreen) hubScreen.hidden = true;
@@ -229,6 +308,7 @@
 
   function openHub() {
     if (typeof stopGameLoop === "function") stopGameLoop();
+    playMenuMusic();
     hideScreens();
     hubScreen.hidden = false;
     showHubView("home");
@@ -241,14 +321,26 @@
     settingsOverlay.hidden = false;
   });
   byId("close-settings").addEventListener("click", closeSettings);
+  byId("trait-code-redeem").addEventListener("click", async () => {
+    const input=byId("trait-code-input"),status=byId("trait-code-status"),button=byId("trait-code-redeem");
+    button.disabled=true;status.textContent="CHECKING CODE...";
+    try{
+      const result=await window.riftboundRedeemTraitCode?.(input.value);
+      status.textContent=result?.message||"CODE SYSTEM UNAVAILABLE";
+      status.classList.toggle("code-success",!!result?.ok);
+      if(result?.ok)input.value="";
+    }finally{button.disabled=false;}
+  });
   byId("save-settings").addEventListener("click", () => {
     window.riftboundSettings = readSettings();
+    updateMusicVolume();
     persistSettings();
     if (typeof updateDeveloperModeUI === "function") updateDeveloperModeUI();
     closeSettings();
   });
   byId("reset-settings").addEventListener("click", () => {
     window.riftboundSettings = { ...DEFAULT_SETTINGS };
+    updateMusicVolume();
     displaySettings();
     persistSettings();
     if (typeof updateDeveloperModeUI === "function") updateDeveloperModeUI();
@@ -257,7 +349,10 @@
     if (event.target === settingsOverlay) closeSettings();
   });
   ["master-volume", "music-volume", "sfx-volume"].forEach(id => {
-    byId(id).addEventListener("input", updateVolumeLabels);
+    byId(id).addEventListener("input", () => {
+      updateVolumeLabels();
+      updateMusicVolume();
+    });
   });
   byId("fullscreen-button").addEventListener("click", async () => {
     try {
@@ -288,6 +383,8 @@
       if (typeof window.startRiftboundNewRun !== "function") {
         throw new Error("The game engine did not expose the new-run function.");
       }
+      stopMenuMusic();
+      setMusicTrack("battle");
       window.startRiftboundNewRun();
       hideScreens();
       gameScreen.hidden = false;
@@ -305,7 +402,9 @@
   });
   byId("leave-battle").addEventListener("click", () => {
     if (window.confirm("Return to the lobby? Your current expedition will be abandoned and cannot be resumed.")) {
+      window.abandonRiftboundRun?.();
       openHub();
+      window.renderRiftboundCommanders?.();
     }
   });
   byId("result-continue").addEventListener("click", () => openHub());

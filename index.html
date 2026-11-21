@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="css/devpanel.css">
     <link rel="stylesheet" href="css/commanders.css">
     <link rel="stylesheet" href="css/progression.css">
+    <link rel="stylesheet" href="css/traits.css">
 </head>
 <body>
 
@@ -115,6 +116,13 @@
 
                 <label>SFX Volume <span id="sfx-value">80%</span></label>
                 <input type="range" id="sfx-volume" min="0" max="100">
+            </div>
+
+            <div class="setting-group code-menu-group">
+                <h3>REDEEM CODE</h3>
+                <p>Enter a Riftbound code to claim its reward.</p>
+                <div class="code-menu-row"><input id="trait-code-input" type="text" maxlength="40" placeholder="ENTER CODE" autocomplete="off"><button id="trait-code-redeem" type="button">REDEEM</button></div>
+                <small id="trait-code-status" role="status">Codes are case-insensitive.</small>
             </div>
 
             <div class="setting-group">
@@ -364,6 +372,7 @@
     <script src="js/progression.js"></script>
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/commander-audio.js"></script>
     <script src="js/devpanel.js"></script>
 </body>
 </html>

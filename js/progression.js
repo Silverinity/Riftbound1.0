@@ -6,16 +6,21 @@
   const STORAGE_KEY="riftbound-class-progression-v1";
   const legacyBonuses=window.getRiftboundSkillBonuses;
   const traitList=[
-    {index:"01",id:"bulwarks-oath",name:"Bulwark's Oath",rarity:"COMMON",icon:"⬡",description:"The fortress begins each expedition with 10% more maximum health.",synergy:"The Warden",good:["warden"],effects:{fortressHp:.10}},
-    {index:"02",id:"hawks-eye",name:"Hawk's Eye",rarity:"COMMON",icon:"➶",description:"Archer Towers deal 12% more damage.",synergy:"The Huntmaster",good:["huntmaster"],effects:{archerDamage:.12}},
-    {index:"03",id:"coin-scent",name:"Coin Scent",rarity:"COMMON",icon:"◈",description:"Defeated enemies drop 10% more gold.",synergy:"The Treasurer",good:["treasurer"],effects:{goldBonus:.10}},
-    {index:"04",id:"frost-sigil",name:"Frost Sigil",rarity:"RARE",icon:"❄",description:"Tower hits have a 12% chance to slow an enemy for 2 seconds.",synergy:"The Arcanist",good:["arcanist"],effects:{slowChance:.12}},
-    {index:"05",id:"ember-heart",name:"Ember Heart",rarity:"RARE",icon:"♨",description:"Burn effects deal 25% more damage and last 1 second longer.",synergy:"The Pyromancer",good:["pyromancer"],effects:{burnDamage:.25,burnDuration:1}},
-    {index:"06",id:"soul-conduit",name:"Soul Conduit",rarity:"EPIC",icon:"☠",description:"Spectral allies are summoned 50% more often and remain for 2 extra seconds.",synergy:"The Necromancer",good:["necromancer"],effects:{summonChance:.10,summonDuration:2}},
-    {index:"07",id:"siege-savant",name:"Siege Savant",rarity:"EPIC",icon:"◆",description:"Cannon Towers deal 18% more damage and their splash radius is increased.",synergy:"The Treasurer or Warden",good:["treasurer","warden"],effects:{cannonDamage:.18,cannonSplash:18}},
-    {index:"08",id:"rift-tactician",name:"Rift Tactician",rarity:"LEGENDARY",icon:"✧",description:"Towers deal 20% more damage to slowed enemies.",synergy:"The Arcanist",good:["arcanist"],effects:{slowedDamage:.20}},
-    {index:"09",id:"golden-forge",name:"Golden Forge",rarity:"LEGENDARY",icon:"♛",description:"Tower upgrades and campsite services cost 15% less gold.",synergy:"The Treasurer",good:["treasurer"],effects:{costReduction:.15}},
-    {index:"10",id:"worldbreaker",name:"Worldbreaker",rarity:"MYTHIC",icon:"✹",description:"Deal 25% more damage to bosses and earn 20% more boss gold.",synergy:"The Huntmaster or Pyromancer",good:["huntmaster","pyromancer"],effects:{bossDamage:.25,bossGold:.20}}
+    {index:"01",id:"bulwarks-oath",name:"Bulwark's Oath",rarity:"COMMON",icon:"⬡",description:"A sturdy ward reinforces the fortress, giving every commander a little more room for mistakes.",synergy:"Warden, Necromancer and any commander built around long defensive runs",good:["warden","necromancer","arcanist","huntmaster","treasurer","pyromancer"],stats:["+4% maximum fortress health"],effects:{"fortressHp":0.04}},
+    {index:"02",id:"hawks-eye",name:"Hawk's Eye",rarity:"COMMON",icon:"➶",description:"A keen battlefield sight guides every tower, improving the accuracy and force of every commander's defenses.",synergy:"All commanders — especially tower-focused formations",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+3% damage from all towers"],effects:{"towerDamage":0.03}},
+    {index:"03",id:"coin-scent",name:"Coin Scent",rarity:"COMMON",icon:"◈",description:"A faint golden aura draws extra coin from defeated foes and supports every expedition.",synergy:"Treasurer, Warden and upgrade-focused builds",good:["treasurer","warden","arcanist","huntmaster","pyromancer","necromancer"],stats:["+5% gold from enemies"],effects:{"goldBonus":0.05}},
+    {index:"04",id:"stonebound",name:"Stonebound Core",rarity:"COMMON",icon:"⬟",description:"Runes carved into the ground extend the reach of every tower, whatever force commands them.",synergy:"All commanders — especially spread-out tower formations",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+4% range for all towers"],effects:{"towerRange":0.04}},
+    {index:"05",id:"frost-sigil",name:"Frost Sigil",rarity:"RARE",icon:"❄",description:"A glacial rune sharpens the whole defensive line, strengthening every tower.",synergy:"Arcanist, Huntmaster and any commander using many towers",good:["arcanist","huntmaster","warden","treasurer","pyromancer","necromancer"],stats:["+6% damage from all towers","+4% range for all towers"],effects:{"towerDamage":0.06,"towerRange":0.04}},
+    {index:"06",id:"ember-heart",name:"Ember Heart",rarity:"RARE",icon:"♨",description:"A steady ember empowers the army and helps fund each expedition.",synergy:"All commanders — especially rapid-fire tower builds",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+5% damage from all towers","+5% gold from enemies"],effects:{"towerDamage":0.05,"goldBonus":0.05}},
+    {index:"07",id:"soul-conduit",name:"Soul Conduit",rarity:"RARE",icon:"☠",description:"A calm spiritual current improves the speed and reach of every defensive formation.",synergy:"All commanders — especially long waves and elite encounters",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+5% attack speed for all towers","+5% range for all towers"],effects:{"towerSpeed":0.05,"towerRange":0.05}},
+    {index:"08",id:"siege-savant",name:"Siege Savant",rarity:"RARE",icon:"◆",description:"A master siege doctrine improves every tower while making cannon volleys especially destructive.",synergy:"All commanders — especially cannon-heavy formations",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+8% damage from all towers","+25% Cannon Tower damage","+25 splash radius"],effects:{"towerDamage":0.08,"cannonDamage":0.25,"cannonSplash":25}},
+    {index:"09",id:"rift-tactician",name:"Rift Tactician",rarity:"EPIC",icon:"✧",description:"Rift calculations improve the force and reach of every tower on the battlefield.",synergy:"Arcanist, Huntmaster, Warden and control-focused builds",good:["arcanist","huntmaster","warden","treasurer","pyromancer","necromancer"],stats:["+12% damage from all towers","+5% range for all towers"],effects:{"towerDamage":0.12,"towerRange":0.05}},
+    {index:"10",id:"golden-forge",name:"Golden Forge",rarity:"EPIC",icon:"♛",description:"A masterwork royal seal lowers upgrade and campsite costs, leaving more resources for every strategy.",synergy:"Treasurer, Warden, Necromancer and upgrade-heavy builds",good:["treasurer","warden","necromancer","arcanist","huntmaster","pyromancer"],stats:["-25% tower upgrade and campsite service costs"],effects:{"costReduction":0.25}},
+    {index:"11",id:"ashen-covenant",name:"Ashen Covenant",rarity:"EPIC",icon:"♧",description:"An ancient ash-mark reinforces every tower and leaves more coin in the royal treasury.",synergy:"All commanders — especially builds with Ember Heart or rapid attacks",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+10% damage from all towers","+10% gold from enemies"],effects:{"towerDamage":0.10,"goldBonus":0.10}},
+    {index:"12",id:"worldbreaker",name:"Worldbreaker",rarity:"LEGENDARY",icon:"✹",description:"A measured fracture rune weakens powerful foes and rewards a successful boss hunt.",synergy:"All commanders — especially sustained-damage and boss-hunting builds",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+15% damage against bosses","+10% boss gold rewards","Every 400 damage dealt to a boss triggers an additional 60 damage"],effects:{"bossDamage":0.15,"bossGold":0.1,"worldbreaker":true}},
+    {index:"13",id:"crown-of-embers",name:"Crown of Embers",rarity:"LEGENDARY",icon:"♨",description:"A restrained royal flame ignites enemies and lets defeated burning foes pass a weaker flame to nearby targets.",synergy:"All commanders — especially rapid-fire and area-damage builds",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+10% chance to ignite enemies","+25% burn damage","+2 seconds burn duration","Burning enemies spread a weaker flame when defeated"],effects:{"burnChance":0.1,"burnDamage":0.25,"burnDuration":2,"burnSpread":true}},
+    {index:"14",id:"eclipse-engine",name:"Eclipse Engine",rarity:"MYTHIC",icon:"◉",description:"The engine periodically releases a rift pulse that damages and slows every enemy on the field, opening them to devastating follow-up attacks.",synergy:"All commanders — especially formations that benefit from grouped, slowed enemies",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+35% damage against slowed enemies","+25% damage against bosses","Every 18 seconds, pulse all enemies for 4% max HP (up to 100) and slow them for 2.5 seconds"],effects:{"slowedDamage":0.35,"bossDamage":0.25,"eclipsePulse":true}},
+    {index:"15",id:"soul-of-the-kingdom",name:"Soul of the Kingdom",rarity:"MYTHIC",icon:"✥",description:"Once per expedition, the kingdom refuses to fall. The fortress is reborn in golden light, then protected by a brief royal ward.",synergy:"All commanders — especially high-risk runs and long expeditions",good:["warden","arcanist","huntmaster","treasurer","pyromancer","necromancer"],stats:["+20% gold from enemies","Once per run, revive the fortress at 10% HP","Gain 50% less fortress damage for 8 seconds after revival"],effects:{"goldBonus":0.2,"reviveOnce":true}}
   ];
   const coreTrees={
     warden:{title:"BASTION ROOT",tagline:"Turn the fortress into an unbreakable anchor.",nodes:[
@@ -73,10 +78,20 @@
         [["Grave Sovereign","Bosses take 20% more damage from spectral allies.",{summonBossDamage:.20}],["Army of Ash","Summon one additional wraith with Raise the Fallen.",{extraWraith:1}]],
         [["Lich's Dominion","Every fifth kill guarantees a spectral ally.",{everyFifthSoul:true}],["Eternal Legion","Spectral ally damage and duration increase by 30%.",{summonDamageBonus:.30,summonDuration:4}]]]}
   };
-  let profile={classes:{},equippedTrait:"bulwarks-oath"};
+  let profile={classes:{},equippedTrait:null};
   function blankClass(){return {xp:0,level:1,skillPoints:0,spentPoints:0,nodes:{},choices:{},totalXp:0};}
   function normalizeProfile(raw){
-    const next={classes:{},equippedTrait:traitList.some(t=>t.id===raw?.equippedTrait)?raw.equippedTrait:"bulwarks-oath"};
+    const oldTraits=raw?.traits&&typeof raw.traits==="object"?raw.traits:{};
+    const owned=oldTraits.owned&&typeof oldTraits.owned==="object"?{...oldTraits.owned}:{};
+    Object.keys(owned).forEach(id=>{if(!traitList.some(t=>t.id===id)||Number(owned[id])<=0)delete owned[id];else owned[id]=Math.max(1,Math.floor(Number(owned[id])||1));});
+    const totalRolls=Math.max(0,Math.floor(Number(oldTraits.totalRolls)||0));
+    let equippedTrait=traitList.some(t=>t.id===raw?.equippedTrait)?raw.equippedTrait:null;
+    // Older profiles automatically received Bulwark's Oath. Remove that free starter trait during migration.
+    if(equippedTrait==="bulwarks-oath"&&totalRolls===0&&Object.keys(owned).every(id=>id==="bulwarks-oath")){
+      equippedTrait=null;
+      delete owned["bulwarks-oath"];
+    }
+    const next={classes:{},equippedTrait,traits:{rolls:Math.max(0,Math.floor(Number(oldTraits.rolls)||0)),pityLegendary:Math.max(0,Math.min(49,Math.floor(Number(oldTraits.pityLegendary)||0))),pityMythic:Math.max(0,Math.min(1499,Math.floor(Number(oldTraits.pityMythic)||0))),totalRolls,owned,redeemedCodes:Array.isArray(oldTraits.redeemedCodes)?oldTraits.redeemedCodes.filter(x=>typeof x==="string").slice(0,50):[]}};
     CLASS_IDS.forEach(id=>{
       const c=raw?.classes?.[id]||{};
       const tree=coreTrees[id],rawChoices=c.choices&&typeof c.choices==="object"?c.choices:{},choices={};
@@ -89,19 +104,20 @@
   function save(){
     profile=normalizeProfile(profile);
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch(e){console.warn("Could not save class progression:",e);}
-    const savedRun=typeof window.persistRiftboundCheckpoint==="function"?window.persistRiftboundCheckpoint("battle"):false;
-    if(savedRun===false&&typeof window.riftboundCloudSaveProfile==="function")window.riftboundCloudSaveProfile();
+    if(typeof window.persistRiftboundCheckpoint==="function")window.persistRiftboundCheckpoint("battle");
+    if(typeof window.riftboundCloudSaveProfile==="function")window.riftboundCloudSaveProfile();
     renderSkillTree();renderTraits();window.renderRiftboundCommanders?.();
   }
   function classData(id=window.riftboundCommanderId||"warden"){return profile.classes[CLASS_IDS.includes(id)?id:"warden"];}
   function xpForNext(level){return Math.round(120+level*45+level*level*2);}
-  function getTrait(id=profile.equippedTrait){return traitList.find(t=>t.id===id)||traitList[0];}
+  const NO_TRAIT={id:null,name:"No Trait Equipped",rarity:"NONE",icon:"—",description:"No trait is equipped. Your expedition receives no trait bonuses.",synergy:"None",good:[],stats:["No additional stat bonuses"],effects:{}};
+  function getTrait(id=profile.equippedTrait){return traitList.find(t=>t.id===id)||NO_TRAIT;}
   function getTraitEffects(id=profile.equippedTrait){return {...getTrait(id).effects};}
   window.getRiftboundTraitEffects=getTraitEffects;
   window.getRiftboundTrait=function(){return {...getTrait()};};
   window.getRiftboundClassProfile=function(id){const c=classData(id);return JSON.parse(JSON.stringify(c));};
   window.getRiftboundProgressionExport=()=>JSON.parse(JSON.stringify(profile));
-  window.loadRiftboundProgression=function(data){if(data&&typeof data==="object"){profile=normalizeProfile(data);try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch(e){}renderSkillTree();renderTraits();}};
+  window.loadRiftboundProgression=function(data){if(data&&typeof data==="object"){const localProfile=profile;profile=normalizeProfile(data);if(!data.traits&&localProfile?.traits){profile.traits=localProfile.traits;if(!data.equippedTrait&&localProfile.equippedTrait)profile.equippedTrait=localProfile.equippedTrait;}try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch(e){}renderSkillTree();renderTraits();if(!data.traits&&localProfile?.traits&&typeof window.riftboundCloudSaveProfile==="function")window.riftboundCloudSaveProfile();}};
   window.getRiftboundClassSkillEffects=function(id=window.riftboundCommanderId||"warden"){
     const c=classData(id),tree=coreTrees[id]||coreTrees.warden,effects={};
     tree.nodes.forEach(n=>{const rank=Math.max(0,Math.min(5,Math.floor(Number(c.nodes[n.id])||0)));effects[n.effect]=(effects[n.effect]||0)+rank*n.per;});
@@ -147,11 +163,107 @@
     root.querySelectorAll("[data-core-node]").forEach(b=>b.addEventListener("click",()=>{const n=tree.nodes.find(x=>x.id===b.dataset.coreNode);if(!n||c.skillPoints<1)return;const rank=Math.max(0,Math.floor(Number(c.nodes[n.id])||0));if(rank>=5)return;c.skillPoints--;c.spentPoints++;c.nodes[n.id]=rank+1;save();}));
     root.querySelectorAll("[data-fork-choice]").forEach(b=>b.addEventListener("click",()=>{const level=Number(b.dataset.forkLevel),choice=b.dataset.forkChoice;if(c.level<level||c.skillPoints<2||c.choices[level])return;c.skillPoints-=2;c.spentPoints+=2;c.choices[level]=choice;save();}));
   }
-  function renderTraits(){
+  const rarityOdds={COMMON:55,RARE:29.5,EPIC:12,LEGENDARY:3,MYTHIC:.5};
+  function rarityClass(r){return String(r||"common").toLowerCase();}
+  function traitChance(trait){const count=traitList.filter(t=>t.rarity===trait.rarity).length;return (rarityOdds[trait.rarity]/count).toFixed(3).replace(/0+$/,"").replace(/\.$/,"")+"%";}
+  function traitOwned(id){return Math.max(0,Number(profile.traits.owned[id])||0);}
+  function traitStatsMarkup(trait){return "<ul class='trait-stat-list'>"+trait.stats.map(s=>"<li>"+s+"</li>").join("")+"</ul>";}
+  function openTraitDetail(id){
+    const trait=traitList.find(t=>t.id===id);if(!trait)return;
+    const overlay=document.getElementById("trait-detail-overlay");if(!overlay)return;
+    const owned=traitOwned(id)>0,locked=!!window.isRiftboundRunActive?.();
+    overlay.innerHTML="<div class='trait-detail-card rarity-"+rarityClass(trait.rarity)+"' role='dialog' aria-modal='true'><button class='trait-detail-close' type='button' aria-label='Close'>×</button><div class='trait-art trait-art-large'><span>"+trait.icon+"</span></div><p class='trait-detail-rarity'>"+trait.rarity+" · "+traitChance(trait)+" PER TRAIT</p><h2>"+trait.name+"</h2><p class='trait-detail-description'>"+trait.description+"</p><h3>STAT BONUSES</h3>"+traitStatsMarkup(trait)+"<h3>BEST SYNERGY</h3><p class='trait-detail-synergy'>"+trait.synergy+"</p><p class='trait-owned-note'>"+(owned?"OWNED · UNLOCKED":"NOT YET DISCOVERED")+(profile.equippedTrait===id?" · CURRENTLY ACTIVE":"")+"</p></div>";
+    overlay.hidden=false;
+    overlay.querySelector(".trait-detail-close").addEventListener("click",()=>{overlay.hidden=true;});
+    overlay.addEventListener("click",event=>{if(event.target===overlay)overlay.hidden=true;},{once:true});
+  }
+  function rollTrait(){
+    if(profile.traits.rolls<1||window.isRiftboundRunActive?.())return null;
+    profile.traits.rolls--;
+    let rarity;
+    if(profile.traits.pityMythic>=1499)rarity="MYTHIC";
+    else{
+      const roll=Math.random()*100;
+      rarity=roll<.5?"MYTHIC":roll<3.5?"LEGENDARY":roll<15.5?"EPIC":roll<45?"RARE":"COMMON";
+      if(profile.traits.pityLegendary>=49&&rarity!=="MYTHIC"&&rarity!=="LEGENDARY")rarity="LEGENDARY";
+    }
+    const pool=traitList.filter(t=>t.rarity===rarity);
+    const trait=pool[Math.floor(Math.random()*pool.length)];
+    profile.traits.totalRolls++;
+    profile.traits.pityMythic=rarity==="MYTHIC"?0:Math.min(1499,profile.traits.pityMythic+1);
+    profile.traits.pityLegendary=(rarity==="MYTHIC"||rarity==="LEGENDARY")?0:Math.min(49,profile.traits.pityLegendary+1);
+    const duplicate=traitOwned(trait.id)>0;
+    if(!duplicate)profile.traits.owned[trait.id]=1;
+    profile.equippedTrait=trait.id;
+    save();
+    return {trait,duplicate,rarity};
+  }
+  function showProtectedTraitRollConfirmation(){
+    const current=getTrait();
+    const root=document.getElementById("trait-collection");
+    if(!root)return;
+    const overlay=document.createElement("div");
+    overlay.className="trait-confirm-overlay";
+    overlay.innerHTML="<div class='trait-confirm-card rarity-"+rarityClass(current.rarity)+"' role='dialog' aria-modal='true' aria-labelledby='trait-confirm-title'><p class='prep-eyebrow'>IMPORTANT · ACTIVE TRAIT PROTECTED</p><div class='trait-art trait-art-large'><span>"+current.icon+"</span></div><p class='trait-detail-rarity'>"+current.rarity+" TRAIT EQUIPPED</p><h2 id='trait-confirm-title'>"+current.name+"</h2><p>Rolling again may replace this "+current.rarity.toLowerCase()+" trait with a lower-rarity trait. Do you want to spend a roll and risk replacing it?</p><div class='trait-confirm-actions'><button type='button' class='trait-confirm-keep'>CANCEL · KEEP TRAIT</button><button type='button' class='trait-confirm-equip'>CONFIRM ROLL</button></div></div>";
+    root.appendChild(overlay);
+    overlay.querySelector(".trait-confirm-keep").addEventListener("click",()=>overlay.remove());
+    overlay.querySelector(".trait-confirm-equip").addEventListener("click",()=>{
+      overlay.remove();
+      performTraitRoll();
+    });
+  }
+  function performTraitRoll(){
+    const pulled=rollTrait();
+    if(!pulled)return;
+    window._riftboundLastTraitRoll=pulled;
+    renderTraits(true);
+  }
+  function requestTraitRoll(){
+    if(profile.traits.rolls<1||window.isRiftboundRunActive?.())return;
+    const rarity=getTrait().rarity;
+    if(rarity==="LEGENDARY"||rarity==="MYTHIC"){
+      showProtectedTraitRollConfirmation();
+      return;
+    }
+    performTraitRoll();
+  }
+  window.riftboundGetTraitState=()=>JSON.parse(JSON.stringify(profile.traits));
+  window.riftboundRedeemTraitCode=async function(code){
+    const normalized=String(code||"").trim().toUpperCase();
+    if(!normalized)return {ok:false,message:"ENTER A CODE"};
+    const api=(window.RIFTBOUND_API_BASE||"").replace(/\/$/,"");
+    if(!api)return {ok:false,message:"CODE REDEMPTION REQUIRES THE SERVER"};
+    try{
+      const response=await fetch(api+"/api/traits/redeem",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({code:normalized})});
+      const data=await response.json().catch(()=>({}));
+      if(response.status===409)return {ok:false,message:"THIS DISCORD ACCOUNT HAS ALREADY REDEEMED THIS CODE"};
+      if(response.status===400)return {ok:false,message:"INVALID CODE"};
+      if(!response.ok)throw new Error(data.error||"Code redemption failed.");
+      profile.traits.rolls+=Math.max(0,Math.floor(Number(data.rollsGranted)||0));
+      if(!profile.traits.redeemedCodes.includes(normalized))profile.traits.redeemedCodes.push(normalized);
+      save();
+      return {ok:true,message:data.message||"CODE ACCEPTED"};
+    }catch(error){
+      console.error("Trait code redemption failed:",error);
+      return {ok:false,message:"COULD NOT REDEEM CODE · CHECK YOUR CONNECTION"};
+    }
+  };
+  function renderTraits(showLastRoll=false){
     const root=document.getElementById("trait-collection");if(!root)return;
-    const equipped=getTrait(),locked=!!window.isRiftboundRunActive?.();
-    root.innerHTML='<div class="trait-heading"><div><p class="prep-eyebrow">COMMANDER IDENTITY</p><h2>TRAIT COLLECTION</h2><p>Equip one trait to define your expedition playstyle. Every trait has a preferred commander. Changes apply to new expeditions; saved runs keep their original trait.</p></div><span>10 TRAITS · 5 RARITIES</span></div>'+(locked?'<p class="commander-lock-note">Trait selection is locked during an expedition. Finish the run before changing your trait.</p>':'')+'<div class="trait-equipped"><span class="trait-equipped-icon">'+equipped.icon+'</span><div><small>CURRENTLY EQUIPPED · '+equipped.rarity+'</small><strong>'+equipped.name+'</strong><p>'+equipped.description+'</p></div></div><div class="trait-grid">'+traitList.map(t=>'<article class="trait-card rarity-'+t.rarity.toLowerCase()+' '+(t.id===profile.equippedTrait?"trait-active":"")+'"><div class="trait-card-top"><span class="trait-index">#'+t.index+'</span><span class="trait-rarity">'+t.rarity+'</span></div><div class="trait-icon">'+t.icon+'</div><h3>'+t.name+'</h3><p>'+t.description+'</p><small>BEST WITH · '+t.synergy.toUpperCase()+'</small><button data-equip-trait="'+t.id+'" '+(t.id===profile.equippedTrait||locked?"disabled":"")+'>'+(t.id===profile.equippedTrait?"EQUIPPED":locked?"LOCKED DURING RUN":"EQUIP TRAIT")+'</button></article>').join("")+'</div>';
-    root.querySelectorAll("[data-equip-trait]").forEach(b=>b.addEventListener("click",()=>{if(window.isRiftboundRunActive?.()){renderTraits();return;}const t=traitList.find(x=>x.id===b.dataset.equipTrait);if(!t)return;profile.equippedTrait=t.id;save();}));
+    const equipped=getTrait(),locked=!!window.isRiftboundRunActive?.(),state=profile.traits;
+    const result=showLastRoll?(window._riftboundLastTraitRoll||null):null;
+    window._riftboundLastTraitRoll=null;
+    const resultMarkup=result?"<div class='trait-roll-result rarity-"+rarityClass(result.trait.rarity)+"'><div class='trait-art trait-art-result'><span>"+result.trait.icon+"</span></div><div><small>"+(result.duplicate?"DUPLICATE · ALREADY OWNED · NO BONUS ROLLS":"NEW TRAIT DISCOVERED")+"</small><strong>"+result.trait.name+"</strong><em>"+result.trait.rarity+"</em></div><button type='button' data-result-details='"+result.trait.id+"'>VIEW DETAILS</button></div>":"";
+    root.innerHTML="<div class='trait-heading'><div><p class='prep-eyebrow'>THE RIFTBOUND TRAIT HALL</p><h2>TRAIT SUMMONING HALL</h2><p>Spend a roll to discover a trait. Your new trait becomes active automatically.</p></div><span>15 TRAITS · 5 RARITIES</span></div>"+
+      "<div class='trait-summon-layout'><section class='trait-summon-stage'><div class='trait-stage-top'><span>ACTIVE TRAIT</span><span>"+(locked?"EXPEDITION ACTIVE":"SANCTUM READY")+"</span></div><div class='trait-equipped-large rarity-"+rarityClass(equipped.rarity)+"'><div class='trait-art trait-art-equipped'><span>"+equipped.icon+"</span></div><div><small>EQUIPPED · "+equipped.rarity+"</small><h3>"+equipped.name+"</h3><p>"+equipped.description+"</p></div></div><div class='trait-summon-orbit'><div class='trait-orbit-ring ring-one'></div><div class='trait-orbit-ring ring-two'></div><div class='trait-orbit-core'><span>✧</span><small>RIFT<br>RESONANCE</small></div></div>"+resultMarkup+"<div class='trait-stage-actions'><button type='button' id='trait-index-open'>✧ OPEN TRAIT INDEX</button><span>Discoveries are permanent · Duplicates do not grant bonus rolls</span></div></section>"+
+      "<aside class='trait-roll-panel'><p class='prep-eyebrow'>SUMMONING RITES</p><h3>RIFT ROLLS</h3><div class='trait-roll-count'><strong>"+state.rolls+"</strong><span>AVAILABLE ROLLS</span></div><button type='button' id='trait-roll-button' "+(state.rolls<1||locked?"disabled":"")+">✦ SUMMON TRAIT · 1 ROLL</button><p class='trait-roll-lock'>"+(locked?"Trait rolls are unavailable during an expedition.":"Duplicates do not grant bonus rolls. Every summon costs exactly 1 roll.")+"</p><div class='trait-pity-block'><div class='trait-pity-heading'><span>LEGENDARY PITY</span><strong>"+state.pityLegendary+" / 50</strong></div><div class='trait-pity-track'><i style='width:"+(state.pityLegendary/50*100)+"%'></i></div><small>Legendary or Mythic guaranteed by roll 50</small></div><div class='trait-pity-block mythic-pity'><div class='trait-pity-heading'><span>MYTHIC PITY</span><strong>"+state.pityMythic.toLocaleString()+" / 1,500</strong></div><div class='trait-pity-track'><i style='width:"+(state.pityMythic/1500*100)+"%'></i></div><small>Mythic guaranteed by roll 1,500</small></div><div class='trait-roll-total'><span>TOTAL ROLLS USED</span><strong>"+state.totalRolls.toLocaleString()+"</strong></div></aside></div>"+
+      "<div id='trait-index-panel' class='trait-index-panel' hidden><div class='trait-index-heading'><div><p class='prep-eyebrow'>TRAIT ARCHIVE</p><h3>TRAIT INDEX</h3><p>Every trait, its rarity, and its exact chance per roll. Select any trait to inspect its effects and synergies.</p></div><button type='button' id='trait-index-close'>CLOSE INDEX</button></div><div class='trait-index-legend'>COMMON 55% · RARE 29.5% · EPIC 12% · LEGENDARY 3% · MYTHIC 0.5%</div><div class='trait-index-grid'>"+traitList.map(t=>"<button type='button' class='trait-index-card rarity-"+rarityClass(t.rarity)+"' data-trait-detail='"+t.id+"'><span class='trait-art trait-art-index'><span>"+t.icon+"</span></span><span class='trait-index-copy'><strong>"+t.name+"</strong><small>"+t.rarity+" · "+traitChance(t)+"</small><em>"+(traitOwned(t.id)>0?"OWNED":"UNDISCOVERED")+"</em></span><span class='trait-index-arrow'>›</span></button>").join("")+"</div></div>"+
+      "<div id='trait-detail-overlay' class='trait-detail-overlay' hidden></div>";
+    root.querySelector("#trait-index-open").addEventListener("click",()=>{root.querySelector("#trait-index-panel").hidden=false;root.querySelector("#trait-index-panel").scrollIntoView({behavior:"smooth",block:"start"});});
+    root.querySelector("#trait-index-close").addEventListener("click",()=>{root.querySelector("#trait-index-panel").hidden=true;});
+    root.querySelector("#trait-roll-button").addEventListener("click",requestTraitRoll);
+    root.querySelectorAll("[data-trait-detail]").forEach(button=>button.addEventListener("click",()=>openTraitDetail(button.dataset.traitDetail)));
+    const details=root.querySelector("[data-result-details]");if(details)details.addEventListener("click",()=>openTraitDetail(details.dataset.resultDetails));
   }
   window.renderRiftboundSkillTree=renderSkillTree;
   window.renderRiftboundTraits=renderTraits;
