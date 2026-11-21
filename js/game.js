@@ -998,7 +998,7 @@ function spawnEnemy(type,waveNumber){
   const health=d.health*healthScale*(d.boss?1.12:1);
   const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
   const enemy={type,name:d.name,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale,isBoss:!!d.boss};
-  if(trait.slowChance&&Math.random()<trait.slowChance){enemy.slowTimer=2;enemy.slowFactor=.75;}
+
   currentRun.enemies.push(enemy);
 }
 function updateEnemies(dt){
