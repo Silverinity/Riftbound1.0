@@ -270,9 +270,21 @@ function updateGameDisplay(){
   updateCommanderHud();
   updateTowerButtons();updateTowerPanel();
 }
+const TOWER_LIMIT_PER_TYPE=5;
+function getTowerCount(type){
+  return currentRun?.towers?.filter(t=>t.type===type).length||0;
+}
 function updateTowerButtons(){
   document.querySelectorAll(".tower-button").forEach(b=>{
-    const type=towerTypes[b.dataset.tower];b.disabled=!currentRun||currentRun.gold<type.cost||currentRun.gameOver;
+    const type=towerTypes[b.dataset.tower];
+    const count=getTowerCount(b.dataset.tower);
+    const maxed=count>=TOWER_LIMIT_PER_TYPE;
+    const counter=b.querySelector("[data-tower-count]");
+    const limitLabel=b.querySelector("[data-tower-limit]");
+    if(counter)counter.textContent=count+"/"+TOWER_LIMIT_PER_TYPE;
+    if(limitLabel)limitLabel.hidden=!maxed;
+    b.classList.toggle("tower-button-maxed",maxed);
+    b.disabled=!currentRun||currentRun.gold<type.cost||currentRun.gameOver||maxed;
   });
 }
 function showBattleMessage(s){document.getElementById("battle-message").textContent=s;}
@@ -1383,7 +1395,9 @@ function handleBattlefieldClick(e){
   const hit=[...currentRun.towers].reverse().find(t=>Math.abs(p.x-t.x)<=20&&Math.abs(p.y-t.y)<=20);
   if(hit){selectedTowerEntity=hit;selectedTower=null;document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));updateTowerPanel();showBattleMessage(towerTypes[hit.type].name.toUpperCase()+" SELECTED");return;}
   if(!selectedTower){selectedTowerEntity=null;updateTowerPanel();return;}
-  const type=towerTypes[selectedTower];if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
+  const type=towerTypes[selectedTower];
+  if(getTowerCount(selectedTower)>=TOWER_LIMIT_PER_TYPE){showBattleMessage("MAX "+selectedTower.toUpperCase()+" TOWERS PLACED · 5/5");updateTowerButtons();return;}
+  if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
   if(!canBuild(p.x,p.y)){showBattleMessage("THAT LOCATION IS BLOCKED — TRY ANOTHER OPEN AREA");return;}
   currentRun.gold-=type.cost;currentRun.stats.goldSpent+=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,investedGold:type.cost,upgrades:{damage:0,range:0,speed:0}});
   updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(type.name.toUpperCase()+" BUILT");
