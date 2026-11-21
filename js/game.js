@@ -1206,7 +1206,7 @@ function damageEnemy(e,dmg,applyPassive=true){
       currentRun.gold+=bossBonus;
       showBattleMessage("BOSS DEFEATED · "+(e.name||enemyTypes[e.type].name)+" · BONUS "+bossBonus+" GOLD");
     }
-    if((bonuses.burnSpread||trait.burnSpread)&&e.burnTimer>0){currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<75){other.burnTimer=Math.max(other.burnTimer||0,1.5+(trait.burnDuration||0)*0.5);other.burnDamage=Math.max(other.burnDamage||0,1);}});}
+    if((bonuses.burnSpread||trait.burnSpread)&&e.burnTimer>0){const spreadDuration=trait.burnSpread?1.5+(trait.burnDuration||0)*0.5:3+(bonuses.burnDuration||0);const spreadDamage=trait.burnSpread?1:2;currentRun.enemies.forEach(other=>{if(other!==e&&Math.hypot(other.x-e.x,other.y-e.y)<75){other.burnTimer=Math.max(other.burnTimer||0,spreadDuration);other.burnDamage=Math.max(other.burnDamage||0,spreadDamage);}});}
     const summonChance=(getRunCommanderId()==="necromancer"?.2:0)+(bonuses.summonChance||0)+(trait.summonChance||0);
     const guaranteedSoul=bonuses.everyFifthSoul&&currentRun.stats.enemiesKilled%5===0;
     if(applyPassive&&(Math.random()<summonChance||guaranteedSoul)){
