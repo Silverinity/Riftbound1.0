@@ -197,6 +197,14 @@ const cardPool = [
 
 function getRunCommanderId(){return currentRun?.commanderId||window.riftboundCommanderId||"warden";}
 window.isRiftboundRunActive=()=>!!currentRun&&!currentRun.finalized&&!currentRun.runFinished;
+// Leaving an active expedition permanently abandons it and unlocks commander selection.
+window.abandonRiftboundRun=function(){
+  if(!currentRun||currentRun.finalized||currentRun.runFinished)return false;
+  currentRun.runFinished=true;
+  currentRun.waveActive=false;
+  stopGameLoop();
+  return true;
+};
 function getRunTraitEffects(){return typeof window.getRiftboundTraitEffects==="function"?window.getRiftboundTraitEffects(currentRun?.traitId):{};}
 const commanderAbilities={
   warden:{name:"IRON BASTION",cooldown:45,description:"Raise a fortress ward for 12 seconds: halve incoming castle damage and make towers fire 25% faster.",requiresEnemies:false},
