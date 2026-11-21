@@ -391,7 +391,9 @@
   });
   byId("leave-battle").addEventListener("click", () => {
     if (window.confirm("Return to the lobby? Your current expedition will be abandoned and cannot be resumed.")) {
+      window.abandonRiftboundRun?.();
       openHub();
+      window.renderRiftboundCommanders?.();
     }
   });
   byId("result-continue").addEventListener("click", () => openHub());
