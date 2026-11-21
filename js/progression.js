@@ -104,6 +104,7 @@
   function save(){
     profile=normalizeProfile(profile);
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch(e){console.warn("Could not save class progression:",e);}
+    if(typeof window.persistRiftboundCheckpoint==="function")window.persistRiftboundCheckpoint("battle");
     if(typeof window.riftboundCloudSaveProfile==="function")window.riftboundCloudSaveProfile();
     renderSkillTree();renderTraits();window.renderRiftboundCommanders?.();
   }
