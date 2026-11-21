@@ -116,7 +116,7 @@
   window.getRiftboundTrait=function(){return {...getTrait()};};
   window.getRiftboundClassProfile=function(id){const c=classData(id);return JSON.parse(JSON.stringify(c));};
   window.getRiftboundProgressionExport=()=>JSON.parse(JSON.stringify(profile));
-  window.loadRiftboundProgression=function(data){if(data&&typeof data==="object"){profile=normalizeProfile(data);try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch(e){}renderSkillTree();renderTraits();}};
+  window.loadRiftboundProgression=function(data){if(data&&typeof data==="object"){const localProfile=profile;profile=normalizeProfile(data);if(!data.traits&&localProfile?.traits){profile.traits=localProfile.traits;if(!data.equippedTrait&&localProfile.equippedTrait)profile.equippedTrait=localProfile.equippedTrait;}try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch(e){}renderSkillTree();renderTraits();if(!data.traits&&localProfile?.traits&&typeof window.riftboundCloudSaveProfile==="function")window.riftboundCloudSaveProfile();}};
   window.getRiftboundClassSkillEffects=function(id=window.riftboundCommanderId||"warden"){
     const c=classData(id),tree=coreTrees[id]||coreTrees.warden,effects={};
     tree.nodes.forEach(n=>{const rank=Math.max(0,Math.min(5,Math.floor(Number(c.nodes[n.id])||0)));effects[n.effect]=(effects[n.effect]||0)+rank*n.per;});
