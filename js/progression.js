@@ -159,7 +159,7 @@
   }
   const rarityOdds={COMMON:55,RARE:29.5,EPIC:12,LEGENDARY:3,MYTHIC:.5};
   function rarityClass(r){return String(r||"common").toLowerCase();}
-  function traitChance(trait){const count=traitList.filter(t=>t.rarity===trait.rarity).length;return (rarityOdds[trait.rarity]/count).toFixed(2).replace(/\.00$/,"")+"%";}
+  function traitChance(trait){const count=traitList.filter(t=>t.rarity===trait.rarity).length;return (rarityOdds[trait.rarity]/count).toFixed(3).replace(/0+$/,"").replace(/\.$/,"")+"%";}
   function traitOwned(id){return Math.max(0,Number(profile.traits.owned[id])||0);}
   function traitStatsMarkup(trait){return "<ul class='trait-stat-list'>"+trait.stats.map(s=>"<li>"+s+"</li>").join("")+"</ul>";}
   function openTraitDetail(id){
