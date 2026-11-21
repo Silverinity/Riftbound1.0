@@ -909,3 +909,33 @@ button { min-height: 42px; }
 
 /* Purple status text at the lower edge of the battlefield. */
 .battle-message{color:#B99AE8;background:#100C19;border-top:1px solid rgba(98,68,127,.38)}
+
+
+/* Per-type tower placement counters */
+.tower-count {
+    color: #D8C5F3;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .8px;
+    padding: 2px 7px;
+    border: 1px solid #76549A;
+    background: rgba(185,154,232,.1);
+    border-radius: 3px;
+}
+.tower-limit-label {
+    color: #F0B7A0;
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: .8px;
+}
+.tower-limit-label[hidden] { display: none !important; }
+.tower-button-maxed {
+    border-color: #8B5961 !important;
+    background: #2B1B29 !important;
+}
+.tower-button-maxed .tower-count {
+    color: #F0B7A0;
+    border-color: #8B5961;
+    background: rgba(180,95,105,.12);
+}
+.tower-button-maxed:disabled { opacity: .72; }
