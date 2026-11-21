@@ -409,17 +409,24 @@ app.post("/api/traits/redeem", async (req, res) => {
   const code = typeof req.body?.code === "string" ? req.body.code.trim().toUpperCase() : "";
   const rewards = { "RIFTBOUND-ROLLTEST": 100, "TESTING": 25 };
   if (!Object.hasOwn(rewards, code)) return res.status(400).json({ ok: false, error: "invalid-code" });
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     await client.query("BEGIN");
     await client.query("INSERT INTO player_saves (discord_user_id, save_data) VALUES ($1, $2::jsonb) ON CONFLICT (discord_user_id) DO NOTHING", [auth.userId, JSON.stringify({ version: 1, run: null, settings: {}, progression: { equippedTrait: null, traits: { rolls: 0, pityLegendary: 0, pityMythic: 0, totalRolls: 0, owned: {}, redeemedCodes: [] }, classes: {} } })]);
     const saveResult = await client.query("SELECT save_data FROM player_saves WHERE discord_user_id = $1 FOR UPDATE", [auth.userId]);
+    const existingSave = saveResult.rows[0].save_data || {};
+    const previousCodes = existingSave.progression?.traits?.redeemedCodes;
+    if (Array.isArray(previousCodes) && previousCodes.includes(code)) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ ok: false, error: "code-already-redeemed" });
+    }
     const inserted = await client.query("INSERT INTO redeemed_trait_codes (discord_user_id, code) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING code", [auth.userId, code]);
     if (!inserted.rowCount) {
       await client.query("ROLLBACK");
       return res.status(409).json({ ok: false, error: "code-already-redeemed" });
     }
-    const stored = saveResult.rows[0].save_data || {};
+    const stored = existingSave;
     const progression = stored.progression && typeof stored.progression === "object" ? stored.progression : {};
     const traits = progression.traits && typeof progression.traits === "object" ? progression.traits : {};
     traits.rolls = Math.max(0, Math.floor(Number(traits.rolls) || 0)) + rewards[code];
@@ -434,7 +441,7 @@ app.post("/api/traits/redeem", async (req, res) => {
     console.error("Could not redeem trait code:", error.message);
     return res.status(503).json({ ok: false, error: "code-service-unavailable" });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 
