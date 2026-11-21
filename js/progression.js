@@ -172,12 +172,10 @@
     const trait=traitList.find(t=>t.id===id);if(!trait)return;
     const overlay=document.getElementById("trait-detail-overlay");if(!overlay)return;
     const owned=traitOwned(id)>0,locked=!!window.isRiftboundRunActive?.();
-    overlay.innerHTML="<div class='trait-detail-card rarity-"+rarityClass(trait.rarity)+"' role='dialog' aria-modal='true'><button class='trait-detail-close' type='button' aria-label='Close'>×</button><div class='trait-art trait-art-large'><span>"+trait.icon+"</span></div><p class='trait-detail-rarity'>"+trait.rarity+" · "+traitChance(trait)+" PER TRAIT</p><h2>"+trait.name+"</h2><p class='trait-detail-description'>"+trait.description+"</p><h3>STAT BONUSES</h3>"+traitStatsMarkup(trait)+"<h3>BEST SYNERGY</h3><p class='trait-detail-synergy'>"+trait.synergy+"</p><p class='trait-owned-note'>"+(owned?"OWNED · UNLOCKED":"NOT YET DISCOVERED")+"</p><button class='trait-equip-button' type='button' "+(!owned||locked||profile.equippedTrait===id?"disabled":"")+">"+(profile.equippedTrait===id?"CURRENTLY EQUIPPED":locked?"UNAVAILABLE DURING RUN":owned?"EQUIP TRAIT":"NOT OWNED")+"</button></div>";
+    overlay.innerHTML="<div class='trait-detail-card rarity-"+rarityClass(trait.rarity)+"' role='dialog' aria-modal='true'><button class='trait-detail-close' type='button' aria-label='Close'>×</button><div class='trait-art trait-art-large'><span>"+trait.icon+"</span></div><p class='trait-detail-rarity'>"+trait.rarity+" · "+traitChance(trait)+" PER TRAIT</p><h2>"+trait.name+"</h2><p class='trait-detail-description'>"+trait.description+"</p><h3>STAT BONUSES</h3>"+traitStatsMarkup(trait)+"<h3>BEST SYNERGY</h3><p class='trait-detail-synergy'>"+trait.synergy+"</p><p class='trait-owned-note'>"+(owned?"OWNED · UNLOCKED":"NOT YET DISCOVERED")+(profile.equippedTrait===id?" · CURRENTLY ACTIVE":"")+"</p></div>";
     overlay.hidden=false;
     overlay.querySelector(".trait-detail-close").addEventListener("click",()=>{overlay.hidden=true;});
     overlay.addEventListener("click",event=>{if(event.target===overlay)overlay.hidden=true;},{once:true});
-    const equip=overlay.querySelector(".trait-equip-button");
-    if(equip)equip.addEventListener("click",()=>{if(!traitOwned(id)||window.isRiftboundRunActive?.())return;profile.equippedTrait=id;save();overlay.hidden=true;});
   }
   function rollTrait(){
     if(profile.traits.rolls<1||window.isRiftboundRunActive?.())return null;
@@ -197,8 +195,25 @@
     const duplicate=traitOwned(trait.id)>0;
     if(duplicate)profile.traits.rolls+=5;
     else profile.traits.owned[trait.id]=1;
+    const requiresConfirmation=rarity==="LEGENDARY"||rarity==="MYTHIC";
+    if(!requiresConfirmation)profile.equippedTrait=trait.id;
     save();
-    return {trait,duplicate,rarity};
+    return {trait,duplicate,rarity,requiresConfirmation};
+  }
+  function showTraitEquipConfirmation(pulled){
+    const root=document.getElementById("trait-collection");if(!root)return;
+    const overlay=document.createElement("div");
+    overlay.className="trait-confirm-overlay";
+    overlay.innerHTML="<div class='trait-confirm-card rarity-"+rarityClass(pulled.rarity)+"' role='dialog' aria-modal='true' aria-labelledby='trait-confirm-title'><p class='prep-eyebrow'>RARE DISCOVERY · CONFIRM EQUIPMENT</p><div class='trait-art trait-art-large'><span>"+pulled.trait.icon+"</span></div><p class='trait-detail-rarity'>"+pulled.trait.rarity+"</p><h2 id='trait-confirm-title'>"+pulled.trait.name+"</h2><p>This "+pulled.rarity.toLowerCase()+" trait is now unlocked. Equip it as your active trait? Your current trait will be replaced.</p><div class='trait-confirm-actions'><button type='button' class='trait-confirm-keep'>KEEP CURRENT TRAIT</button><button type='button' class='trait-confirm-equip'>EQUIP NEW TRAIT</button></div></div>";
+    root.appendChild(overlay);
+    overlay.querySelector(".trait-confirm-keep").addEventListener("click",()=>overlay.remove());
+    overlay.querySelector(".trait-confirm-equip").addEventListener("click",()=>{
+      profile.equippedTrait=pulled.trait.id;
+      overlay.remove();
+      save();
+      window._riftboundLastTraitRoll=pulled;
+      renderTraits(true);
+    });
   }
   window.riftboundGetTraitState=()=>JSON.parse(JSON.stringify(profile.traits));
   window.riftboundRedeemTraitCode=function(code){
@@ -216,14 +231,14 @@
     const result=showLastRoll?(window._riftboundLastTraitRoll||null):null;
     window._riftboundLastTraitRoll=null;
     const resultMarkup=result?"<div class='trait-roll-result rarity-"+rarityClass(result.trait.rarity)+"'><div class='trait-art trait-art-result'><span>"+result.trait.icon+"</span></div><div><small>"+(result.duplicate?"DUPLICATE · +5 ROLLS · +4 NET":"NEW TRAIT DISCOVERED")+"</small><strong>"+result.trait.name+"</strong><em>"+result.trait.rarity+"</em></div><button type='button' data-result-details='"+result.trait.id+"'>VIEW DETAILS</button></div>":"";
-    root.innerHTML="<div class='trait-heading'><div><p class='prep-eyebrow'>THE RIFTBOUND TRAIT HALL</p><h2>TRAIT SUMMONING HALL</h2><p>Spend rolls to discover traits. Each discovery is permanent and can be equipped for future expeditions.</p></div><span>15 TRAITS · 5 RARITIES</span></div>"+
+    root.innerHTML="<div class='trait-heading'><div><p class='prep-eyebrow'>THE RIFTBOUND TRAIT HALL</p><h2>TRAIT SUMMONING HALL</h2><p>Spend a roll to discover a trait. Your new trait becomes active automatically.</p></div><span>15 TRAITS · 5 RARITIES</span></div>"+
       "<div class='trait-summon-layout'><section class='trait-summon-stage'><div class='trait-stage-top'><span>ACTIVE TRAIT</span><span>"+(locked?"EXPEDITION ACTIVE":"SANCTUM READY")+"</span></div><div class='trait-equipped-large rarity-"+rarityClass(equipped.rarity)+"'><div class='trait-art trait-art-equipped'><span>"+equipped.icon+"</span></div><div><small>EQUIPPED · "+equipped.rarity+"</small><h3>"+equipped.name+"</h3><p>"+equipped.description+"</p></div></div><div class='trait-summon-orbit'><div class='trait-orbit-ring ring-one'></div><div class='trait-orbit-ring ring-two'></div><div class='trait-orbit-core'><span>✧</span><small>RIFT<br>RESONANCE</small></div></div>"+resultMarkup+"<div class='trait-stage-actions'><button type='button' id='trait-index-open'>✧ OPEN TRAIT INDEX</button><span>Discoveries are permanent · Duplicates grant 5 rolls (4 net after the roll cost)</span></div></section>"+
       "<aside class='trait-roll-panel'><p class='prep-eyebrow'>SUMMONING RITES</p><h3>RIFT ROLLS</h3><div class='trait-roll-count'><strong>"+state.rolls+"</strong><span>AVAILABLE ROLLS</span></div><button type='button' id='trait-roll-button' "+(state.rolls<1||locked?"disabled":"")+">✦ SUMMON TRAIT · 1 ROLL</button><p class='trait-roll-lock'>"+(locked?"Trait rolls are unavailable during an expedition.":"A duplicate trait refunds 5 rolls (4 net rolls after the roll cost).")+"</p><div class='trait-pity-block'><div class='trait-pity-heading'><span>LEGENDARY PITY</span><strong>"+state.pityLegendary+" / 50</strong></div><div class='trait-pity-track'><i style='width:"+(state.pityLegendary/50*100)+"%'></i></div><small>Legendary or Mythic guaranteed by roll 50</small></div><div class='trait-pity-block mythic-pity'><div class='trait-pity-heading'><span>MYTHIC PITY</span><strong>"+state.pityMythic.toLocaleString()+" / 1,500</strong></div><div class='trait-pity-track'><i style='width:"+(state.pityMythic/1500*100)+"%'></i></div><small>Mythic guaranteed by roll 1,500</small></div><div class='trait-roll-total'><span>TOTAL ROLLS USED</span><strong>"+state.totalRolls.toLocaleString()+"</strong></div></aside></div>"+
       "<div id='trait-index-panel' class='trait-index-panel' hidden><div class='trait-index-heading'><div><p class='prep-eyebrow'>TRAIT ARCHIVE</p><h3>TRAIT INDEX</h3><p>Every trait, its rarity, and its exact chance per roll. Select any trait to inspect its effects and synergies.</p></div><button type='button' id='trait-index-close'>CLOSE INDEX</button></div><div class='trait-index-legend'>COMMON 55% · RARE 29.5% · EPIC 12% · LEGENDARY 3% · MYTHIC 0.5%</div><div class='trait-index-grid'>"+traitList.map(t=>"<button type='button' class='trait-index-card rarity-"+rarityClass(t.rarity)+"' data-trait-detail='"+t.id+"'><span class='trait-art trait-art-index'><span>"+t.icon+"</span></span><span class='trait-index-copy'><strong>"+t.name+"</strong><small>"+t.rarity+" · "+traitChance(t)+"</small><em>"+(traitOwned(t.id)>0?"OWNED":"UNDISCOVERED")+"</em></span><span class='trait-index-arrow'>›</span></button>").join("")+"</div></div>"+
       "<div id='trait-detail-overlay' class='trait-detail-overlay' hidden></div>";
     root.querySelector("#trait-index-open").addEventListener("click",()=>{root.querySelector("#trait-index-panel").hidden=false;root.querySelector("#trait-index-panel").scrollIntoView({behavior:"smooth",block:"start"});});
     root.querySelector("#trait-index-close").addEventListener("click",()=>{root.querySelector("#trait-index-panel").hidden=true;});
-    root.querySelector("#trait-roll-button").addEventListener("click",()=>{const pulled=rollTrait();if(!pulled)return;window._riftboundLastTraitRoll=pulled;renderTraits(true);});
+    root.querySelector("#trait-roll-button").addEventListener("click",()=>{const pulled=rollTrait();if(!pulled)return;window._riftboundLastTraitRoll=pulled;renderTraits(true);if(pulled.requiresConfirmation)showTraitEquipConfirmation(pulled);});
     root.querySelectorAll("[data-trait-detail]").forEach(button=>button.addEventListener("click",()=>openTraitDetail(button.dataset.traitDetail)));
     const details=root.querySelector("[data-result-details]");if(details)details.addEventListener("click",()=>openTraitDetail(details.dataset.resultDetails));
   }
