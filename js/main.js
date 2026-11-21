@@ -120,6 +120,7 @@
       if (!response.ok) throw new Error("Player profile could not be loaded.");
       const data = await response.json();
       if (data.progression && typeof window.loadRiftboundProgression === "function") window.loadRiftboundProgression(data.progression);
+      else if (typeof window.riftboundCloudSaveProfile === "function") window.riftboundCloudSaveProfile();
       return data;
     } catch (error) {
       console.warn("Could not load Riftbound player profile:", error);
