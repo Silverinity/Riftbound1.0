@@ -437,7 +437,7 @@ app.post("/api/traits/redeem", async (req, res) => {
     await client.query("COMMIT");
     return res.json({ ok: true, rollsGranted: rewards[code], message: "CODE ACCEPTED · +" + rewards[code] + " TRAIT ROLLS" });
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (client) await client.query("ROLLBACK").catch(() => {});
     console.error("Could not redeem trait code:", error.message);
     return res.status(503).json({ ok: false, error: "code-service-unavailable" });
   } finally {
