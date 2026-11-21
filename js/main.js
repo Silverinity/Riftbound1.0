@@ -28,39 +28,79 @@
 
   window.riftboundSettings = loadSettings();
 
-  // Main menu / Command Sanctum background music.
-  const menuMusic = new Audio("assets/audio/music/menu.mp3");
-  menuMusic.loop = true;
-  menuMusic.preload = "auto";
+  // Central audio manager. All tracks are local WAV files in assets/audio.
+  const musicTracks = {
+    menu: new Audio("assets/audio/music/menu.wav"),
+    battle: new Audio("assets/audio/music/battle.wav"),
+    boss: new Audio("assets/audio/music/boss.wav"),
+    campfire: new Audio("assets/audio/music/campfire.wav")
+  };
+  Object.values(musicTracks).forEach(track => {
+    track.loop = true;
+    track.preload = "auto";
+  });
+  const soundEffects = {
+    click: new Audio("assets/audio/sfx/ui-click.wav"),
+    build: new Audio("assets/audio/sfx/tower-build.wav"),
+    defeat: new Audio("assets/audio/sfx/enemy-defeat.wav"),
+    impact: new Audio("assets/audio/sfx/heavy-impact.wav"),
+    wave: new Audio("assets/audio/sfx/wave-start.wav")
+  };
+  let activeMusicName = "menu";
+  let audioUnlocked = false;
 
   function updateMusicVolume() {
     const settings = window.riftboundSettings || DEFAULT_SETTINGS;
-    menuMusic.volume = Math.max(0, Math.min(1,
+    const volume = Math.max(0, Math.min(1,
       (Number(settings.masterVolume) / 100) * (Number(settings.musicVolume) / 100)
     ));
+    Object.values(musicTracks).forEach(track => { track.volume = volume; });
+    Object.values(soundEffects).forEach(sound => {
+      sound.volume = Math.max(0, Math.min(1,
+        (Number(settings.masterVolume) / 100) * (Number(settings.sfxVolume) / 100)
+      ));
+    });
+    if (volume <= 0) Object.values(musicTracks).forEach(track => track.pause());
   }
 
-  function playMenuMusic() {
+  function setMusicTrack(name) {
+    if (!musicTracks[name]) return;
+    activeMusicName = name;
     updateMusicVolume();
-    if (menuMusic.volume <= 0) {
-      menuMusic.pause();
-      return;
-    }
-    if (menuMusic.paused) {
-      menuMusic.play().catch(error => {
-        // Browsers may block playback until the player interacts with the page.
-        console.info("Menu music will start after the next interaction:", error);
-      });
-    }
+    Object.entries(musicTracks).forEach(([key, track]) => {
+      if (key !== name) track.pause();
+    });
+    const selected = musicTracks[name];
+    if (selected.volume <= 0) return;
+    if (selected.paused) selected.play().catch(error => {
+      console.info("Riftbound music awaits a browser interaction:", error);
+    });
   }
 
+  function playMenuMusic() { setMusicTrack("menu"); }
   function stopMenuMusic() {
-    menuMusic.pause();
+    Object.values(musicTracks).forEach(track => track.pause());
   }
+  window.riftboundSetMusicTrack = setMusicTrack;
+  window.riftboundPlaySfx = function(name) {
+    const sound = soundEffects[name];
+    if (!sound) return;
+    const settings = window.riftboundSettings || DEFAULT_SETTINGS;
+    sound.volume = Math.max(0, Math.min(1,
+      (Number(settings.masterVolume) / 100) * (Number(settings.sfxVolume) / 100)
+    ));
+    if (sound.volume <= 0) return;
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+  };
 
   // Browsers require a user gesture before starting audio.
-  document.addEventListener("pointerdown", playMenuMusic, { once: true, capture: true });
-  document.addEventListener("keydown", playMenuMusic, { once: true, capture: true });
+  const unlockAudio = () => {
+    audioUnlocked = true;
+    setMusicTrack(activeMusicName);
+  };
+  document.addEventListener("pointerdown", unlockAudio, { once: true, capture: true });
+  document.addEventListener("keydown", unlockAudio, { once: true, capture: true });
 
   const byId = id => document.getElementById(id);
   const mainMenu = byId("main-menu");
@@ -330,6 +370,7 @@
         throw new Error("The game engine did not expose the new-run function.");
       }
       stopMenuMusic();
+      setMusicTrack("battle");
       window.startRiftboundNewRun();
       hideScreens();
       gameScreen.hidden = false;
