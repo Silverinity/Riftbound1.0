@@ -320,12 +320,15 @@
     settingsOverlay.hidden = false;
   });
   byId("close-settings").addEventListener("click", closeSettings);
-  byId("trait-code-redeem").addEventListener("click", () => {
-    const input=byId("trait-code-input"),status=byId("trait-code-status");
-    const result=window.riftboundRedeemTraitCode?.(input.value);
-    status.textContent=result?.message||"CODE SYSTEM UNAVAILABLE";
-    status.classList.toggle("code-success",!!result?.ok);
-    if(result?.ok)input.value="";
+  byId("trait-code-redeem").addEventListener("click", async () => {
+    const input=byId("trait-code-input"),status=byId("trait-code-status"),button=byId("trait-code-redeem");
+    button.disabled=true;status.textContent="CHECKING CODE...";
+    try{
+      const result=await window.riftboundRedeemTraitCode?.(input.value);
+      status.textContent=result?.message||"CODE SYSTEM UNAVAILABLE";
+      status.classList.toggle("code-success",!!result?.ok);
+      if(result?.ok)input.value="";
+    }finally{button.disabled=false;}
   });
   byId("save-settings").addEventListener("click", () => {
     window.riftboundSettings = readSettings();
