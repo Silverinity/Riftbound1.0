@@ -812,6 +812,7 @@ function startWave(automatic=false){
   if(!currentRun||currentRun.gameOver||currentRun.currentWave>=5)return;
   if(currentRun.waveActive&&!automatic)return;
   currentRun.currentWave++;
+  window.riftboundPlaySfx?.("wave");
   currentRun.waveActive=true;
   currentRun.waitingForWave=false;
   currentRun.waveStarted=true;
@@ -1401,6 +1402,7 @@ function handleBattlefieldClick(e){
   if(currentRun.gold<type.cost){showBattleMessage("NOT ENOUGH GOLD");return;}
   if(!canBuild(p.x,p.y)){showBattleMessage("THAT LOCATION IS BLOCKED — TRY ANOTHER OPEN AREA");return;}
   currentRun.gold-=type.cost;currentRun.stats.goldSpent+=type.cost;currentRun.towers.push({type:selectedTower,x:p.x,y:p.y,cooldown:0,level:1,investedGold:type.cost,upgrades:{damage:0,range:0,speed:0}});
+  window.riftboundPlaySfx?.("build");
   updateGameDisplay();persistRunCheckpoint("battle");showBattleMessage(type.name.toUpperCase()+" BUILT");
 }
 function selectTower(type){
