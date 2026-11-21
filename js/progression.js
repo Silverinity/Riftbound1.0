@@ -230,7 +230,7 @@
   window.riftboundRedeemTraitCode=async function(code){
     const normalized=String(code||"").trim().toUpperCase();
     if(!normalized)return {ok:false,message:"ENTER A CODE"};
-    const api=(window.RIFTBOUND_API_BASE||"").replace(/\\/$/,"");
+    const api=(window.RIFTBOUND_API_BASE||"").replace(/\/$/,"");
     if(!api)return {ok:false,message:"CODE REDEMPTION REQUIRES THE SERVER"};
     try{
       const response=await fetch(api+"/api/traits/redeem",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({code:normalized})});
