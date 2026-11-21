@@ -54,11 +54,12 @@ the session.
 - `GET /auth/discord/callback` — Discord OAuth2 callback
 - `GET /api/session` — check login and current Beta Tester role
 - `POST /auth/logout` — clear the login cookie
+- `POST /api/traits/redeem` — redeem a trait code once per Discord account
 - `GET /api/save` — load the signed-in player's cloud save
 - `PUT /api/save` — validate and update the signed-in player's cloud save
 - `DELETE /api/save` — delete the signed-in player's cloud save
 
-Saves are stored in PostgreSQL and keyed by the verified Discord user ID. The server validates the save structure and only accepts known tower, card, and settings fields.
+Saves are stored in PostgreSQL and keyed by the verified Discord user ID. Trait ownership, equipped trait, remaining rolls, pity counters, total rolls, and redeemed-code history are included in the validated progression save. A separate database uniqueness constraint prevents the same Discord account from redeeming the same code more than once.
 
 The frontend must call the API with credentials enabled when checking the
 session and logging out.
