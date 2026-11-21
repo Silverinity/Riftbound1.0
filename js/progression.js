@@ -195,25 +195,38 @@
     const duplicate=traitOwned(trait.id)>0;
     if(duplicate)profile.traits.rolls+=5;
     else profile.traits.owned[trait.id]=1;
-    const requiresConfirmation=rarity==="LEGENDARY"||rarity==="MYTHIC";
-    if(!requiresConfirmation)profile.equippedTrait=trait.id;
+    profile.equippedTrait=trait.id;
     save();
-    return {trait,duplicate,rarity,requiresConfirmation};
+    return {trait,duplicate,rarity};
   }
-  function showTraitEquipConfirmation(pulled){
-    const root=document.getElementById("trait-collection");if(!root)return;
+  function showProtectedTraitRollConfirmation(){
+    const current=getTrait();
+    const root=document.getElementById("trait-collection");
+    if(!root)return;
     const overlay=document.createElement("div");
     overlay.className="trait-confirm-overlay";
-    overlay.innerHTML="<div class='trait-confirm-card rarity-"+rarityClass(pulled.rarity)+"' role='dialog' aria-modal='true' aria-labelledby='trait-confirm-title'><p class='prep-eyebrow'>RARE DISCOVERY · CONFIRM EQUIPMENT</p><div class='trait-art trait-art-large'><span>"+pulled.trait.icon+"</span></div><p class='trait-detail-rarity'>"+pulled.trait.rarity+"</p><h2 id='trait-confirm-title'>"+pulled.trait.name+"</h2><p>This "+pulled.rarity.toLowerCase()+" trait is now unlocked. Equip it as your active trait? Your current trait will be replaced.</p><div class='trait-confirm-actions'><button type='button' class='trait-confirm-keep'>KEEP CURRENT TRAIT</button><button type='button' class='trait-confirm-equip'>EQUIP NEW TRAIT</button></div></div>";
+    overlay.innerHTML="<div class='trait-confirm-card rarity-"+rarityClass(current.rarity)+"' role='dialog' aria-modal='true' aria-labelledby='trait-confirm-title'><p class='prep-eyebrow'>IMPORTANT · ACTIVE TRAIT PROTECTED</p><div class='trait-art trait-art-large'><span>"+current.icon+"</span></div><p class='trait-detail-rarity'>"+current.rarity+" TRAIT EQUIPPED</p><h2 id='trait-confirm-title'>"+current.name+"</h2><p>Rolling again may replace this "+current.rarity.toLowerCase()+" trait with a lower-rarity trait. Do you want to spend a roll and risk replacing it?</p><div class='trait-confirm-actions'><button type='button' class='trait-confirm-keep'>CANCEL · KEEP TRAIT</button><button type='button' class='trait-confirm-equip'>CONFIRM ROLL</button></div></div>";
     root.appendChild(overlay);
     overlay.querySelector(".trait-confirm-keep").addEventListener("click",()=>overlay.remove());
     overlay.querySelector(".trait-confirm-equip").addEventListener("click",()=>{
-      profile.equippedTrait=pulled.trait.id;
       overlay.remove();
-      save();
-      window._riftboundLastTraitRoll=pulled;
-      renderTraits(true);
+      performTraitRoll();
     });
+  }
+  function performTraitRoll(){
+    const pulled=rollTrait();
+    if(!pulled)return;
+    window._riftboundLastTraitRoll=pulled;
+    renderTraits(true);
+  }
+  function requestTraitRoll(){
+    if(profile.traits.rolls<1||window.isRiftboundRunActive?.())return;
+    const rarity=getTrait().rarity;
+    if(rarity==="LEGENDARY"||rarity==="MYTHIC"){
+      showProtectedTraitRollConfirmation();
+      return;
+    }
+    performTraitRoll();
   }
   window.riftboundGetTraitState=()=>JSON.parse(JSON.stringify(profile.traits));
   window.riftboundRedeemTraitCode=function(code){
@@ -238,7 +251,7 @@
       "<div id='trait-detail-overlay' class='trait-detail-overlay' hidden></div>";
     root.querySelector("#trait-index-open").addEventListener("click",()=>{root.querySelector("#trait-index-panel").hidden=false;root.querySelector("#trait-index-panel").scrollIntoView({behavior:"smooth",block:"start"});});
     root.querySelector("#trait-index-close").addEventListener("click",()=>{root.querySelector("#trait-index-panel").hidden=true;});
-    root.querySelector("#trait-roll-button").addEventListener("click",()=>{const pulled=rollTrait();if(!pulled)return;window._riftboundLastTraitRoll=pulled;renderTraits(true);if(pulled.requiresConfirmation)showTraitEquipConfirmation(pulled);});
+    root.querySelector("#trait-roll-button").addEventListener("click",requestTraitRoll);
     root.querySelectorAll("[data-trait-detail]").forEach(button=>button.addEventListener("click",()=>openTraitDetail(button.dataset.traitDetail)));
     const details=root.querySelector("[data-result-details]");if(details)details.addEventListener("click",()=>openTraitDetail(details.dataset.resultDetails));
   }
