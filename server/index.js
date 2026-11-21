@@ -331,9 +331,25 @@ function cleanSave(body) {
     for (const key of settingKeys) if (Object.hasOwn(save.settings, key)) settings[key] = save.settings[key];
   }
   const classIds = ["warden", "arcanist", "huntmaster", "treasurer", "pyromancer", "necromancer"];
-  const traitIds = ["bulwarks-oath", "hawks-eye", "coin-scent", "frost-sigil", "ember-heart", "soul-conduit", "siege-savant", "rift-tactician", "golden-forge", "worldbreaker"];
+  const traitIds = ["bulwarks-oath", "hawks-eye", "coin-scent", "stonebound", "frost-sigil", "ember-heart", "soul-conduit", "siege-savant", "rift-tactician", "golden-forge", "ashen-covenant", "worldbreaker", "crown-of-embers", "eclipse-engine", "soul-of-the-kingdom"];
   const input = save.progression && typeof save.progression === "object" ? save.progression : {};
-  const progression = { equippedTrait: traitIds.includes(input.equippedTrait) ? input.equippedTrait : "bulwarks-oath", classes: {} };
+  const sourceTraits = input.traits && typeof input.traits === "object" ? input.traits : {};
+  const owned = {};
+  if (sourceTraits.owned && typeof sourceTraits.owned === "object") {
+    for (const [id, count] of Object.entries(sourceTraits.owned)) if (traitIds.includes(id) && Number.isFinite(Number(count)) && Number(count) > 0) owned[id] = 1;
+  }
+  const progression = {
+    equippedTrait: traitIds.includes(input.equippedTrait) ? input.equippedTrait : null,
+    traits: {
+      rolls: Number.isFinite(sourceTraits.rolls) ? Math.max(0, Math.min(1000000, Math.floor(sourceTraits.rolls))) : 0,
+      pityLegendary: Number.isFinite(sourceTraits.pityLegendary) ? Math.max(0, Math.min(49, Math.floor(sourceTraits.pityLegendary))) : 0,
+      pityMythic: Number.isFinite(sourceTraits.pityMythic) ? Math.max(0, Math.min(1499, Math.floor(sourceTraits.pityMythic))) : 0,
+      totalRolls: Number.isFinite(sourceTraits.totalRolls) ? Math.max(0, Math.min(100000000, Math.floor(sourceTraits.totalRolls))) : 0,
+      owned,
+      redeemedCodes: Array.isArray(sourceTraits.redeemedCodes) ? sourceTraits.redeemedCodes.filter(code => typeof code === "string").map(code => code.toUpperCase()).slice(0, 100) : []
+    },
+    classes: {}
+  };
   for (const id of classIds) {
     const source = input.classes?.[id] || {};
     const nodes = {};
@@ -364,7 +380,7 @@ app.get("/api/save", async (req, res) => {
     if (!result.rowCount) return res.json({ hasSave: false, save: { version: 1, run: null, settings: {}, progression: null } });
     const stored = result.rows[0].save_data || {};
     const save = { version: 1, run: null, settings: stored.settings || {}, progression: stored.progression || null };
-    return res.json({ hasSave: false, save, progression: save.progression, updatedAt: result.rows[0].updated_at });
+    return res.json({ hasSave: true, save, progression: save.progression, updatedAt: result.rows[0].updated_at });
   } catch (error) {
     console.error("Could not load player profile:", error.message);
     return res.status(503).json({ error: "save-service-unavailable" });
@@ -384,6 +400,41 @@ app.put("/api/save", async (req, res) => {
   } catch (error) {
     console.error("Could not store player save:", error.message);
     return res.status(503).json({ error: "save-service-unavailable" });
+  }
+});
+
+app.post("/api/traits/redeem", async (req, res) => {
+  const auth = await verifiedSaveUser(req);
+  if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error });
+  const code = typeof req.body?.code === "string" ? req.body.code.trim().toUpperCase() : "";
+  const rewards = { "RIFTBOUND-ROLLTEST": 100, "TESTING": 25 };
+  if (!Object.hasOwn(rewards, code)) return res.status(400).json({ ok: false, error: "invalid-code" });
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("INSERT INTO player_saves (discord_user_id, save_data) VALUES ($1, $2::jsonb) ON CONFLICT (discord_user_id) DO NOTHING", [auth.userId, JSON.stringify({ version: 1, run: null, settings: {}, progression: { equippedTrait: null, traits: { rolls: 0, pityLegendary: 0, pityMythic: 0, totalRolls: 0, owned: {}, redeemedCodes: [] }, classes: {} } })]);
+    const saveResult = await client.query("SELECT save_data FROM player_saves WHERE discord_user_id = $1 FOR UPDATE", [auth.userId]);
+    const inserted = await client.query("INSERT INTO redeemed_trait_codes (discord_user_id, code) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING code", [auth.userId, code]);
+    if (!inserted.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ ok: false, error: "code-already-redeemed" });
+    }
+    const stored = saveResult.rows[0].save_data || {};
+    const progression = stored.progression && typeof stored.progression === "object" ? stored.progression : {};
+    const traits = progression.traits && typeof progression.traits === "object" ? progression.traits : {};
+    traits.rolls = Math.max(0, Math.floor(Number(traits.rolls) || 0)) + rewards[code];
+    traits.redeemedCodes = [...new Set([...(Array.isArray(traits.redeemedCodes) ? traits.redeemedCodes : []), code])];
+    progression.traits = traits;
+    stored.progression = progression;
+    await client.query("UPDATE player_saves SET save_data = $2::jsonb, updated_at = NOW() WHERE discord_user_id = $1", [auth.userId, JSON.stringify(stored)]);
+    await client.query("COMMIT");
+    return res.json({ ok: true, rollsGranted: rewards[code], message: "CODE ACCEPTED · +" + rewards[code] + " TRAIT ROLLS" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Could not redeem trait code:", error.message);
+    return res.status(503).json({ ok: false, error: "code-service-unavailable" });
+  } finally {
+    client.release();
   }
 });
 
@@ -407,6 +458,7 @@ app.use((error, _req, res, _next) => {
 async function startServer() {
   try {
     await pool.query("CREATE TABLE IF NOT EXISTS player_saves (discord_user_id TEXT PRIMARY KEY, save_data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
+    await pool.query("CREATE TABLE IF NOT EXISTS redeemed_trait_codes (discord_user_id TEXT NOT NULL, code TEXT NOT NULL, redeemed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_user_id, code))");
     app.listen(PORT, () => {
       console.log(`Riftbound auth server listening on port ${PORT}`);
       console.log("Player save database is ready.");
