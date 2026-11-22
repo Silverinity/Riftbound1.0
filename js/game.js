@@ -239,6 +239,18 @@ function updateWeatherDisplay(){
   if(effect)effect.textContent=weather.description;
   if(panel)panel.dataset.weather=weather.id;
 }
+window.devRiftboundGetWeather=function(){return currentRun?.weather?.id||"clear";};
+window.devRiftboundSetWeather=function(id){
+  if(!currentRun||!weatherTypes[id])return false;
+  currentRun.weather={id,...weatherTypes[id]};
+  currentRun.weatherStormTimer=12+Math.random()*5;
+  currentRun.weatherLightning=null;
+  currentRun.towers.forEach(t=>{t.weatherDisabledTimer=0;});
+  updateWeatherDisplay();drawBattlefield();return true;
+};
+window.devRiftboundRerollWeather=function(){
+  if(!currentRun)return false;rollStageWeather();drawBattlefield();return currentRun.weather?.id||"clear";
+};
 function updateWeather(dt){
   if(!currentRun||currentRun.weather?.id!=="thunderstorm")return;
   currentRun.weatherStormTimer=(currentRun.weatherStormTimer??15)-dt;
