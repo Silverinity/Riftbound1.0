@@ -407,7 +407,7 @@ app.post("/api/traits/redeem", async (req, res) => {
   const auth = await verifiedSaveUser(req);
   if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error });
   const code = typeof req.body?.code === "string" ? req.body.code.trim().toUpperCase() : "";
-  const rewards = { "RIFTBOUND-ROLLTEST": 100, "TESTING": 25 };
+  const rewards = { "RIFTBOUND-ROLLTEST": 100, "TESTING": 25, "WEATHER": 15 };
   if (!Object.hasOwn(rewards, code)) return res.status(400).json({ ok: false, error: "invalid-code" });
   let client;
   try {
