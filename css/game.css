@@ -954,3 +954,5 @@ button { min-height: 42px; }
 .weather-display[data-weather="galeWinds"]{border-left-color:#8DB5C4;}
 .weather-display[data-weather="thunderstorm"]{border-left-color:#9BBCEB;}
 @media(max-width:750px){.weather-display{max-width:62vw;padding:6px 8px;gap:7px}.weather-display small{font-size:8px}.weather-icon{width:22px;height:22px;font-size:16px!important}}
+
+.battle-region .weather-icon{display:grid;margin:0!important;font-size:18px!important;letter-spacing:0!important;}
