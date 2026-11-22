@@ -216,6 +216,7 @@ const weatherAreaWeights = {
   2:{snow:.25,rain:.75,fog:.8,bloodRain:1.2,ashfall:2.2,plagueMist:1.25,galeWinds:1.1,thunderstorm:1.1,bloodEclipse:1.25},
   3:{snow:2.2,rain:.7,fog:1.2,bloodRain:.85,ashfall:.35,plagueMist:1,galeWinds:1.3,thunderstorm:1.05,bloodEclipse:1.2}
 };
+window.riftboundWeatherCodex={types:weatherTypes,chances:baseWeatherChances,areaWeights:weatherAreaWeights};
 function rollStageWeather(){
   if(!currentRun)return;
   const areaWeights=weatherAreaWeights[currentRun.area]||{};
