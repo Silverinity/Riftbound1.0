@@ -955,7 +955,7 @@ button { min-height: 42px; }
 .weather-display[data-weather="thunderstorm"]{border-left-color:#B7D8FF;}
 .weather-display[data-weather="cloudy"]{border-left-color:#B9C2D0;}
 .weather-announcement{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:20px;pointer-events:none;opacity:0;visibility:hidden;}
-.weather-announcement.is-active{animation:weather-announcement-life 1s cubic-bezier(.18,.78,.24,1) both;}
+.weather-announcement.is-active{animation:weather-announcement-life 2.5s cubic-bezier(.18,.78,.24,1) both;}
 .weather-announcement-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;width:min(520px,92vw);min-height:220px;padding:28px 36px;text-align:center;background:radial-gradient(ellipse at 50% 0%,rgba(121,83,153,.34),transparent 68%),linear-gradient(145deg,rgba(26,19,37,.98),rgba(10,9,17,.97));border:1px solid rgba(196,165,225,.72);box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 55px rgba(117,75,157,.38),inset 0 0 35px rgba(185,154,232,.08);clip-path:polygon(5% 0,95% 0,100% 12%,100% 88%,95% 100%,5% 100%,0 88%,0 12%);}
 .weather-announcement-kicker{color:#BBA9CC;font-size:10px;font-weight:800;letter-spacing:4px;}
 .weather-announcement-icon{font-size:46px;line-height:1.15;filter:drop-shadow(0 0 13px currentColor);}
@@ -965,7 +965,7 @@ button { min-height: 42px; }
 .weather-announcement[data-weather="rain"] .weather-announcement-panel,.weather-announcement[data-weather="lightRain"] .weather-announcement-panel{border-color:#82BCEB;}
 .weather-announcement[data-weather="bloodRain"] .weather-announcement-panel,.weather-announcement[data-weather="bloodEclipse"] .weather-announcement-panel{border-color:#D94D68;box-shadow:0 0 55px rgba(190,43,67,.3);}
 .weather-announcement[data-weather="ashfall"] .weather-announcement-panel{border-color:#F0925D;box-shadow:0 0 55px rgba(225,105,53,.25);}
-@keyframes weather-announcement-life{0%{opacity:0;visibility:visible;transform:scale(.82);filter:blur(9px)}18%{opacity:1;transform:scale(1.04);filter:blur(0)}28%{transform:scale(1)}76%{opacity:1;transform:scale(1)}100%{opacity:0;visibility:hidden;transform:scale(1.08);filter:blur(5px)}}
+@keyframes weather-announcement-life{0%{opacity:0;visibility:visible;transform:scale(.78);filter:blur(12px)}16%{opacity:1;transform:scale(1.045);filter:blur(0)}23%{transform:scale(1)}82%{opacity:1;transform:scale(1)}100%{opacity:0;visibility:hidden;transform:scale(1.09);filter:blur(6px)}}
 @media(max-width:750px){.weather-display{max-width:68vw;padding:8px 10px;gap:8px}.weather-display small{font-size:9px}.weather-icon{width:28px;height:28px;font-size:21px!important}.weather-announcement-panel{min-height:190px;padding:24px 18px}.weather-announcement-kicker{font-size:9px;letter-spacing:3px}.weather-announcement-icon{font-size:39px}.weather-announcement-effect{font-size:11px}}
 
 .battle-region .weather-icon{display:grid;margin:0!important;font-size:25px!important;letter-spacing:0!important;}
