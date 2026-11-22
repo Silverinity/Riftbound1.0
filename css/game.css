@@ -965,7 +965,7 @@ button { min-height: 42px; }
 .weather-announcement[data-weather="rain"] .weather-announcement-panel,.weather-announcement[data-weather="lightRain"] .weather-announcement-panel{border-color:#82BCEB;}
 .weather-announcement[data-weather="bloodRain"] .weather-announcement-panel,.weather-announcement[data-weather="bloodEclipse"] .weather-announcement-panel{border-color:#D94D68;box-shadow:0 0 55px rgba(190,43,67,.3);}
 .weather-announcement[data-weather="ashfall"] .weather-announcement-panel{border-color:#F0925D;box-shadow:0 0 55px rgba(225,105,53,.25);}
-@keyframes weather-announcement-life{0%{opacity:0;visibility:visible;transform:scale(.78);filter:blur(12px)}16%{opacity:1;transform:scale(1.045);filter:blur(0)}23%{transform:scale(1)}82%{opacity:1;transform:scale(1)}100%{opacity:0;visibility:hidden;transform:scale(1.09);filter:blur(6px)}}
+@keyframes weather-announcement-life{0%{opacity:0;visibility:visible;transform:scale(.92)}16%{opacity:1;transform:scale(1.025)}23%{transform:scale(1)}82%{opacity:1;transform:scale(1)}100%{opacity:0;visibility:hidden;transform:scale(1.04)}}
 @media(max-width:750px){.weather-display{max-width:68vw;padding:8px 10px;gap:8px}.weather-display small{font-size:9px}.weather-icon{width:28px;height:28px;font-size:21px!important}.weather-announcement-panel{min-height:190px;padding:24px 18px}.weather-announcement-kicker{font-size:9px;letter-spacing:3px}.weather-announcement-icon{font-size:39px}.weather-announcement-effect{font-size:11px}}
 
 .battle-region .weather-icon{display:grid;margin:0!important;font-size:25px!important;letter-spacing:0!important;}
