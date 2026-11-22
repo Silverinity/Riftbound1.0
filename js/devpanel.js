@@ -107,7 +107,7 @@
     if(!id){say("Could not roll stage weather.");return;}
     syncWeatherControls();say("Randomized this stage's weather: "+$("dev-weather-current").textContent.replace("Current weather: ","")+".");
   });
-  $("dev-weather").addEventListener("change",syncWeatherControls);
+  // Preserve the chosen dropdown value until APPLY WEATHER is clicked.
 
   $("dev-pause").addEventListener("click",()=>{if(!active())return;stopGameLoop();say("Game loop paused. Use Resume Game to continue.");});
   $("dev-resume").addEventListener("click",()=>{if(!active())return;if($("card-overlay").hidden&&$("progress-overlay").hidden&&$("result-overlay").hidden)startGameLoop();say("Game loop resumed.");});
