@@ -89,6 +89,25 @@
   $("dev-all-cards").addEventListener("click",()=>{if(!active())return;["arrows","arcane","siege","greed","walls"].forEach(id=>{currentRun.cards.push(id);if(id==="walls"){currentRun.maxCastleHealth+=20;currentRun.castleHealth+=20;}});currentRun.castleHealth=Math.min(currentRun.castleHealth,currentRun.maxCastleHealth);refresh();say("Added one stack of every card, including the wall bonus.");});
   $("dev-trigger-boss").addEventListener("click",()=>{if(!active())return;jumpProgress(3,2,3);currentRun.encounter={id:"frost-wyrm",name:"The Frost Wyrm",kind:"BOSS",bossId:"frost-wyrm"};currentRun.currentWave=4;startWave(false);startGameLoop();say("Started a Frost Wyrm boss test.");});
 
+  function syncWeatherControls(){
+    const id=window.devRiftboundGetWeather?.()||"clear";
+    $("dev-weather").value=id;
+    $("dev-weather-current").textContent="Current weather: "+id.replace(/([A-Z])/g," $1").toUpperCase();
+  }
+  $("dev-apply-weather").addEventListener("click",()=>{
+    if(!active())return;
+    const id=$("dev-weather").value;
+    if(!window.devRiftboundSetWeather?.(id)){say("Could not apply the selected weather.");return;}
+    syncWeatherControls();say("Applied "+$("dev-weather-current").textContent.replace("Current weather: ","")+" to this stage.");
+  });
+  $("dev-reroll-weather").addEventListener("click",()=>{
+    if(!active())return;
+    const id=window.devRiftboundRerollWeather?.();
+    if(!id){say("Could not roll stage weather.");return;}
+    syncWeatherControls();say("Randomized this stage's weather: "+$("dev-weather-current").textContent.replace("Current weather: ","")+".");
+  });
+  $("dev-weather").addEventListener("change",syncWeatherControls);
+
   $("dev-pause").addEventListener("click",()=>{if(!active())return;stopGameLoop();say("Game loop paused. Use Resume Game to continue.");});
   $("dev-resume").addEventListener("click",()=>{if(!active())return;if($("card-overlay").hidden&&$("progress-overlay").hidden&&$("result-overlay").hidden)startGameLoop();say("Game loop resumed.");});
   $("dev-add-class-xp").addEventListener("click",()=>{
