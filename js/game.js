@@ -187,6 +187,127 @@ const destinationPools = [
     {id:"riftbound-knight",name:"The Riftbound Knight",kind:"BOSS",bossId:"riftbound-knight",icon:"✦",description:"A fallen champion guards the path to the final realm.",reward:"+Boss gold · bonus class XP"}
   ]
 ];
+
+// Stage weather: each stage rolls one persistent condition. All modifiers are
+// applied to derived stats or incoming damage, never repeatedly to base values.
+const weatherTypes = {
+  clear:{name:"Clear",icon:"☀",description:"No gameplay modifiers."},
+  cloudy:{name:"Cloudy",icon:"☁",description:"No gameplay modifiers."},
+  lightRain:{name:"Light Rain",icon:"🌦",description:"No gameplay modifiers."},
+  snow:{name:"Snow",icon:"❄",description:"Tower cooldowns increased by 12%."},
+  rain:{name:"Rain",icon:"🌧",description:"Enemy movement speed increased by 10%."},
+  bloodRain:{name:"Blood Rain",icon:"🩸",description:"Enemy HP increased by 15%."},
+  fog:{name:"Fog",icon:"🌫",description:"Tower range reduced by 15%."},
+  ashfall:{name:"Ashfall",icon:"♨",description:"Tower damage reduced by 10%."},
+  plagueMist:{name:"Plague Mist",icon:"☣",description:"Fortress receives 10% more damage from enemies."},
+  galeWinds:{name:"Gale Winds",icon:"〰",description:"Projectile tower attack speed reduced by 10%."},
+  thunderstorm:{name:"Thunderstorm",icon:"⚡",description:"Lightning periodically disables a random tower."},
+  bloodEclipse:{name:"Blood Eclipse",icon:"◉",description:"Enemies gain 15% HP and 10% movement speed."}
+};
+const baseWeatherChances = [
+  {id:"clear",chance:27},{id:"cloudy",chance:3},{id:"lightRain",chance:3},
+  {id:"snow",chance:12},{id:"rain",chance:12},{id:"fog",chance:10},
+  {id:"bloodRain",chance:8},{id:"ashfall",chance:8},{id:"plagueMist",chance:6},
+  {id:"galeWinds",chance:5},{id:"thunderstorm",chance:4},{id:"bloodEclipse",chance:2}
+];
+// Region multipliers bias the roll without removing any weather from a region.
+const weatherAreaWeights = {
+  1:{snow:.65,rain:1.35,fog:1.3,bloodRain:.9,ashfall:.55,plagueMist:1.1,galeWinds:1,thunderstorm:.9,bloodEclipse:.8},
+  2:{snow:.25,rain:.75,fog:.8,bloodRain:1.2,ashfall:2.2,plagueMist:1.25,galeWinds:1.1,thunderstorm:1.1,bloodEclipse:1.25},
+  3:{snow:2.2,rain:.7,fog:1.2,bloodRain:.85,ashfall:.35,plagueMist:1,galeWinds:1.3,thunderstorm:1.05,bloodEclipse:1.2}
+};
+function rollStageWeather(){
+  if(!currentRun)return;
+  const areaWeights=weatherAreaWeights[currentRun.area]||{};
+  const weighted=baseWeatherChances.map(entry=>({...entry,weight:entry.chance*(areaWeights[entry.id]??1)}));
+  const total=weighted.reduce((sum,entry)=>sum+entry.weight,0);
+  let roll=Math.random()*total;
+  const selected=weighted.find(entry=>(roll-=entry.weight)<=0)||weighted[0];
+  currentRun.weather=weatherTypes[selected.id]?{id:selected.id,...weatherTypes[selected.id]}:{id:"clear",...weatherTypes.clear};
+  currentRun.weatherStormTimer=12+Math.random()*5;
+  currentRun.weatherLightning=null;
+  updateWeatherDisplay();
+}
+function updateWeatherDisplay(){
+  const weather=currentRun?.weather||weatherTypes.clear;
+  const icon=document.getElementById("weather-icon");
+  const name=document.getElementById("weather-name");
+  const effect=document.getElementById("weather-effect");
+  const panel=document.getElementById("weather-display");
+  if(icon)icon.textContent=weather.icon;
+  if(name)name.textContent=weather.name.toUpperCase();
+  if(effect)effect.textContent=weather.description;
+  if(panel)panel.dataset.weather=weather.id;
+}
+function updateWeather(dt){
+  if(!currentRun||currentRun.weather?.id!=="thunderstorm")return;
+  currentRun.weatherStormTimer=(currentRun.weatherStormTimer??15)-dt;
+  if(currentRun.weatherStormTimer>0)return;
+  const available=currentRun.towers.filter(t=>(t.weatherDisabledTimer||0)<=0);
+  currentRun.weatherStormTimer=13+Math.random()*8;
+  if(!available.length)return;
+  const tower=available[Math.floor(Math.random()*available.length)];
+  tower.weatherDisabledTimer=3.5;
+  tower.archerAnimation=null;tower.arcaneAnimation=null;tower.cannonAnimation=null;
+  currentRun.weatherLightning={x:tower.x,y:tower.y,timer:.55};
+  showBattleMessage("THUNDERSTORM · "+towerTypes[tower.type].name.toUpperCase()+" DISABLED");
+}
+function drawWeatherEffects(){
+  if(!currentRun?.weather)return;
+  const id=currentRun.weather.id,now=performance.now()/1000;
+  if(id==="clear")return;
+  ctx.save();
+  if(id==="fog"||id==="plagueMist"){
+    const fogColor=id==="fog"?"rgba(190,196,205,":"rgba(119,139,105,";
+    for(let i=0;i<5;i++){
+      const x=((i*237+now*8*(i%2?1:-1))%1160)-100;
+      const y=75+i*91+Math.sin(now*.22+i)*22;
+      const gradient=ctx.createRadialGradient(x,y,8,x,y,190);
+      gradient.addColorStop(0,fogColor+(id==="fog"?.15:.13)+")");
+      gradient.addColorStop(1,fogColor+"0)");
+      ctx.fillStyle=gradient;ctx.fillRect(0,0,960,540);
+    }
+  }else if(id==="bloodEclipse"){
+    ctx.fillStyle="rgba(35,5,16,.24)";ctx.fillRect(0,0,960,540);
+    ctx.fillStyle="rgba(112,12,32,.20)";ctx.beginPath();ctx.arc(780,75,56,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="rgba(22,8,20,.88)";ctx.beginPath();ctx.arc(795,67,43,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="rgba(183,42,65,.55)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(780,75,56,0,Math.PI*2);ctx.stroke();
+  }else{
+    const count=id==="snow"?62:id==="ashfall"?48:72;
+    for(let i=0;i<count;i++){
+      const seed=i*97.31;
+      const drift=id==="galeWinds"?1.9:id==="snow"?.35:.9;
+      const x=((seed+now*(id==="galeWinds"?155: id==="snow"?24: id==="ashfall"?34:115)*drift)%1080)-60;
+      const y=(seed*2.7+now*(id==="snow"?35:id==="ashfall"?24:210))%590-25;
+      if(id==="snow"){
+        ctx.fillStyle="rgba(235,242,255,.72)";ctx.beginPath();ctx.arc(x,y,1.2+(i%4)*.35,0,Math.PI*2);ctx.fill();
+      }else if(id==="ashfall"){
+        ctx.fillStyle=i%4===0?"rgba(255,132,67,.7)":"rgba(40,31,29,.72)";
+        ctx.beginPath();ctx.arc(x,y,1+(i%3)*.45,0,Math.PI*2);ctx.fill();
+      }else{
+        ctx.strokeStyle=id==="bloodRain"?"rgba(174,35,53,.72)":id==="lightRain"?"rgba(195,210,224,.48)":"rgba(145,171,195,.58)";
+        ctx.lineWidth=id==="bloodRain"?1.5:1;
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-3,y+10+(id==="galeWinds"?5:0));ctx.stroke();
+      }
+    }
+    if(id==="rain"||id==="bloodRain"||id==="lightRain"||id==="galeWinds"){
+      ctx.fillStyle=id==="bloodRain"?"rgba(70,5,17,.09)":"rgba(12,22,35,.07)";ctx.fillRect(0,0,960,540);
+    }
+  }
+  if(id==="thunderstorm"){
+    ctx.fillStyle="rgba(12,18,31,.15)";ctx.fillRect(0,0,960,540);
+    const strike=currentRun.weatherLightning;
+    if(strike&&strike.timer>0){
+      const alpha=Math.min(1,strike.timer/.55);
+      ctx.globalAlpha=alpha;
+      ctx.strokeStyle="#E8F4FF";ctx.lineWidth=4;ctx.shadowColor="#A9D8FF";ctx.shadowBlur=22;
+      ctx.beginPath();ctx.moveTo(strike.x-18,0);ctx.lineTo(strike.x+8,62);ctx.lineTo(strike.x-7,105);ctx.lineTo(strike.x,strike.y);ctx.stroke();
+      ctx.fillStyle="rgba(170,215,255,.35)";ctx.beginPath();ctx.arc(strike.x,strike.y,35,0,Math.PI*2);ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 const towerTypes = {
   archer:{name:"Archer Tower",cost:50,damage:10,range:120,fireRate:1,color:"#B99AE8",projectileSpeed:330,upgradeCost:65},
   arcane:{name:"Wizard Tower",cost:100,damage:34,range:112,fireRate:.8,color:"#75B8E8",projectileSpeed:280,upgradeCost:90},
@@ -246,12 +367,12 @@ function createNewRun(){
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
     encounter:{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},defeatedBosses:[],
     stats:{damageDealt:0,damageTaken:0,goldSpent:0,enemiesKilled:0,wavesCompleted:0,bossesDefeated:0},
-    devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],
+    devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],weather:null,weatherStormTimer:15,weatherLightning:null,
     abilityCooldown:0,bastionTimer:0,markedEnemy:null,markedTimer:0,abilityEffects:[]
   };
 }
 function startNewRun(){
-  stopGameLoop();currentRun=createNewRun();selectedTower=null;selectedTowerEntity=null;
+  stopGameLoop();currentRun=createNewRun();rollStageWeather();selectedTower=null;selectedTowerEntity=null;
   persistRunCheckpoint("battle");
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
   updateAreaLabels();
@@ -295,6 +416,7 @@ function updateGameDisplay(){
   const progress=document.getElementById("progress-summary");if(progress)progress.textContent="AREA "+currentRun.area+" · CAMPSITE "+currentRun.campsite+"/2 · STAGE "+currentRun.stage+"/3";
   const start=document.getElementById("start-wave");if(start)start.disabled=currentRun.waveActive||currentRun.gameOver||currentRun.currentWave>=5;
   updateCommanderHud();
+  updateWeatherDisplay();
   updateTowerButtons();updateTowerPanel();
 }
 const TOWER_LIMIT_PER_TYPE=5;
@@ -334,16 +456,21 @@ function getTowerStats(t){
   if(t.type==="archer")damage*=1+(trait.archerDamage||0);
   damage*=1+(trait.towerDamage||0);
   range*=1+(trait.towerRange||0);
+  if(currentRun.weather?.id==="fog")range*=.85;
   fireRate*=1+(trait.towerSpeed||0);
   if(t.type==="cannon")damage*=1+(trait.cannonDamage||0)+(bonuses.areaDamage||0);
   if(currentRun.castleHealth>currentRun.maxCastleHealth*.5)damage*=1+(bonuses.healthyDamage||0);
   if(currentRun.castleHealth<currentRun.maxCastleHealth*.35)fireRate*=1+(bonuses.lowHealthSpeed||0);
   fireRate*=1+(bonuses.towerSpeed||0);
   cooldown=1/fireRate;
+  if(currentRun.weather?.id==="snow")cooldown*=1.12;
+  if(currentRun.weather?.id==="galeWinds")cooldown*=1/.9;
+  fireRate=1/cooldown;
   if(t.type==="archer")damage+=currentRun.cards.filter(c=>c==="arrows").length*5;
   if(t.type==="arcane")damage+=currentRun.cards.filter(c=>c==="arcane").length*10;
   if(t.type==="cannon")range+=currentRun.cards.filter(c=>c==="siege").length*25;
   damage+=currentRun.towerDamageBonus;
+  if(currentRun.weather?.id==="ashfall")damage*=.9;
   return {...base,damage,range,fireRate,cooldown};
 }
 function environmentPalette(){
@@ -375,6 +502,7 @@ function drawBattlefield(){
   drawProjectiles();
   drawSpectralAllies();
   drawCommanderEffects();
+  drawWeatherEffects();
   drawPlacementPreview();
 }
 function drawGroundTexture(){
@@ -1044,9 +1172,10 @@ function spawnEnemy(type,waveNumber){
   const healthScale=areaData().enemyScale*(1+progression*.022+progression*progression*.00012);
   const damageScale=1+progression*.012+progression*progression*.00005;
   const speedScale=1+progression*.002;
-  const health=d.health*healthScale*(d.boss?1.12:1);
+  let health=d.health*healthScale*(d.boss?1.12:1);
+  if(currentRun.weather?.id==="bloodRain"||currentRun.weather?.id==="bloodEclipse")health*=1.15;
   const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
-  const enemy={type,name:d.name,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale,isBoss:!!d.boss};
+  const enemy={type,name:d.name,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale*(currentRun.weather?.id==="rain"||currentRun.weather?.id==="bloodEclipse"?1.1:1),isBoss:!!d.boss};
 
   currentRun.enemies.push(enemy);
 }
@@ -1107,7 +1236,7 @@ function updateEnemies(dt){
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
-    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1)*(currentRun.kingdomWardTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=Math.min(currentRun.castleHealth,incomingDamage);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0&&!trySoulKingdomRevival())endGame();return false;}return e.health>0;
+    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1)*(currentRun.kingdomWardTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);if(currentRun.weather?.id==="plagueMist")incomingDamage*=1.1;currentRun.stats.damageTaken+=Math.min(currentRun.castleHealth,incomingDamage);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0&&!trySoulKingdomRevival())endGame();return false;}return e.health>0;
   });
 }
 function getEnemyDamageMultiplier(target){
@@ -1184,6 +1313,7 @@ function updateTowers(dt){
       }
       if(anim.elapsed>=cannonAnimation.attack.frames/cannonAnimation.attack.fps)t.cannonAnimation=null;
     }
+    if(t.weatherDisabledTimer>0){t.weatherDisabledTimer=Math.max(0,t.weatherDisabledTimer-dt);return;}
     const s=getTowerStats(t);t.cooldown-=dt;if(t.cooldown>0)return;
     let target=null,best=-1;
     const marked=currentRun.markedTimer>0?currentRun.markedEnemy:null;
@@ -1526,6 +1656,7 @@ function arriveAtCampfire(completedWaves){
   currentRun.area=pendingDestinationProgress.area;
   currentRun.campsite=pendingDestinationProgress.campsite;
   currentRun.stage=pendingDestinationProgress.stage;
+  rollStageWeather();
   if(node)currentRun.encounter={id:node.id,name:node.name,kind:node.kind,bossId:null};
   if(currentRun.area!==previousArea)relocateTowersForCurrentArea();
   currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];
@@ -1543,7 +1674,7 @@ function chooseDestination(id,completedWaves){
   const node=pendingDestinationChoices.find(choice=>choice.id===id);
   if(!node||!pendingDestinationProgress)return;
   const previousArea=currentRun.area;
-  currentRun.area=pendingDestinationProgress.area;currentRun.campsite=pendingDestinationProgress.campsite;currentRun.stage=pendingDestinationProgress.stage;
+  currentRun.area=pendingDestinationProgress.area;currentRun.campsite=pendingDestinationProgress.campsite;currentRun.stage=pendingDestinationProgress.stage;rollStageWeather();
   currentRun.encounter={id:node.id,name:node.name,kind:node.kind,bossId:node.bossId||null};
   if(currentRun.skillBonuses?.stageGold)currentRun.gold+=currentRun.skillBonuses.stageGold;
   if(currentRun.skillBonuses?.stageHeal)currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+currentRun.skillBonuses.stageHeal);
@@ -1567,6 +1698,8 @@ function gameLoop(timestamp){
   const dt=rawDt*(currentRun.devGameSpeed||1);
   lastFrameTime=timestamp;
   updateCommanderAbilityState(dt);
+  updateWeather(dt);
+  if(currentRun.weatherLightning){currentRun.weatherLightning.timer-=dt;if(currentRun.weatherLightning.timer<=0)currentRun.weatherLightning=null;}
   // Tower attack animations must finish even between waves. Only enemy and
   // projectile simulation is paused when no wave is active.
   updateTowers(dt);
