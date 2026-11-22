@@ -538,8 +538,8 @@ function drawCastle(){
   }else if(fallback.complete&&fallback.naturalWidth>0){
     ctx.drawImage(fallback,drawX,drawY,displaySize,displaySize);
   }else{
-  
-  ctx.fillStyle="rgba(5,5,9,.42)";
+    ctx.save();
+    ctx.fillStyle="rgba(5,5,9,.42)";
   ctx.beginPath();ctx.ellipse(896,316,54,13,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#20202B";ctx.fillRect(850,296,91,29);
   ctx.fillStyle="#51485F";ctx.fillRect(855,230,82,76);
