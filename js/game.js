@@ -239,7 +239,6 @@ function updateWeatherDisplay(){
   if(name)name.textContent=weather.name.toUpperCase();
   if(effect)effect.textContent=weather.description;
   if(panel)panel.dataset.weather=weather.id;
-  showWeatherAnnouncement(weather);
 }
 function showWeatherAnnouncement(weather){
   const overlay=document.getElementById("weather-announcement");
@@ -1203,6 +1202,7 @@ function createWaveQueue(wave){
 function startWave(automatic=false){
   if(!currentRun||currentRun.gameOver||currentRun.currentWave>=5)return;
   if(currentRun.waveActive&&!automatic)return;
+  if(!automatic)showWeatherAnnouncement(currentRun.weather||weatherTypes.clear);
   currentRun.currentWave++;
   window.riftboundPlaySfx?.("wave");
   currentRun.waveActive=true;
