@@ -295,7 +295,62 @@
     byId("card-overlay").hidden = true;
   }
 
+  let selectedCodexWeather = "clear";
+
+  function renderWeatherCodex() {
+    const catalog = window.riftboundWeatherCodex;
+    const list = byId("weather-codex-list");
+    const emblem = byId("weather-codex-emblem");
+    const icon = byId("weather-codex-icon");
+    const details = byId("weather-codex-details");
+    if (!catalog || !list || !emblem || !icon || !details) return;
+
+    const entries = catalog.chances.map(entry => ({
+      ...entry,
+      weather: catalog.types[entry.id]
+    })).filter(entry => entry.weather);
+    if (!entries.some(entry => entry.id === selectedCodexWeather)) selectedCodexWeather = entries[0]?.id || "clear";
+
+    list.innerHTML = entries.map((entry, index) =>
+      '<button class="weather-codex-entry' + (entry.id === selectedCodexWeather ? ' active' : '') +
+      '" type="button" data-weather-entry="' + entry.id + '" aria-pressed="' + (entry.id === selectedCodexWeather) + '">' +
+      '<span class="weather-codex-entry-number">' + String(index + 1).padStart(2, "0") + '</span>' +
+      '<span>' + entry.weather.name.toUpperCase() + '</span><span class="weather-codex-entry-arrow">›</span></button>'
+    ).join("");
+
+    const selected = entries.find(entry => entry.id === selectedCodexWeather) || entries[0];
+    if (!selected) return;
+    const weights = catalog.areaWeights || {};
+    const regionNames = ["VERDANT WOODS", "ASHEN WASTES", "FROSTBOUND KINGDOM"];
+    const regionalChances = [1, 2, 3].map(area => {
+      const areaWeights = weights[area] || {};
+      const total = catalog.chances.reduce((sum, item) => sum + item.chance * (areaWeights[item.id] ?? 1), 0);
+      const chance = selected.chance * (areaWeights[selected.id] ?? 1) / total * 100;
+      return { name: regionNames[area - 1], chance };
+    });
+    emblem.dataset.weather = selected.id;
+    icon.textContent = selected.weather.icon;
+    details.innerHTML =
+      '<p class="weather-codex-kicker">WEATHER CONDITION · ' + String(entries.indexOf(selected) + 1).padStart(2, "0") + ' / ' + String(entries.length).padStart(2, "0") + '</p>' +
+      '<h2>' + selected.weather.name.toUpperCase() + '</h2>' +
+      '<p class="weather-codex-description">' + selected.weather.description + '</p>' +
+      '<div class="weather-codex-chance-block"><span class="weather-codex-section-label">APPEARANCE CHANCE</span>' +
+      '<strong class="weather-codex-base-chance">' + selected.chance.toFixed(1).replace(".0", "") + '% <small>BASE CHANCE</small></strong>' +
+      '<div class="weather-codex-region-chances">' + regionalChances.map(region =>
+        '<div><span>' + region.name + '</span><strong>' + region.chance.toFixed(2) + '%</strong></div>'
+      ).join("") + '</div></div>' +
+      '<div class="weather-codex-effect-block"><span class="weather-codex-section-label">EXACT STAGE EFFECT</span><p>' + selected.weather.description + '</p></div>';
+
+    list.querySelectorAll("[data-weather-entry]").forEach(button => {
+      button.addEventListener("click", () => {
+        selectedCodexWeather = button.dataset.weatherEntry;
+        renderWeatherCodex();
+      });
+    });
+  }
+
   function showHubView(view) {
+    if(view==="weather")renderWeatherCodex();
     if(view==="commanders")window.renderRiftboundCommanders?.();
     if(view==="traits")window.renderRiftboundTraits?.();
     document.querySelectorAll(".hub-view").forEach(section => {

@@ -32,3 +32,10 @@
 .developer-panel input:focus,.developer-panel select:focus,.developer-panel button:focus-visible{outline:2px solid #B99AE8;outline-offset:2px}
 #dev-test-campfire{width:100%;min-height:36px;background:linear-gradient(100deg,#49335F,#302044);border-color:#A887CF;color:#F1E7FF}
 #dev-test-campfire:hover{background:#62447F}
+
+/* Stage weather controls in the developer panel */
+.dev-weather-section .dev-input-row{align-items:stretch;flex-direction:column;gap:8px;}
+.dev-weather-section select{width:100%;max-width:none;min-height:38px;font-size:12px;}
+.dev-weather-section #dev-apply-weather{width:100%;min-height:36px;background:#382746;border-color:#A887CF;color:#F0E5FF;}
+.dev-weather-section #dev-reroll-weather{width:100%;background:linear-gradient(100deg,#49335F,#302044);border-color:#A887CF;}
+.dev-weather-current{margin:8px 0 0;padding:8px 10px;background:rgba(168,135,207,.09);border-left:2px solid #A887CF;color:#DCC9F0;font-size:10px;letter-spacing:.7px;}

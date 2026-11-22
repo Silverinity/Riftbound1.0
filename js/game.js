@@ -29,6 +29,24 @@ Object.entries(areaBackgrounds).forEach(([area, source]) => {
   backgroundImages[area] = image;
 });
 
+// Fortress artwork: an 8-frame, 160x160 transparent idle loop.
+// The standalone PNG is retained as a fallback while the sheet loads or if it fails.
+const fortressAnimation = {
+  frameWidth: 160,
+  frameHeight: 160,
+  frames: 8,
+  fps: 8,
+  displaySize: 128,
+  image: new Image(),
+  fallback: new Image()
+};
+fortressAnimation.image.onload = () => { if (currentRun) drawBattlefield(); };
+fortressAnimation.image.onerror = () => console.warn("Riftbound fortress animation could not be loaded.");
+fortressAnimation.fallback.onload = () => { if (currentRun) drawBattlefield(); };
+fortressAnimation.fallback.onerror = () => console.warn("Riftbound fortress fallback image could not be loaded.");
+fortressAnimation.image.src = "assets/fortress/fortress-animation.png";
+fortressAnimation.fallback.src = "assets/fortress/fortress.png";
+
 // Pixel-art tower sprites. Missing files safely fall back to the original canvas drawings.
 const towerSpritePaths = {
   archer: "assets/towers/archer.png",
@@ -169,6 +187,173 @@ const destinationPools = [
     {id:"riftbound-knight",name:"The Riftbound Knight",kind:"BOSS",bossId:"riftbound-knight",icon:"✦",description:"A fallen champion guards the path to the final realm.",reward:"+Boss gold · bonus class XP"}
   ]
 ];
+
+// Stage weather: each stage rolls one persistent condition. All modifiers are
+// applied to derived stats or incoming damage, never repeatedly to base values.
+const weatherTypes = {
+  clear:{name:"Clear",icon:"☀",description:"No gameplay modifiers."},
+  cloudy:{name:"Cloudy",icon:"☁",description:"No gameplay modifiers."},
+  lightRain:{name:"Light Rain",icon:"🌦",description:"No gameplay modifiers."},
+  snow:{name:"Snow",icon:"❄",description:"All towers attack 12% more slowly because their cooldowns are 12% longer."},
+  rain:{name:"Rain",icon:"🌧",description:"All enemies move 10% faster."},
+  bloodRain:{name:"Blood Rain",icon:"🩸",description:"All enemies spawn with 15% more health."},
+  fog:{name:"Fog",icon:"🌫",description:"All towers have 15% less attack range."},
+  ashfall:{name:"Ashfall",icon:"♨",description:"All towers deal 10% less damage."},
+  plagueMist:{name:"Plague Mist",icon:"☣",description:"The fortress takes 10% more damage whenever an enemy reaches it."},
+  galeWinds:{name:"Gale Winds",icon:"〰",description:"All towers attack 10% more slowly because their cooldowns are increased."},
+  thunderstorm:{name:"Thunderstorm",icon:"⚡",description:"Every 13–21 seconds, lightning disables one random tower for 3.5 seconds."},
+  bloodEclipse:{name:"Blood Eclipse",icon:"◉",description:"All enemies spawn with 15% more health and move 10% faster."}
+};
+const baseWeatherChances = [
+  {id:"clear",chance:27},{id:"cloudy",chance:3},{id:"lightRain",chance:3},
+  {id:"snow",chance:12},{id:"rain",chance:12},{id:"fog",chance:10},
+  {id:"bloodRain",chance:8},{id:"ashfall",chance:8},{id:"plagueMist",chance:6},
+  {id:"galeWinds",chance:5},{id:"thunderstorm",chance:4},{id:"bloodEclipse",chance:2}
+];
+// Region multipliers bias the roll without removing any weather from a region.
+const weatherAreaWeights = {
+  1:{snow:.65,rain:1.35,fog:1.3,bloodRain:.9,ashfall:.55,plagueMist:1.1,galeWinds:1,thunderstorm:.9,bloodEclipse:.8},
+  2:{snow:.25,rain:.75,fog:.8,bloodRain:1.2,ashfall:2.2,plagueMist:1.25,galeWinds:1.1,thunderstorm:1.1,bloodEclipse:1.25},
+  3:{snow:2.2,rain:.7,fog:1.2,bloodRain:.85,ashfall:.35,plagueMist:1,galeWinds:1.3,thunderstorm:1.05,bloodEclipse:1.2}
+};
+window.riftboundWeatherCodex={types:weatherTypes,chances:baseWeatherChances,areaWeights:weatherAreaWeights};
+function rollStageWeather(){
+  if(!currentRun)return;
+  const areaWeights=weatherAreaWeights[currentRun.area]||{};
+  const weighted=baseWeatherChances.map(entry=>({...entry,weight:entry.chance*(areaWeights[entry.id]??1)}));
+  const total=weighted.reduce((sum,entry)=>sum+entry.weight,0);
+  let roll=Math.random()*total;
+  const selected=weighted.find(entry=>(roll-=entry.weight)<=0)||weighted[0];
+  currentRun.weather=weatherTypes[selected.id]?{id:selected.id,...weatherTypes[selected.id]}:{id:"clear",...weatherTypes.clear};
+  currentRun.weatherStormTimer=12+Math.random()*5;
+  currentRun.weatherLightning=null;
+  updateWeatherDisplay();
+}
+function updateWeatherDisplay(){
+  const weather=currentRun?.weather||weatherTypes.clear;
+  const icon=document.getElementById("weather-icon");
+  const name=document.getElementById("weather-name");
+  const effect=document.getElementById("weather-effect");
+  const panel=document.getElementById("weather-display");
+  if(icon)icon.textContent=weather.icon;
+  if(name)name.textContent=weather.name.toUpperCase();
+  if(effect)effect.textContent=weather.description;
+  if(panel)panel.dataset.weather=weather.id;
+  showWeatherAnnouncement(weather);
+}
+function showWeatherAnnouncement(weather){
+  const overlay=document.getElementById("weather-announcement");
+  const icon=document.getElementById("weather-announcement-icon");
+  const name=document.getElementById("weather-announcement-name");
+  const effect=document.getElementById("weather-announcement-effect");
+  if(!overlay)return;
+  if(icon)icon.textContent=weather.icon||"";
+  if(name)name.textContent=(weather.name||"WEATHER").toUpperCase();
+  if(effect)effect.textContent=weather.description||"";
+  overlay.dataset.weather=weather.id||"clear";
+  overlay.classList.remove("is-active");
+  void overlay.offsetWidth;
+  overlay.classList.add("is-active");
+}
+window.devRiftboundGetWeather=function(){return currentRun?.weather?.id||"clear";};
+window.devRiftboundSetWeather=function(id){
+  if(!currentRun||!weatherTypes[id])return false;
+  currentRun.weather={id,...weatherTypes[id]};
+  currentRun.weatherStormTimer=12+Math.random()*5;
+  currentRun.weatherLightning=null;
+  currentRun.towers.forEach(t=>{t.weatherDisabledTimer=0;});
+  updateWeatherDisplay();drawBattlefield();return true;
+};
+window.devRiftboundRerollWeather=function(){
+  if(!currentRun)return false;rollStageWeather();drawBattlefield();return currentRun.weather?.id||"clear";
+};
+function updateWeather(dt){
+  if(!currentRun||currentRun.weather?.id!=="thunderstorm")return;
+  currentRun.weatherStormTimer=(currentRun.weatherStormTimer??15)-dt;
+  if(currentRun.weatherStormTimer>0)return;
+  const available=currentRun.towers.filter(t=>(t.weatherDisabledTimer||0)<=0);
+  currentRun.weatherStormTimer=13+Math.random()*8;
+  if(!available.length)return;
+  const tower=available[Math.floor(Math.random()*available.length)];
+  tower.weatherDisabledTimer=3.5;
+  tower.archerAnimation=null;tower.arcaneAnimation=null;tower.cannonAnimation=null;
+  currentRun.weatherLightning={x:tower.x,y:tower.y,timer:.55};
+  showBattleMessage("THUNDERSTORM · "+towerTypes[tower.type].name.toUpperCase()+" DISABLED");
+}
+function drawWeatherEffects(){
+  if(!currentRun?.weather)return;
+  const id=currentRun.weather.id,now=performance.now()/1000;
+  if(id==="clear")return;
+  ctx.save();
+  if(id==="cloudy"){
+    ctx.fillStyle="rgba(18,23,35,.24)";ctx.fillRect(0,0,960,540);
+    for(let i=0;i<6;i++){
+      const x=((i*217+now*8)%1260)-150,y=42+i*31;
+      const gradient=ctx.createRadialGradient(x,y,10,x,y,215);
+      gradient.addColorStop(0,"rgba(185,194,207,.34)");gradient.addColorStop(.55,"rgba(130,143,161,.15)");gradient.addColorStop(1,"rgba(130,143,161,0)");
+      ctx.fillStyle=gradient;ctx.fillRect(0,0,960,300);
+    }
+  }else if(id==="fog"||id==="plagueMist"){
+    const fogColor=id==="fog"?"rgba(205,216,226,":"rgba(139,164,111,";
+    ctx.fillStyle=id==="fog"?"rgba(183,199,211,.10)":"rgba(91,119,70,.12)";
+    ctx.fillRect(0,0,960,540);
+    for(let i=0;i<8;i++){
+      const x=((i*197+now*11*(i%2?1:-1))%1320)-180;
+      const y=45+i*67+Math.sin(now*.3+i)*28;
+      const gradient=ctx.createRadialGradient(x,y,5,x,y,235);
+      gradient.addColorStop(0,fogColor+(id==="fog"?.28:.25)+")");
+      gradient.addColorStop(.55,fogColor+(id==="fog"?.13:.12)+")");
+      gradient.addColorStop(1,fogColor+"0)");
+      ctx.fillStyle=gradient;ctx.fillRect(0,0,960,540);
+    }
+  }else if(id==="bloodEclipse"){
+    ctx.fillStyle="rgba(35,5,16,.32)";ctx.fillRect(0,0,960,540);
+    const pulse=.5+Math.sin(now*1.8)*.12;
+    ctx.fillStyle="rgba(112,12,32,.28)";ctx.beginPath();ctx.arc(780,75,68,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="rgba(22,8,20,.90)";ctx.beginPath();ctx.arc(795,67,48,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="rgba(220,54,78,.75)";ctx.lineWidth=5;ctx.beginPath();ctx.arc(780,75,60+pulse*8,0,Math.PI*2);ctx.stroke();
+  }else{
+    const count=id==="snow"?100:id==="ashfall"?92:id==="lightRain"?105:id==="galeWinds"?76:112;
+    for(let i=0;i<count;i++){
+      const seed=i*97.31;
+      const drift=id==="galeWinds"?2.3:id==="snow"?.42:.95;
+      const x=((seed+now*(id==="galeWinds"?185:id==="snow"?30:id==="ashfall"?43:145)*drift)%1120)-80;
+      const y=(seed*2.7+now*(id==="snow"?43:id==="ashfall"?31:245))%610-35;
+      if(id==="snow"){
+        ctx.fillStyle="rgba(248,252,255,.92)";ctx.shadowColor="#D8ECFF";ctx.shadowBlur=5;
+        ctx.beginPath();ctx.arc(x,y,1.8+(i%5)*.48,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+      }else if(id==="ashfall"){
+        ctx.fillStyle=i%3===0?"rgba(255,151,79,.95)":"rgba(65,49,43,.88)";
+        if(i%3===0){ctx.shadowColor="#FF7B3D";ctx.shadowBlur=7;}
+        ctx.beginPath();ctx.arc(x,y,1.7+(i%4)*.55,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+      }else if(id==="galeWinds"){
+        ctx.strokeStyle="rgba(220,237,245,.82)";ctx.lineWidth=1.8;
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+30,y-5);ctx.stroke();
+      }else{
+        ctx.strokeStyle=id==="bloodRain"?"rgba(207,43,65,.88)":id==="lightRain"?"rgba(220,235,248,.78)":"rgba(165,199,226,.82)";
+        ctx.lineWidth=id==="bloodRain"?2.2:id==="lightRain"?1.6:1.8;
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-(id==="lightRain"?2:5),y+(id==="lightRain"?13:16));ctx.stroke();
+      }
+    }
+    if(id==="rain"||id==="bloodRain"||id==="lightRain"||id==="galeWinds"){
+      ctx.fillStyle=id==="bloodRain"?"rgba(70,5,17,.15)":id==="lightRain"?"rgba(24,39,56,.035)":"rgba(12,22,35,.11)";
+      ctx.fillRect(0,0,960,540);
+    }
+  }
+  if(id==="thunderstorm"){
+    ctx.fillStyle="rgba(12,18,31,.23)";ctx.fillRect(0,0,960,540);
+    const strike=currentRun.weatherLightning;
+    if(strike&&strike.timer>0){
+      const alpha=Math.min(1,strike.timer/.55);
+      ctx.globalAlpha=alpha;
+      ctx.strokeStyle="#E8F4FF";ctx.lineWidth=5;ctx.shadowColor="#A9D8FF";ctx.shadowBlur=28;
+      ctx.beginPath();ctx.moveTo(strike.x-18,0);ctx.lineTo(strike.x+8,62);ctx.lineTo(strike.x-7,105);ctx.lineTo(strike.x,strike.y);ctx.stroke();
+      ctx.fillStyle="rgba(170,215,255,.48)";ctx.beginPath();ctx.arc(strike.x,strike.y,44,0,Math.PI*2);ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 const towerTypes = {
   archer:{name:"Archer Tower",cost:50,damage:10,range:120,fireRate:1,color:"#B99AE8",projectileSpeed:330,upgradeCost:65},
   arcane:{name:"Wizard Tower",cost:100,damage:34,range:112,fireRate:.8,color:"#75B8E8",projectileSpeed:280,upgradeCost:90},
@@ -228,12 +413,12 @@ function createNewRun(){
     towerDamageBonus:0,cards:[],nextWaveTimer:0,waitingForWave:false,runFinished:false,
     encounter:{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},defeatedBosses:[],
     stats:{damageDealt:0,damageTaken:0,goldSpent:0,enemiesKilled:0,wavesCompleted:0,bossesDefeated:0},
-    devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],
+    devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],weather:null,weatherStormTimer:15,weatherLightning:null,
     abilityCooldown:0,bastionTimer:0,markedEnemy:null,markedTimer:0,abilityEffects:[]
   };
 }
 function startNewRun(){
-  stopGameLoop();currentRun=createNewRun();selectedTower=null;selectedTowerEntity=null;
+  stopGameLoop();currentRun=createNewRun();rollStageWeather();selectedTower=null;selectedTowerEntity=null;
   persistRunCheckpoint("battle");
   document.querySelectorAll(".tower-button").forEach(b=>b.classList.remove("selected"));
   updateAreaLabels();
@@ -277,6 +462,7 @@ function updateGameDisplay(){
   const progress=document.getElementById("progress-summary");if(progress)progress.textContent="AREA "+currentRun.area+" · CAMPSITE "+currentRun.campsite+"/2 · STAGE "+currentRun.stage+"/3";
   const start=document.getElementById("start-wave");if(start)start.disabled=currentRun.waveActive||currentRun.gameOver||currentRun.currentWave>=5;
   updateCommanderHud();
+  updateWeatherDisplay();
   updateTowerButtons();updateTowerPanel();
 }
 const TOWER_LIMIT_PER_TYPE=5;
@@ -322,10 +508,15 @@ function getTowerStats(t){
   if(currentRun.castleHealth<currentRun.maxCastleHealth*.35)fireRate*=1+(bonuses.lowHealthSpeed||0);
   fireRate*=1+(bonuses.towerSpeed||0);
   cooldown=1/fireRate;
+  if(currentRun.weather?.id==="snow")cooldown*=1.12;
+  if(currentRun.weather?.id==="galeWinds")cooldown*=1/.9;
+  fireRate=1/cooldown;
   if(t.type==="archer")damage+=currentRun.cards.filter(c=>c==="arrows").length*5;
   if(t.type==="arcane")damage+=currentRun.cards.filter(c=>c==="arcane").length*10;
   if(t.type==="cannon")range+=currentRun.cards.filter(c=>c==="siege").length*25;
+  if(currentRun.weather?.id==="fog")range*=.85;
   damage+=currentRun.towerDamageBonus;
+  if(currentRun.weather?.id==="ashfall")damage*=.9;
   return {...base,damage,range,fireRate,cooldown};
 }
 function environmentPalette(){
@@ -357,6 +548,7 @@ function drawBattlefield(){
   drawProjectiles();
   drawSpectralAllies();
   drawCommanderEffects();
+  drawWeatherEffects();
   drawPlacementPreview();
 }
 function drawGroundTexture(){
@@ -507,9 +699,21 @@ function drawPortal(){
   ctx.fillStyle="#21102F";ctx.beginPath();ctx.ellipse(75,270,18,31,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#B99AE8";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(75,270,15,27,0,0,Math.PI*2);ctx.stroke();
 }
 function drawCastle(){
-  // Ground shadow and stone foundation.
-  ctx.save();
-  ctx.fillStyle="rgba(5,5,9,.42)";
+  // Prefer the animated sprite sheet, then the static PNG, and finally
+  // the original canvas castle so the fortress is always visible.
+  const sheet=fortressAnimation.image;
+  const fallback=fortressAnimation.fallback;
+  const displaySize=fortressAnimation.displaySize;
+  const drawX=896-displaySize/2;
+  const drawY=270-displaySize/2+16;
+  if(sheet.complete&&sheet.naturalWidth>=fortressAnimation.frameWidth*fortressAnimation.frames&&sheet.naturalHeight>=fortressAnimation.frameHeight){
+    const frame=Math.floor(performance.now()/1000*fortressAnimation.fps)%fortressAnimation.frames;
+    ctx.drawImage(sheet,frame*fortressAnimation.frameWidth,0,fortressAnimation.frameWidth,fortressAnimation.frameHeight,drawX,drawY,displaySize,displaySize);
+  }else if(fallback.complete&&fallback.naturalWidth>0){
+    ctx.drawImage(fallback,drawX,drawY,displaySize,displaySize);
+  }else{
+    ctx.save();
+    ctx.fillStyle="rgba(5,5,9,.42)";
   ctx.beginPath();ctx.ellipse(896,316,54,13,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#20202B";ctx.fillRect(850,296,91,29);
   ctx.fillStyle="#51485F";ctx.fillRect(855,230,82,76);
@@ -554,6 +758,8 @@ function drawCastle(){
   ctx.fillStyle="rgba(185,154,232,.22)";
   ctx.fillRect(858,224,11,2);ctx.fillRect(922,224,11,2);
   ctx.restore();
+
+  }
   if(currentRun.revivalAnimation>0){
     const progress=1-currentRun.revivalAnimation/2.4;
     const pulse=1+Math.sin(performance.now()/75)*.12;
@@ -612,6 +818,16 @@ function drawTowers(){
     }else{
       ctx.fillStyle="#241932";ctx.fillRect(t.x-16,t.y-16,32,32);ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.strokeRect(t.x-16,t.y-16,32,32);
       ctx.fillStyle=s.color;ctx.fillRect(t.x-8,t.y-8,16,16);ctx.fillStyle="#E5DDF0";ctx.fillRect(t.x-3,t.y-3,6,6);
+    }
+    if(t.weatherDisabledTimer>0){
+      ctx.save();
+      ctx.fillStyle="rgba(8,15,29,.58)";ctx.fillRect(t.x-22,t.y-42,44,48);
+      ctx.strokeStyle="#B9DFFF";ctx.fillStyle="#E5F4FF";ctx.lineWidth=2.5;
+      ctx.shadowColor="#79BFFF";ctx.shadowBlur=12;
+      ctx.beginPath();ctx.moveTo(t.x+3,t.y-35);ctx.lineTo(t.x-7,t.y-19);ctx.lineTo(t.x+1,t.y-19);
+      ctx.lineTo(t.x-4,t.y-5);ctx.lineTo(t.x+10,t.y-24);ctx.lineTo(t.x+2,t.y-24);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.shadowBlur=0;ctx.font="bold 7px Georgia";ctx.textAlign="center";ctx.fillStyle="#D9EDFF";
+      ctx.fillText("DISABLED",t.x,t.y+16);ctx.restore();
     }
     if(t.level>1){
       ctx.fillStyle="#F0D58A";ctx.font="bold 11px Georgia";ctx.textAlign="center";
@@ -948,7 +1164,8 @@ function drawCommanderEffects(){
 function drawPlacementPreview(){
   if(!pointerWorld||!currentRun||!selectedTower)return;
   const s=towerTypes[selectedTower];const valid=canBuild(pointerWorld.x,pointerWorld.y,false);
-  const range=s.range*(selectedTower==="cannon"?Math.pow(1.25,currentRun.cards.filter(c=>c==="siege").length):1);
+  let range=s.range*(selectedTower==="cannon"?Math.pow(1.25,currentRun.cards.filter(c=>c==="siege").length):1);
+  if(currentRun.weather?.id==="fog")range*=.85;
   ctx.beginPath();ctx.arc(pointerWorld.x,pointerWorld.y,range,0,Math.PI*2);ctx.fillStyle=valid?"rgba(185,154,232,.09)":"rgba(214,107,117,.09)";ctx.fill();
   ctx.strokeStyle=valid?"rgba(185,154,232,.65)":"rgba(214,107,117,.8)";ctx.lineWidth=2;ctx.stroke();
   ctx.globalAlpha=.65;ctx.fillStyle=valid?s.color:"#D66B75";ctx.fillRect(pointerWorld.x-14,pointerWorld.y-14,28,28);ctx.globalAlpha=1;
@@ -1012,9 +1229,10 @@ function spawnEnemy(type,waveNumber){
   const healthScale=areaData().enemyScale*(1+progression*.022+progression*progression*.00012);
   const damageScale=1+progression*.012+progression*progression*.00005;
   const speedScale=1+progression*.002;
-  const health=d.health*healthScale*(d.boss?1.12:1);
+  let health=d.health*healthScale*(d.boss?1.12:1);
+  if(currentRun.weather?.id==="bloodRain"||currentRun.weather?.id==="bloodEclipse")health*=1.15;
   const trait=typeof window.getRiftboundTraitEffects==="function"?getRunTraitEffects():{};
-  const enemy={type,name:d.name,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale,isBoss:!!d.boss};
+  const enemy={type,name:d.name,x:getPathPoints()[0].x,y:getPathPoints()[0].y,health,maxHealth:health,progress:0,reward:d.reward,damage:d.damage*damageScale,speed:d.speed*speedScale*(currentRun.weather?.id==="rain"||currentRun.weather?.id==="bloodEclipse"?1.1:1),isBoss:!!d.boss};
 
   currentRun.enemies.push(enemy);
 }
@@ -1075,7 +1293,7 @@ function updateEnemies(dt){
     const p=getPathPosition(e.progress);e.x=p.x;e.y=p.y;
   });
   currentRun.enemies=currentRun.enemies.filter(e=>{
-    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1)*(currentRun.kingdomWardTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);currentRun.stats.damageTaken+=Math.min(currentRun.castleHealth,incomingDamage);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0&&!trySoulKingdomRevival())endGame();return false;}return e.health>0;
+    if(e.progress>=1){if(!currentRun.devInvincible){const bonuses=currentRun.skillBonuses||{};let incomingDamage=e.damage*(currentRun.bastionTimer>0?.5:1)*(currentRun.kingdomWardTimer>0?.5:1);if(e.isBoss)incomingDamage*=1-(bonuses.bossReduction||0);if(getRunCommanderId()==="warden")incomingDamage*=1-(bonuses.damageReduction||0);if(currentRun.weather?.id==="plagueMist")incomingDamage*=1.1;currentRun.stats.damageTaken+=Math.min(currentRun.castleHealth,incomingDamage);currentRun.castleHealth=Math.max(0,currentRun.castleHealth-incomingDamage);}updateGameDisplay();if(currentRun.castleHealth<=0&&!trySoulKingdomRevival())endGame();return false;}return e.health>0;
   });
 }
 function getEnemyDamageMultiplier(target){
@@ -1152,6 +1370,7 @@ function updateTowers(dt){
       }
       if(anim.elapsed>=cannonAnimation.attack.frames/cannonAnimation.attack.fps)t.cannonAnimation=null;
     }
+    if(t.weatherDisabledTimer>0){t.weatherDisabledTimer=Math.max(0,t.weatherDisabledTimer-dt);return;}
     const s=getTowerStats(t);t.cooldown-=dt;if(t.cooldown>0)return;
     let target=null,best=-1;
     const marked=currentRun.markedTimer>0?currentRun.markedEnemy:null;
@@ -1494,6 +1713,7 @@ function arriveAtCampfire(completedWaves){
   currentRun.area=pendingDestinationProgress.area;
   currentRun.campsite=pendingDestinationProgress.campsite;
   currentRun.stage=pendingDestinationProgress.stage;
+  rollStageWeather();
   if(node)currentRun.encounter={id:node.id,name:node.name,kind:node.kind,bossId:null};
   if(currentRun.area!==previousArea)relocateTowersForCurrentArea();
   currentRun.currentWave=0;currentRun.enemies=[];currentRun.projectiles=[];currentRun.spawnBatches=[];
@@ -1511,7 +1731,7 @@ function chooseDestination(id,completedWaves){
   const node=pendingDestinationChoices.find(choice=>choice.id===id);
   if(!node||!pendingDestinationProgress)return;
   const previousArea=currentRun.area;
-  currentRun.area=pendingDestinationProgress.area;currentRun.campsite=pendingDestinationProgress.campsite;currentRun.stage=pendingDestinationProgress.stage;
+  currentRun.area=pendingDestinationProgress.area;currentRun.campsite=pendingDestinationProgress.campsite;currentRun.stage=pendingDestinationProgress.stage;rollStageWeather();
   currentRun.encounter={id:node.id,name:node.name,kind:node.kind,bossId:node.bossId||null};
   if(currentRun.skillBonuses?.stageGold)currentRun.gold+=currentRun.skillBonuses.stageGold;
   if(currentRun.skillBonuses?.stageHeal)currentRun.castleHealth=Math.min(currentRun.maxCastleHealth,currentRun.castleHealth+currentRun.skillBonuses.stageHeal);
@@ -1535,9 +1755,13 @@ function gameLoop(timestamp){
   const dt=rawDt*(currentRun.devGameSpeed||1);
   lastFrameTime=timestamp;
   updateCommanderAbilityState(dt);
+  updateWeather(dt);
+  if(currentRun.weatherLightning){currentRun.weatherLightning.timer-=dt;if(currentRun.weatherLightning.timer<=0)currentRun.weatherLightning=null;}
+  // Tower attack animations must finish even between waves. Only enemy and
+  // projectile simulation is paused when no wave is active.
+  updateTowers(dt);
   if(currentRun.waveActive){
     updateEnemies(dt);
-    updateTowers(dt);
     updateProjectiles(dt);
     updateSpectralAllies(dt);
     if(currentRun.currentWave<5){
@@ -1568,7 +1792,12 @@ function isOnPath(x,y){
 function isValidTowerSpot(x,y,ignoreTower=null){
   if(!Number.isFinite(x)||!Number.isFinite(y))return false;
   if(x<42||x>918||y<42||y>498||isOnPath(x,y)||Math.hypot(x-75,y-270)<68||(x>824&&y>194&&y<346))return false;
-  if(getTreePositions().some(([tx,ty])=>Math.hypot(x-tx,y-ty)<43))return false;
+  // Procedural tree coordinates are only visible on the fallback canvas map.
+  // Illustrated backgrounds have their own scenery, so hidden fallback trees
+  // must not create invisible tower-placement blockers.
+  const background=backgroundImages[currentRun.area];
+  const hasIllustratedBackground=!!(background&&background.complete&&background.naturalWidth>0);
+  if(!hasIllustratedBackground&&getTreePositions().some(([tx,ty])=>Math.hypot(x-tx,y-ty)<43))return false;
   if(currentRun.towers.some(t=>t!==ignoreTower&&Math.hypot(x-t.x,y-t.y)<44))return false;
   return true;
 }
