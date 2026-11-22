@@ -194,15 +194,15 @@ const weatherTypes = {
   clear:{name:"Clear",icon:"☀",description:"No gameplay modifiers."},
   cloudy:{name:"Cloudy",icon:"☁",description:"No gameplay modifiers."},
   lightRain:{name:"Light Rain",icon:"🌦",description:"No gameplay modifiers."},
-  snow:{name:"Snow",icon:"❄",description:"Tower cooldowns increased by 12%."},
-  rain:{name:"Rain",icon:"🌧",description:"Enemy movement speed increased by 10%."},
-  bloodRain:{name:"Blood Rain",icon:"🩸",description:"Enemy HP increased by 15%."},
-  fog:{name:"Fog",icon:"🌫",description:"Tower range reduced by 15%."},
-  ashfall:{name:"Ashfall",icon:"♨",description:"Tower damage reduced by 10%."},
-  plagueMist:{name:"Plague Mist",icon:"☣",description:"Fortress receives 10% more damage from enemies."},
-  galeWinds:{name:"Gale Winds",icon:"〰",description:"Projectile tower attack speed reduced by 10%."},
-  thunderstorm:{name:"Thunderstorm",icon:"⚡",description:"Lightning periodically disables a random tower."},
-  bloodEclipse:{name:"Blood Eclipse",icon:"◉",description:"Enemies gain 15% HP and 10% movement speed."}
+  snow:{name:"Snow",icon:"❄",description:"All towers attack 12% more slowly because their cooldowns are 12% longer."},
+  rain:{name:"Rain",icon:"🌧",description:"All enemies move 10% faster."},
+  bloodRain:{name:"Blood Rain",icon:"🩸",description:"All enemies spawn with 15% more health."},
+  fog:{name:"Fog",icon:"🌫",description:"All towers have 15% less attack range."},
+  ashfall:{name:"Ashfall",icon:"♨",description:"All towers deal 10% less damage."},
+  plagueMist:{name:"Plague Mist",icon:"☣",description:"The fortress takes 10% more damage whenever an enemy reaches it."},
+  galeWinds:{name:"Gale Winds",icon:"〰",description:"All towers attack 10% more slowly because their cooldowns are increased."},
+  thunderstorm:{name:"Thunderstorm",icon:"⚡",description:"Every 13–21 seconds, lightning disables one random tower for 3.5 seconds."},
+  bloodEclipse:{name:"Blood Eclipse",icon:"◉",description:"All enemies spawn with 15% more health and move 10% faster."}
 };
 const baseWeatherChances = [
   {id:"clear",chance:27},{id:"cloudy",chance:3},{id:"lightRain",chance:3},
