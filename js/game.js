@@ -1535,9 +1535,11 @@ function gameLoop(timestamp){
   const dt=rawDt*(currentRun.devGameSpeed||1);
   lastFrameTime=timestamp;
   updateCommanderAbilityState(dt);
+  // Tower attack animations must finish even between waves. Only enemy and
+  // projectile simulation is paused when no wave is active.
+  updateTowers(dt);
   if(currentRun.waveActive){
     updateEnemies(dt);
-    updateTowers(dt);
     updateProjectiles(dt);
     updateSpectralAllies(dt);
     if(currentRun.currentWave<5){
@@ -1568,7 +1570,12 @@ function isOnPath(x,y){
 function isValidTowerSpot(x,y,ignoreTower=null){
   if(!Number.isFinite(x)||!Number.isFinite(y))return false;
   if(x<42||x>918||y<42||y>498||isOnPath(x,y)||Math.hypot(x-75,y-270)<68||(x>824&&y>194&&y<346))return false;
-  if(getTreePositions().some(([tx,ty])=>Math.hypot(x-tx,y-ty)<43))return false;
+  // Procedural tree coordinates are only visible on the fallback canvas map.
+  // Illustrated backgrounds have their own scenery, so hidden fallback trees
+  // must not create invisible tower-placement blockers.
+  const background=backgroundImages[currentRun.area];
+  const hasIllustratedBackground=!!(background&&background.complete&&background.naturalWidth>0);
+  if(!hasIllustratedBackground&&getTreePositions().some(([tx,ty])=>Math.hypot(x-tx,y-ty)<43))return false;
   if(currentRun.towers.some(t=>t!==ignoreTower&&Math.hypot(x-t.x,y-t.y)<44))return false;
   return true;
 }
