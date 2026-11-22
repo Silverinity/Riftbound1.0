@@ -467,7 +467,6 @@ function getTowerStats(t){
   if(t.type==="archer")damage*=1+(trait.archerDamage||0);
   damage*=1+(trait.towerDamage||0);
   range*=1+(trait.towerRange||0);
-  if(currentRun.weather?.id==="fog")range*=.85;
   fireRate*=1+(trait.towerSpeed||0);
   if(t.type==="cannon")damage*=1+(trait.cannonDamage||0)+(bonuses.areaDamage||0);
   if(currentRun.castleHealth>currentRun.maxCastleHealth*.5)damage*=1+(bonuses.healthyDamage||0);
@@ -480,6 +479,7 @@ function getTowerStats(t){
   if(t.type==="archer")damage+=currentRun.cards.filter(c=>c==="arrows").length*5;
   if(t.type==="arcane")damage+=currentRun.cards.filter(c=>c==="arcane").length*10;
   if(t.type==="cannon")range+=currentRun.cards.filter(c=>c==="siege").length*25;
+  if(currentRun.weather?.id==="fog")range*=.85;
   damage+=currentRun.towerDamageBonus;
   if(currentRun.weather?.id==="ashfall")damage*=.9;
   return {...base,damage,range,fireRate,cooldown};
@@ -1129,7 +1129,8 @@ function drawCommanderEffects(){
 function drawPlacementPreview(){
   if(!pointerWorld||!currentRun||!selectedTower)return;
   const s=towerTypes[selectedTower];const valid=canBuild(pointerWorld.x,pointerWorld.y,false);
-  const range=s.range*(selectedTower==="cannon"?Math.pow(1.25,currentRun.cards.filter(c=>c==="siege").length):1);
+  let range=s.range*(selectedTower==="cannon"?Math.pow(1.25,currentRun.cards.filter(c=>c==="siege").length):1);
+  if(currentRun.weather?.id==="fog")range*=.85;
   ctx.beginPath();ctx.arc(pointerWorld.x,pointerWorld.y,range,0,Math.PI*2);ctx.fillStyle=valid?"rgba(185,154,232,.09)":"rgba(214,107,117,.09)";ctx.fill();
   ctx.strokeStyle=valid?"rgba(185,154,232,.65)":"rgba(214,107,117,.8)";ctx.lineWidth=2;ctx.stroke();
   ctx.globalAlpha=.65;ctx.fillStyle=valid?s.color:"#D66B75";ctx.fillRect(pointerWorld.x-14,pointerWorld.y-14,28,28);ctx.globalAlpha=1;
