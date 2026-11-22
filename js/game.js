@@ -29,6 +29,24 @@ Object.entries(areaBackgrounds).forEach(([area, source]) => {
   backgroundImages[area] = image;
 });
 
+// Fortress artwork: an 8-frame, 160x160 transparent idle loop.
+// The standalone PNG is retained as a fallback while the sheet loads or if it fails.
+const fortressAnimation = {
+  frameWidth: 160,
+  frameHeight: 160,
+  frames: 8,
+  fps: 8,
+  displaySize: 128,
+  image: new Image(),
+  fallback: new Image()
+};
+fortressAnimation.image.onload = () => { if (currentRun) drawBattlefield(); };
+fortressAnimation.image.onerror = () => console.warn("Riftbound fortress animation could not be loaded.");
+fortressAnimation.fallback.onload = () => { if (currentRun) drawBattlefield(); };
+fortressAnimation.fallback.onerror = () => console.warn("Riftbound fortress fallback image could not be loaded.");
+fortressAnimation.image.src = "assets/fortress/fortress-animation.png";
+fortressAnimation.fallback.src = "assets/fortress/fortress.png";
+
 // Pixel-art tower sprites. Missing files safely fall back to the original canvas drawings.
 const towerSpritePaths = {
   archer: "assets/towers/archer.png",
@@ -507,8 +525,20 @@ function drawPortal(){
   ctx.fillStyle="#21102F";ctx.beginPath();ctx.ellipse(75,270,18,31,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#B99AE8";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(75,270,15,27,0,0,Math.PI*2);ctx.stroke();
 }
 function drawCastle(){
-  // Ground shadow and stone foundation.
-  ctx.save();
+  // Prefer the animated sprite sheet, then the static PNG, and finally
+  // the original canvas castle so the fortress is always visible.
+  const sheet=fortressAnimation.image;
+  const fallback=fortressAnimation.fallback;
+  const displaySize=fortressAnimation.displaySize;
+  const drawX=896-displaySize/2;
+  const drawY=270-displaySize/2+16;
+  if(sheet.complete&&sheet.naturalWidth>=fortressAnimation.frameWidth*fortressAnimation.frames&&sheet.naturalHeight>=fortressAnimation.frameHeight){
+    const frame=Math.floor(performance.now()/1000*fortressAnimation.fps)%fortressAnimation.frames;
+    ctx.drawImage(sheet,frame*fortressAnimation.frameWidth,0,fortressAnimation.frameWidth,fortressAnimation.frameHeight,drawX,drawY,displaySize,displaySize);
+  }else if(fallback.complete&&fallback.naturalWidth>0){
+    ctx.drawImage(fallback,drawX,drawY,displaySize,displaySize);
+  }else{
+  
   ctx.fillStyle="rgba(5,5,9,.42)";
   ctx.beginPath();ctx.ellipse(896,316,54,13,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#20202B";ctx.fillRect(850,296,91,29);
@@ -554,6 +584,8 @@ function drawCastle(){
   ctx.fillStyle="rgba(185,154,232,.22)";
   ctx.fillRect(858,224,11,2);ctx.fillRect(922,224,11,2);
   ctx.restore();
+
+  }
   if(currentRun.revivalAnimation>0){
     const progress=1-currentRun.revivalAnimation/2.4;
     const pulse=1+Math.sin(performance.now()/75)*.12;
