@@ -773,6 +773,16 @@ function drawTowers(){
       ctx.fillStyle="#241932";ctx.fillRect(t.x-16,t.y-16,32,32);ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.strokeRect(t.x-16,t.y-16,32,32);
       ctx.fillStyle=s.color;ctx.fillRect(t.x-8,t.y-8,16,16);ctx.fillStyle="#E5DDF0";ctx.fillRect(t.x-3,t.y-3,6,6);
     }
+    if(t.weatherDisabledTimer>0){
+      ctx.save();
+      ctx.fillStyle="rgba(8,15,29,.58)";ctx.fillRect(t.x-22,t.y-42,44,48);
+      ctx.strokeStyle="#B9DFFF";ctx.fillStyle="#E5F4FF";ctx.lineWidth=2.5;
+      ctx.shadowColor="#79BFFF";ctx.shadowBlur=12;
+      ctx.beginPath();ctx.moveTo(t.x+3,t.y-35);ctx.lineTo(t.x-7,t.y-19);ctx.lineTo(t.x+1,t.y-19);
+      ctx.lineTo(t.x-4,t.y-5);ctx.lineTo(t.x+10,t.y-24);ctx.lineTo(t.x+2,t.y-24);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.shadowBlur=0;ctx.font="bold 7px Georgia";ctx.textAlign="center";ctx.fillStyle="#D9EDFF";
+      ctx.fillText("DISABLED",t.x,t.y+16);ctx.restore();
+    }
     if(t.level>1){
       ctx.fillStyle="#F0D58A";ctx.font="bold 11px Georgia";ctx.textAlign="center";
       ctx.fillText("+"+(t.level-1),t.x+30,t.y-78);ctx.textAlign="left";
