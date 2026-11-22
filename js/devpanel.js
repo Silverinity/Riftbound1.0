@@ -18,6 +18,7 @@
   function openPanel() {
     if (!enabled() || $("game-screen").hidden) return;
     panel.hidden = false;
+    syncWeatherControls();
     const r = panel.getBoundingClientRect();
     if (r.right > innerWidth || r.bottom > innerHeight) {
       panel.style.left = Math.max(8, innerWidth-r.width-8)+"px";
@@ -80,7 +81,7 @@
   $("dev-reset-cooldowns").addEventListener("click",()=>{if(!active())return;currentRun.towers.forEach(t=>t.cooldown=0);refresh();say("All tower cooldowns reset.");});
 
   function jumpProgress(area,camp,stage) {
-    clearCombat();currentRun.area=area;currentRun.campsite=camp;currentRun.stage=stage;currentRun.currentWave=0;currentRun.gameOver=false;currentRun.runFinished=false;
+    clearCombat();currentRun.area=area;currentRun.campsite=camp;currentRun.stage=stage;window.devRiftboundRerollWeather?.();currentRun.currentWave=0;currentRun.gameOver=false;currentRun.runFinished=false;
     currentRun.devInvincible=$("dev-invincible").checked;selectedTower=null;selectedTowerEntity=null;
     $("card-overlay").hidden=true;$("progress-overlay").hidden=true;$("result-overlay").hidden=true;
     updateAreaLabels();refresh();setWaveStatus("READY WHEN YOU ARE");showBattleMessage("DEVELOPER MODE: PROGRESSION UPDATED");if(!gameRunning)startGameLoop();
