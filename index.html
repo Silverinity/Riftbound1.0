@@ -235,6 +235,21 @@
                     <div class="dev-input-row"><label for="dev-points-amount">Skill points</label><input id="dev-points-amount" type="number" min="0" max="1000" value="2"><button id="dev-add-skill-points">GRANT POINTS</button></div>
                     <div class="dev-button-row"><button id="dev-test-campfire">TEST NEXT CAMPFIRE</button></div>
                 </section>
+                <section class="dev-section dev-weather-section">
+                    <h3>STAGE WEATHER</h3>
+                    <div class="dev-input-row">
+                        <label for="dev-weather">Weather</label>
+                        <select id="dev-weather">
+                            <option value="clear">Clear</option><option value="cloudy">Cloudy</option><option value="lightRain">Light Rain</option>
+                            <option value="snow">Snow</option><option value="rain">Rain</option><option value="bloodRain">Blood Rain</option>
+                            <option value="fog">Fog</option><option value="ashfall">Ashfall</option><option value="plagueMist">Plague Mist</option>
+                            <option value="galeWinds">Gale Winds</option><option value="thunderstorm">Thunderstorm</option><option value="bloodEclipse">Blood Eclipse</option>
+                        </select>
+                        <button id="dev-apply-weather">APPLY WEATHER</button>
+                    </div>
+                    <div class="dev-button-row"><button id="dev-reroll-weather">RANDOM WEATHER</button></div>
+                    <p id="dev-weather-current" class="dev-weather-current">Current weather: CLEAR</p>
+                </section>
                 <section class="dev-section">
                     <h3>TESTING</h3>
                     <div class="dev-button-row"><button id="dev-pause">PAUSE GAME</button><button id="dev-resume">RESUME GAME</button></div>
