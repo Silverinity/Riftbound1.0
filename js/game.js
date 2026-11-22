@@ -239,7 +239,6 @@ function updateWeatherDisplay(){
   if(name)name.textContent=weather.name.toUpperCase();
   if(effect)effect.textContent=weather.description;
   if(panel)panel.dataset.weather=weather.id;
-  showWeatherAnnouncement(weather);
 }
 function showWeatherAnnouncement(weather){
   const overlay=document.getElementById("weather-announcement");
