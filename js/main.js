@@ -131,6 +131,14 @@
   }
 
   // Cloud saves contain permanent profile progression and settings only.
+  // Queue every server-side profile write, including code redemption, in one order.
+  window.riftboundQueueCloudWrite = task => {
+    if (typeof task !== "function") return Promise.reject(new TypeError("Cloud write task must be a function."));
+    const request = cloudSaveQueue.catch(() => {}).then(task);
+    cloudSaveQueue = request.catch(() => {});
+    return request;
+  };
+
   window.riftboundCloudSave = () => {
     if (!betaAuthenticated) return Promise.resolve(false);
     const payload = JSON.stringify({
@@ -143,7 +151,7 @@
           : null
       }
     });
-    const request = cloudSaveQueue.catch(() => {}).then(async () => {
+    return window.riftboundQueueCloudWrite(async () => {
       const response = await fetch(API_BASE + "/api/save", {
         method: "PUT",
         credentials: "include",
@@ -158,8 +166,6 @@
       byId("auth-status").textContent = "CLOUD SAVE FAILED · CHECK BACKEND DATABASE";
       return false;
     });
-    cloudSaveQueue = request;
-    return request;
   };
 
   window.riftboundCloudSaveProfile = async () => window.riftboundCloudSave();
