@@ -1559,8 +1559,8 @@ function activateCommanderAbility(){
   const id=getRunCommanderId(),ability=commanderAbilities[id]||commanderAbilities.warden;
   if((currentRun.abilityCooldown||0)>0)return;
   const enemies=currentRun.enemies.filter(enemy=>enemy.health>0&&!enemy.rewarded);
-  currentRun.commanderCastTimer=1.65;
   if(ability.requiresEnemies&&!enemies.length){showBattleMessage("WAIT FOR ENEMIES BEFORE USING "+ability.name);return;}
+  currentRun.commanderCastTimer=1.65;
   let effect=null;
   if(id==="warden"){
     currentRun.bastionTimer=12;
