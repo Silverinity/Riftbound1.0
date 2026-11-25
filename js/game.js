@@ -47,6 +47,24 @@ fortressAnimation.fallback.onerror = () => console.warn("Riftbound fortress fall
 fortressAnimation.image.src = "assets/fortress/fortress-animation.png";
 fortressAnimation.fallback.src = "assets/fortress/fortress.png";
 
+// Distinct commander models rendered beside the fortress on every battlefield.
+const commanderSpritePaths = {
+  warden:"assets/commanders/warden.svg",
+  arcanist:"assets/commanders/arcanist.svg",
+  huntmaster:"assets/commanders/huntmaster.svg",
+  treasurer:"assets/commanders/treasurer.svg",
+  pyromancer:"assets/commanders/pyromancer.svg",
+  necromancer:"assets/commanders/necromancer.svg"
+};
+const commanderSprites = {};
+Object.entries(commanderSpritePaths).forEach(([id,source])=>{
+  const sprite=new Image();
+  sprite.onload=()=>{if(currentRun)drawBattlefield();};
+  sprite.onerror=()=>console.warn("Riftbound commander model could not be loaded:",source);
+  sprite.src=source;
+  commanderSprites[id]=sprite;
+});
+
 // Pixel-art tower sprites. Missing files safely fall back to the original canvas drawings.
 const towerSpritePaths = {
   archer: "assets/towers/archer.png",
@@ -413,7 +431,7 @@ function createNewRun(){
     encounter:{id:"bear-cave",name:"Bear Cave",kind:"ENCOUNTER",bossId:null},defeatedBosses:[],
     stats:{damageDealt:0,damageTaken:0,goldSpent:0,enemiesKilled:0,wavesCompleted:0,bossesDefeated:0},
     devInvincible:false,devGameSpeed:1,campsiteRestUsed:false,spectralAllies:[],weather:null,weatherStormTimer:15,weatherLightning:null,
-    abilityCooldown:0,bastionTimer:0,markedEnemy:null,markedTimer:0,abilityEffects:[]
+    abilityCooldown:0,commanderCastTimer:0,bastionTimer:0,markedEnemy:null,markedTimer:0,abilityEffects:[]
   };
 }
 function startNewRun(){
@@ -542,6 +560,7 @@ function drawBattlefield(){
   drawPath();
   drawPortal();
   drawCastle();
+  drawCommanderModel();
   drawTowers();
   drawEnemies();
   drawProjectiles();
@@ -953,6 +972,38 @@ function drawSpectralAllies(){
     }
     ctx.restore();
   });
+}
+function drawCommanderModel(){
+  if(!currentRun)return;
+  const id=getRunCommanderId();
+  const sprite=commanderSprites[id];
+  if(!sprite||!sprite.complete||!sprite.naturalWidth)return;
+  const now=performance.now(),cast=Math.max(0,Math.min(1,(currentRun.commanderCastTimer||0)/1.65));
+  const colors={warden:"#9bdcff",arcanist:"#c29aff",huntmaster:"#ffc46b",treasurer:"#ffe08a",pyromancer:"#ff8045",necromancer:"#8cffbf"};
+  const color=colors[id]||"#d8d5e8";
+  const x=816,y=354;
+  const bob=Math.sin(now/420)*2.2;
+  const lift=cast>0?Math.sin((1-cast)*Math.PI)*12:0;
+  const scale=1+(cast>0?Math.sin((1-cast)*Math.PI)*.13:0);
+  ctx.save();
+  ctx.globalAlpha=.82;
+  ctx.fillStyle="rgba(0,0,0,.42)";
+  ctx.beginPath();ctx.ellipse(x,y+3,30,9,0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=1;
+  const aura=ctx.createRadialGradient(x,y-43,4,x,y-43,58+(1-cast)*10);
+  aura.addColorStop(0,color+"55");aura.addColorStop(.55,color+"18");aura.addColorStop(1,color+"00");
+  ctx.fillStyle=aura;ctx.beginPath();ctx.ellipse(x,y-43,58,68,0,0,Math.PI*2);ctx.fill();
+  if(cast>0){
+    ctx.save();ctx.translate(x,y-10);ctx.globalAlpha=.55+Math.sin(now/45)*.2;
+    ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.shadowColor=color;ctx.shadowBlur=18;
+    ctx.beginPath();ctx.ellipse(0,0,35+Math.sin(now/65)*4,12+Math.sin(now/65)*2,0,0,Math.PI*2);ctx.stroke();
+    for(let i=0;i<8;i++){const a=now/170+i*Math.PI/4,r=28+(1-cast)*26;ctx.fillStyle=color;ctx.beginPath();ctx.arc(Math.cos(a)*r,Math.sin(a)*r*.55,2.2,0,Math.PI*2);ctx.fill();}
+    ctx.restore();
+  }
+  ctx.translate(x,y-8-bob-lift);ctx.rotate(cast>0?Math.sin((1-cast)*Math.PI*2)*.09:Math.sin(now/700)*.012);ctx.scale(scale,scale);
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(sprite,-39,-94,78,98);
+  ctx.restore();
 }
 function drawCommanderEffects(){
   if(!currentRun)return;
@@ -1483,6 +1534,7 @@ function updateSpectralAllies(dt){
 function updateCommanderAbilityState(dt){
   if(!currentRun)return;
   currentRun.abilityCooldown=Math.max(0,(currentRun.abilityCooldown||0)-dt);
+  currentRun.commanderCastTimer=Math.max(0,(currentRun.commanderCastTimer||0)-dt);
   currentRun.bastionTimer=Math.max(0,(currentRun.bastionTimer||0)-dt);
   currentRun.markedTimer=Math.max(0,(currentRun.markedTimer||0)-dt);
   if(currentRun.markedTimer<=0)currentRun.markedEnemy=null;
@@ -1507,6 +1559,7 @@ function activateCommanderAbility(){
   const id=getRunCommanderId(),ability=commanderAbilities[id]||commanderAbilities.warden;
   if((currentRun.abilityCooldown||0)>0)return;
   const enemies=currentRun.enemies.filter(enemy=>enemy.health>0&&!enemy.rewarded);
+  currentRun.commanderCastTimer=1.65;
   if(ability.requiresEnemies&&!enemies.length){showBattleMessage("WAIT FOR ENEMIES BEFORE USING "+ability.name);return;}
   let effect=null;
   if(id==="warden"){
