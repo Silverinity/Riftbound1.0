@@ -57,6 +57,7 @@ const commanderSpritePaths = {
   necromancer:"assets/commanders/necromancer.svg"
 };
 const commanderSprites = {};
+const commanderFrameWidth=512,commanderFrameHeight=640,commanderIdleFrames=4,commanderCastFrames=4;
 Object.entries(commanderSpritePaths).forEach(([id,source])=>{
   const sprite=new Image();
   sprite.onload=()=>{if(currentRun)drawBattlefield();};
@@ -979,6 +980,8 @@ function drawCommanderModel(){
   const sprite=commanderSprites[id];
   if(!sprite||!sprite.complete||!sprite.naturalWidth)return;
   const now=performance.now(),cast=Math.max(0,Math.min(1,(currentRun.commanderCastTimer||0)/1.65));
+  const frame=cast>0?commanderIdleFrames+Math.min(commanderCastFrames-1,Math.floor((1-cast)*commanderCastFrames)):Math.floor(now/145)%commanderIdleFrames;
+  const sx=(frame%4)*commanderFrameWidth,sy=Math.floor(frame/4)*commanderFrameHeight;
   const colors={warden:"#9bdcff",arcanist:"#c29aff",huntmaster:"#ffc46b",treasurer:"#ffe08a",pyromancer:"#ff8045",necromancer:"#8cffbf"};
   const color=colors[id]||"#d8d5e8";
   const x=816,y=354;
@@ -1001,8 +1004,8 @@ function drawCommanderModel(){
     ctx.restore();
   }
   ctx.translate(x,y-8-bob-lift);ctx.rotate(cast>0?Math.sin((1-cast)*Math.PI*2)*.09:Math.sin(now/700)*.012);ctx.scale(scale,scale);
-  ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(sprite,-39,-94,78,98);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(sprite,sx,sy,commanderFrameWidth,commanderFrameHeight,-43,-99,86,104);
   ctx.restore();
 }
 function drawCommanderEffects(){
