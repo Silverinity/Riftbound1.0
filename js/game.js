@@ -49,12 +49,12 @@ fortressAnimation.fallback.src = "assets/fortress/fortress.png";
 
 // Distinct commander models rendered beside the fortress on every battlefield.
 const commanderSpritePaths = {
-  warden:"assets/commanders/warden.svg",
-  arcanist:"assets/commanders/arcanist.svg",
-  huntmaster:"assets/commanders/huntmaster.svg",
-  treasurer:"assets/commanders/treasurer.svg",
-  pyromancer:"assets/commanders/pyromancer.svg",
-  necromancer:"assets/commanders/necromancer.svg"
+  warden:"assets/commanders/warden_animation.svg",
+  arcanist:"assets/commanders/arcanist_animation.svg",
+  huntmaster:"assets/commanders/huntmaster_animation.svg",
+  treasurer:"assets/commanders/treasurer_animation.svg",
+  pyromancer:"assets/commanders/pyromancer_animation.svg",
+  necromancer:"assets/commanders/necromancer_animation.svg"
 };
 const commanderSprites = {};
 const commanderFrameWidth=512,commanderFrameHeight=640,commanderIdleFrames=4,commanderCastFrames=4;
