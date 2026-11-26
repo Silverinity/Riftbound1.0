@@ -1005,7 +1005,9 @@ function drawCommanderModel(){
   }
   ctx.translate(x,y-8-bob-lift);ctx.rotate(cast>0?Math.sin((1-cast)*Math.PI*2)*.09:Math.sin(now/700)*.012);ctx.scale(scale,scale);
   ctx.imageSmoothingEnabled=true;
-  ctx.drawImage(sprite,sx,sy,commanderFrameWidth,commanderFrameHeight,-43,-99,86,104);
+  // SVG sprite sheets can be inconsistent as cropped CanvasImageSources across browsers.
+  // Render the standalone commander model, then animate its pose and cast effects in Canvas.
+  ctx.drawImage(sprite,-43,-99,86,104);
   ctx.restore();
 }
 function drawCommanderEffects(){
