@@ -47,24 +47,12 @@ fortressAnimation.fallback.onerror = () => console.warn("Riftbound fortress fall
 fortressAnimation.image.src = "assets/fortress/fortress-animation.png";
 fortressAnimation.fallback.src = "assets/fortress/fortress.png";
 
-// Distinct commander models rendered beside the fortress on every battlefield.
-const commanderSpritePaths = {
-  warden:"assets/commanders/warden.svg",
-  arcanist:"assets/commanders/arcanist.svg",
-  huntmaster:"assets/commanders/huntmaster.svg",
-  treasurer:"assets/commanders/treasurer.svg",
-  pyromancer:"assets/commanders/pyromancer.svg",
-  necromancer:"assets/commanders/necromancer.svg"
-};
-const commanderSprites = {};
-const commanderFrameWidth=512,commanderFrameHeight=640,commanderIdleFrames=4,commanderCastFrames=4;
-Object.entries(commanderSpritePaths).forEach(([id,source])=>{
-  const sprite=new Image();
-  sprite.onload=()=>{if(currentRun)drawBattlefield();};
-  sprite.onerror=()=>console.warn("Riftbound commander model could not be loaded:",source);
-  sprite.src=source;
-  commanderSprites[id]=sprite;
-});
+// Native-resolution pixel-art sprite sheets, generated once per commander.
+const commanderSprites = window.RiftboundCommanderSprites;
+const commanderFrameWidth=commanderSprites.frameWidth;
+const commanderFrameHeight=commanderSprites.frameHeight;
+const commanderIdleFrames=commanderSprites.idleFrames;
+const commanderCastFrames=commanderSprites.castFrames;
 
 // Pixel-art tower sprites. Missing files safely fall back to the original canvas drawings.
 const towerSpritePaths = {
@@ -977,11 +965,11 @@ function drawSpectralAllies(){
 function drawCommanderModel(){
   if(!currentRun)return;
   const id=getRunCommanderId();
-  const sprite=commanderSprites[id];
-  if(!sprite||!sprite.complete||!sprite.naturalWidth)return;
+  const sprite=commanderSprites.get(id);
+  if(!sprite||!sprite.width)return;
   const now=performance.now(),cast=Math.max(0,Math.min(1,(currentRun.commanderCastTimer||0)/1.65));
-  const frame=cast>0?commanderIdleFrames+Math.min(commanderCastFrames-1,Math.floor((1-cast)*commanderCastFrames)):Math.floor(now/145)%commanderIdleFrames;
-  const sx=(frame%4)*commanderFrameWidth,sy=Math.floor(frame/4)*commanderFrameHeight;
+  const frame=cast>0?commanderIdleFrames+Math.min(commanderCastFrames-1,Math.floor((1-cast)*commanderCastFrames)):Math.floor(now/170)%commanderIdleFrames;
+  const sx=frame*commanderFrameWidth;
   const colors={warden:"#9bdcff",arcanist:"#c29aff",huntmaster:"#ffc46b",treasurer:"#ffe08a",pyromancer:"#ff8045",necromancer:"#8cffbf"};
   const color=colors[id]||"#d8d5e8";
   const x=816,y=354;
@@ -1004,10 +992,9 @@ function drawCommanderModel(){
     ctx.restore();
   }
   ctx.translate(x,y-8-bob-lift);ctx.rotate(cast>0?Math.sin((1-cast)*Math.PI*2)*.09:Math.sin(now/700)*.012);ctx.scale(scale,scale);
-  ctx.imageSmoothingEnabled=true;
-  // SVG sprite sheets can be inconsistent as cropped CanvasImageSources across browsers.
-  // Render the standalone commander model, then animate its pose and cast effects in Canvas.
-  ctx.drawImage(sprite,-43,-99,86,104);
+  // Pixel art must stay crisp: crop the active frame and scale without interpolation.
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(sprite,sx,0,commanderFrameWidth,commanderFrameHeight,-43,-99,86,104);
   ctx.restore();
 }
 function drawCommanderEffects(){
