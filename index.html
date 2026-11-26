@@ -93,6 +93,7 @@
                 <section id="hub-traits-view" class="hub-view" hidden>
                     <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
                     <div id="trait-collection"></div>
+                    <div id="trait-detail-overlay" class="trait-detail-overlay" hidden></div>
                 </section>
                 <section id="hub-weather-view" class="hub-view" hidden>
                     <button class="hub-return" data-hub-view="home" type="button">← COMMAND SANCTUM</button>
@@ -408,6 +409,7 @@
     </div>
 
     <script>window.RIFTBOUND_API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:3000" : "https://riftbound-auth.onrender.com";</script>
+    <script src="js/commander-pixel-art.js"></script>
     <script src="js/commanders.js"></script>
     <script src="js/progression.js"></script>
     <script src="js/game.js"></script>

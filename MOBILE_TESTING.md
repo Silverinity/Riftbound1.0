@@ -8,9 +8,8 @@ The mobile layout pass adds:
 - Larger touch targets for buttons and tower upgrades.
 - A single-column battlefield layout on narrow screens while preserving the 16:9 game world.
 - Touch-first instructions and pointer capture when tapping the battlefield.
-- Cloud-save checkpoints after starting a wave, placing a tower, upgrading a tower, completing a stage, and using campsite actions.
-
-Cloud saves remain checkpoint-based. The game does not save every frame or every enemy movement.
+- Cloud saves preserve permanent progression (class XP, skill trees, trait rolls, pity, owned traits and equipped trait) plus settings.
+- Active expedition state is deliberately not saved. Refreshing or reopening the game does not resume an unfinished run.
 
 ## Important: Safari Discord authentication
 
@@ -43,9 +42,9 @@ Run these checks after the game is deployed to the test domain:
 2. Sign in with an approved Discord account.
 3. Confirm the game returns to the preparation menu and shows the signed-in user.
 4. Refresh the page and confirm the session remains.
-5. Start a run, place a tower, upgrade it, and start a wave.
-6. Return to the menu and use Continue Expedition.
-7. Confirm the saved checkpoint and towers are restored.
+5. Open the Trait Hall and confirm the current trait, rolls and pity values load.
+6. Redeem a test code only on a designated test account; confirm the added rolls remain after refreshing and signing in again.
+7. Start a run, place and upgrade a tower, then refresh. Confirm the unfinished run is not resumed, while permanent progression remains intact.
 8. Repeat with an account without the Beta Tester role and confirm access is denied.
 
 ### Android Chrome

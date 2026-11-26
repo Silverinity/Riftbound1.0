@@ -114,13 +114,14 @@
   const settingsOverlay = byId("settings-overlay");
   const API_BASE = (window.RIFTBOUND_API_BASE || "http://localhost:3000").replace(/\/$/, "");
   let betaAuthenticated = false;
+  // Serialize profile writes so a slower, older request can never overwrite a newer save.
+  let cloudSaveQueue = Promise.resolve();
   async function loadCloudSave() {
     try {
       const response = await fetch(API_BASE + "/api/save", { credentials: "include" });
       if (!response.ok) throw new Error("Player profile could not be loaded.");
       const data = await response.json();
       if (data.progression && typeof window.loadRiftboundProgression === "function") window.loadRiftboundProgression(data.progression);
-      else if (typeof window.riftboundCloudSaveProfile === "function") window.riftboundCloudSaveProfile();
       return data;
     } catch (error) {
       console.warn("Could not load Riftbound player profile:", error);
@@ -129,20 +130,41 @@
   }
 
   // Cloud saves contain permanent profile progression and settings only.
-  window.riftboundCloudSave = async () => {
-    if (!betaAuthenticated) return;
-    try {
+  // Queue every server-side profile write, including code redemption, in one order.
+  window.riftboundQueueCloudWrite = task => {
+    if (typeof task !== "function") return Promise.reject(new TypeError("Cloud write task must be a function."));
+    const request = cloudSaveQueue.catch(() => {}).then(task);
+    cloudSaveQueue = request.catch(() => {});
+    return request;
+  };
+
+  window.riftboundCloudSave = () => {
+    if (!betaAuthenticated) return Promise.resolve(false);
+    const payload = JSON.stringify({
+      save: {
+        version: 1,
+        run: null,
+        settings: window.riftboundSettings,
+        progression: typeof window.getRiftboundProgressionExport === "function"
+          ? window.getRiftboundProgressionExport()
+          : null
+      }
+    });
+    return window.riftboundQueueCloudWrite(async () => {
       const response = await fetch(API_BASE + "/api/save", {
-        method: "PUT", credentials: "include",
+        method: "PUT",
+        credentials: "include",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ save: { version: 1, run: null, settings: window.riftboundSettings, progression: typeof window.getRiftboundProgressionExport === "function" ? window.getRiftboundProgressionExport() : null } })
+        body: payload
       });
       if (!response.ok) throw new Error("Save request failed (" + response.status + ").");
       byId("auth-status").textContent = "BETA ACCESS VERIFIED · PROFILE SAVED";
-    } catch (error) {
+      return true;
+    }).catch(error => {
       console.error("Could not save Riftbound profile:", error);
       byId("auth-status").textContent = "CLOUD SAVE FAILED · CHECK BACKEND DATABASE";
-    }
+      return false;
+    });
   };
 
   window.riftboundCloudSaveProfile = async () => window.riftboundCloudSave();
@@ -182,6 +204,8 @@
           displaySettings();
           if (typeof updateDeveloperModeUI === "function") updateDeveloperModeUI();
         }
+        // Save only after cloud settings have been applied, so migration cannot overwrite them with defaults.
+        if (cloud && typeof window.riftboundCloudSaveProfile === "function") window.riftboundCloudSaveProfile();
         return;
       }
 

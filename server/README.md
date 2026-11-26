@@ -22,7 +22,7 @@ configured **Beta Tester** role in the configured Discord server.
 8. Set `DATABASE_URL` to your PostgreSQL connection string.
 9. Run `npm run dev`.
 
-The backend creates the `player_saves` table automatically on first startup.
+The backend creates the `player_saves` and `redeemed_trait_codes` tables automatically on first startup.
 
 The Discord OAuth scopes requested are `identify` and `guilds.members.read`.
 The latter allows the backend to check the signed-in user's own member record and
@@ -59,7 +59,7 @@ the session.
 - `PUT /api/save` — validate and update the signed-in player's cloud save
 - `DELETE /api/save` — delete the signed-in player's cloud save
 
-Saves are stored in PostgreSQL and keyed by the verified Discord user ID. Trait ownership, equipped trait, remaining rolls, pity counters, total rolls, and redeemed-code history are included in the validated progression save. A separate database uniqueness constraint prevents the same Discord account from redeeming the same code more than once.
+Saves are stored in PostgreSQL and keyed by the verified Discord user ID. Trait ownership, equipped trait, remaining rolls, pity counters, total rolls, and redeemed-code history are included in the validated progression save. A separate database uniqueness constraint prevents the same Discord account from redeeming the same code more than once. Active expedition state is intentionally excluded from cloud saves; only permanent progression and settings persist between sessions.
 
 The frontend must call the API with credentials enabled when checking the
 session and logging out.

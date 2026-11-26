@@ -234,7 +234,8 @@
     const api=(window.RIFTBOUND_API_BASE||"").replace(/\/$/,"");
     if(!api)return {ok:false,message:"CODE REDEMPTION REQUIRES THE SERVER"};
     try{
-      const response=await fetch(api+"/api/traits/redeem",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({code:normalized})});
+      const sendRedemption=()=>fetch(api+"/api/traits/redeem",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({code:normalized})});
+      const response=await (typeof window.riftboundQueueCloudWrite==="function"?window.riftboundQueueCloudWrite(sendRedemption):sendRedemption());
       const data=await response.json().catch(()=>({}));
       if(response.status===409)return {ok:false,message:"THIS DISCORD ACCOUNT HAS ALREADY REDEEMED THIS CODE"};
       if(response.status===400)return {ok:false,message:"INVALID CODE"};
